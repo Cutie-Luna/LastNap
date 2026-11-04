@@ -95,7 +95,15 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleGithubRelease
 
-      # 把 APK 直接发布为 Prerelease，用户点链接即可下载单个 apk，无需登录、无需解压
+      # Publish the phone-ready ARM64 split with a stable, easy-to-find filename.
+      - name: Prepare ARM64 release APK
+        run: |
+          mkdir -p release-assets
+          arm64_apk="$(find app/build/outputs/apk/github/release -maxdepth 1 -type f -name '*arm64-v8a*.apk' -print -quit)"
+          test -n "$arm64_apk"
+          cp "$arm64_apk" release-assets/LastNap-arm64-v8a.apk
+
+      # 把 ARM64 APK 直接发布为 Prerelease，用户点链接即可下载单个 apk
       - name: Publish nightly prerelease
         uses: softprops/action-gh-release@v2
         if: success()
@@ -109,5 +117,5 @@ jobs:
             > ⚠️ 开发版本，可能不稳定，仅供测试。
           # mapping.txt 用于还原混淆后的崩溃堆栈，所有 ABI 的 APK 共用这一份
           files: |
-            app/build/outputs/apk/github/release/*.apk
+            release-assets/LastNap-arm64-v8a.apk
             app/build/outputs/mapping/githubRelease/mapping.txt
