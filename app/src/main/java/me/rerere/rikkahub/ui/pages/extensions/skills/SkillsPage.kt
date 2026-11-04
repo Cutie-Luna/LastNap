@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -91,6 +92,7 @@ fun SkillsPage() {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val toaster = LocalToaster.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     var showImportSheet by rememberSaveable { mutableStateOf(false) }
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var showImportDialog by rememberSaveable { mutableStateOf(false) }
@@ -117,9 +119,9 @@ fun SkillsPage() {
         uri ?: return@rememberLauncherForActivityResult
         vm.importSkillFromFile(uri) { success, message ->
             if (success) {
-                toaster.show(context.getString(R.string.skills_page_import_success, message))
+                toaster.show(resources.getString(R.string.skills_page_import_success, message))
             } else {
-                toaster.show(context.getString(R.string.skills_page_import_failed, message))
+                toaster.show(resources.getString(R.string.skills_page_import_failed, message))
             }
         }
     }
@@ -256,7 +258,7 @@ fun SkillsPage() {
                 vm.saveSkill(name, content) { success ->
                     showAddDialog = false
                     if (!success) {
-                        toaster.show(context.getString(R.string.skills_page_save_failed))
+                        toaster.show(resources.getString(R.string.skills_page_save_failed))
                     }
                 }
             },
@@ -270,9 +272,9 @@ fun SkillsPage() {
                 vm.importSkillFromGitHub(repoUrl) { success, message ->
                     showImportDialog = false
                     if (success) {
-                        toaster.show(context.getString(R.string.skills_page_import_success, message))
+                        toaster.show(resources.getString(R.string.skills_page_import_success, message))
                     } else {
-                        toaster.show(context.getString(R.string.skills_page_import_failed, message))
+                        toaster.show(resources.getString(R.string.skills_page_import_failed, message))
                     }
                 }
             },

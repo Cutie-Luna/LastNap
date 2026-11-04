@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -360,6 +361,7 @@ private fun ImportProviderButton(
 ) {
     val toaster = LocalToaster.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     var showImportDialog by remember { mutableStateOf(false) }
     var showScanner by remember { mutableStateOf(false) }
 
@@ -371,7 +373,7 @@ private fun ImportProviderButton(
             },
             onPermissionDenied = {
                 showScanner = false
-                toaster.show(context.getString(R.string.setting_provider_page_no_permission), type = ToastType.Error)
+                toaster.show(resources.getString(R.string.setting_provider_page_no_permission), type = ToastType.Error)
             },
             onDismissRequest = { showScanner = false },
         )
@@ -506,12 +508,12 @@ private fun handleScannedQRCode(
         val setting = decodeProviderSetting(content)
         onAdd(setting)
         toaster.show(
-            context.getString(R.string.setting_provider_page_import_success),
+            resources.getString(R.string.setting_provider_page_import_success),
             type = ToastType.Success
         )
     }.onFailure { error ->
         toaster.show(
-            context.getString(R.string.setting_provider_page_qr_decode_failed, error.message ?: ""),
+            resources.getString(R.string.setting_provider_page_qr_decode_failed, error.message ?: ""),
             type = ToastType.Error
         )
     }
@@ -529,7 +531,7 @@ private fun handleImageQRCode(
 
         if (qrContent.isNullOrEmpty()) {
             toaster.show(
-                context.getString(R.string.setting_provider_page_no_qr_found),
+                resources.getString(R.string.setting_provider_page_no_qr_found),
                 type = ToastType.Error
             )
             return
@@ -538,12 +540,12 @@ private fun handleImageQRCode(
         val setting = decodeProviderSetting(qrContent)
         onAdd(setting)
         toaster.show(
-            context.getString(R.string.setting_provider_page_import_success),
+            resources.getString(R.string.setting_provider_page_import_success),
             type = ToastType.Success
         )
     }.onFailure { error ->
         toaster.show(
-            context.getString(R.string.setting_provider_page_image_qr_decode_failed, error.message ?: ""),
+            resources.getString(R.string.setting_provider_page_image_qr_decode_failed, error.message ?: ""),
             type = ToastType.Error
         )
     }
