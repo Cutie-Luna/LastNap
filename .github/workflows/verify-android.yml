@@ -99,6 +99,30 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Run lint and assemble debug APK
+      - name: Assemble debug APK
         if: success()
-        run: ./gradlew --no-daemon lintGithubDebug assembleGithubDebug
+        run: ./gradlew --no-daemon assembleGithubDebug
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lastnap-debug-apk
+          path: app/build/outputs/apk/github/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run Android lint
+        if: success()
+        run: ./gradlew --no-daemon lintGithubDebug
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lastnap-lint-reports
+          path: |
+            app/build/reports/lint-results-githubDebug.*
+            app/build/intermediates/lint_intermediate_text_report/githubDebug/lintReportGithubDebug/
+          if-no-files-found: warn
+          retention-days: 7
