@@ -75,6 +75,25 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun `custom extension drafts persist with safe default permission`() = runBlocking {
+        val store = open().store
+        val draft = me.rerere.rikkahub.data.model.CustomExtension(
+            name = "Example extension",
+            description = "A saved draft",
+        )
+
+        store.update { it.copy(customExtensions = listOf(draft)) }
+
+        val restored = reopened().customExtensions.single()
+        assertEquals(draft, restored)
+        assertEquals(
+            me.rerere.rikkahub.data.model.ExtensionPermission.ASK_EVERY_TIME,
+            restored.permission,
+        )
+        assertFalse(restored.enabled)
+    }
+
+    @Test
     fun `concurrent updates are all applied`() = runBlocking {
         val store = open().store
         store.update { it.copy(webServerPort = 0) }
