@@ -1810,7 +1810,7 @@
   <string name="extension_builder_page_implementation">Implementation</string>
   <string name="extension_builder_page_simple_mode">Simple</string>
   <string name="extension_builder_page_advanced_mode">Advanced</string>
-  <string name="extension_builder_page_simple_help">Describe what the tool should do in the instructions field. Ask an assistant with the Tool Creator skill to draft the implementation, then paste its generated code and example input here. You do not need to write code or JSON yourself.</string>
+  <string name="extension_builder_page_simple_help">Describe what the tool should do in the instructions field. Ask an assistant with the Tool Creator skill to draft the input shape, implementation and example input, then paste them into the fields. You do not need to write code or JSON yourself.</string>
   <string name="extension_builder_page_generated_implementation">AI-generated implementation</string>
   <string name="extension_builder_page_input_schema">Input schema (JSON)</string>
   <string name="extension_builder_page_generated_input_schema">Input shape from your assistant</string>
