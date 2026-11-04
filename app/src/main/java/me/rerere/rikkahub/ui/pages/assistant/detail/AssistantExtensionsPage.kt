@@ -27,6 +27,7 @@ import me.rerere.rikkahub.ui.components.ai.LorebooksContent
 import me.rerere.rikkahub.ui.components.ai.ModeInjectionsContent
 import me.rerere.rikkahub.ui.components.ai.QuickMessagesContent
 import me.rerere.rikkahub.ui.components.ai.SkillsContent
+import me.rerere.rikkahub.ui.components.ai.CustomExtensionsContent
 import me.rerere.rikkahub.ui.components.nav.BackButton
 import me.rerere.rikkahub.ui.components.ui.ExtensionTab
 import me.rerere.rikkahub.ui.components.ui.PagerTabs
@@ -173,6 +174,25 @@ fun AssistantExtensionsPage(id: String) {
                                     vm.update(assistant.copy(enabledSkills = newSkills))
                                 },
                                 onManage = { navController.navigate(Screen.Skills) },
+                            )
+                        }
+                    }
+                    4 -> {
+                        if (settings.customExtensions.isEmpty()) {
+                            ExtensionEmptyState(
+                                message = stringResource(R.string.assistant_extensions_page_empty_custom_tools),
+                                icon = ExtensionTab.CUSTOM_TOOLS.icon,
+                            )
+                        } else {
+                            CustomExtensionsContent(
+                                contentPadding = listPadding,
+                                colors = listColors,
+                                extensions = settings.customExtensions,
+                                selectedIds = assistant.selectedCustomExtensionIds,
+                                onToggle = { id, checked ->
+                                    val ids = if (checked) assistant.selectedCustomExtensionIds + id else assistant.selectedCustomExtensionIds - id
+                                    vm.update(assistant.copy(selectedCustomExtensionIds = ids))
+                                },
                             )
                         }
                     }

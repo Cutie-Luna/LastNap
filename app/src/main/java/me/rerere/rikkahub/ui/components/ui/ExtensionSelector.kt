@@ -31,6 +31,7 @@ import me.rerere.rikkahub.ui.components.ai.LorebooksContent
 import me.rerere.rikkahub.ui.components.ai.ModeInjectionsContent
 import me.rerere.rikkahub.ui.components.ai.QuickMessagesContent
 import me.rerere.rikkahub.ui.components.ai.SkillsContent
+import me.rerere.rikkahub.ui.components.ai.CustomExtensionsContent
 import org.koin.compose.koinInject
 
 internal enum class ExtensionTab(
@@ -40,7 +41,8 @@ internal enum class ExtensionTab(
     QUICK_MESSAGES(HugeIcons.Zap, R.string.extension_selector_tab_quick_messages),
     MODE_INJECTIONS(HugeIcons.MagicWand01, R.string.extension_selector_tab_mode_injections),
     LOREBOOKS(HugeIcons.Book01, R.string.extension_selector_tab_lorebooks),
-    SKILLS(HugeIcons.Puzzle, R.string.extension_selector_tab_skills);
+    SKILLS(HugeIcons.Puzzle, R.string.extension_selector_tab_skills),
+    CUSTOM_TOOLS(HugeIcons.Puzzle, R.string.extension_selector_tab_custom_tools);
 
     override val label: String
         @Composable get() = stringResource(labelRes)
@@ -160,6 +162,25 @@ fun ExtensionSelector(
                     }
                 }
 
+                ExtensionTab.CUSTOM_TOOLS -> {
+                    if (settings.customExtensions.isNotEmpty()) {
+                        CustomExtensionsContent(
+                            extensions = settings.customExtensions,
+                            selectedIds = assistant.selectedCustomExtensionIds,
+                            onToggle = { id, checked ->
+                                val ids = if (checked) assistant.selectedCustomExtensionIds + id else assistant.selectedCustomExtensionIds - id
+                                onUpdate(assistant.copy(selectedCustomExtensionIds = ids))
+                            },
+                        )
+                    } else {
+                        ExtensionEmptyState(
+                            message = stringResource(R.string.extension_selector_custom_tools_empty),
+                            buttonText = stringResource(R.string.extension_selector_go_to_extensions),
+                            onAction = onNavigateToSkills,
+                            icon = tab.icon,
+                        )
+                    }
+                }
                 ExtensionTab.SKILLS -> {
                     if (skills.isNotEmpty()) {
                         SkillsContent(

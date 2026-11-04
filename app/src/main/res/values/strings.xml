@@ -11,7 +11,7 @@
   <string name="asr_button_content_description">Speech Recognition</string>
   <string name="asr_button_stop">Stop</string>
   <string name="assistant_detail_basic_desc">Configure name, avatar, model, and parameters</string>
-  <string name="assistant_detail_extensions_desc">Manage quick messages, prompt injections, lorebooks and skills</string>
+  <string name="assistant_detail_extensions_desc">Choose quick messages, prompt injections, lorebooks, skills and custom tools for this assistant</string>
   <string name="assistant_detail_local_tools_desc">Enable local tools like JavaScript engine</string>
   <string name="assistant_detail_mcp_desc">Configure MCP server tools for the assistant</string>
   <string name="assistant_detail_memory_desc">Manage assistant memory and recent chat references</string>
@@ -21,6 +21,7 @@
   <string name="assistant_extensions_page_empty_mode_injections">No mode injections available, create one in Prompts</string>
   <string name="assistant_extensions_page_empty_quick_messages">No quick messages available, create one in Extensions</string>
   <string name="assistant_extensions_page_empty_skills">No skills available, install one in Extensions</string>
+  <string name="assistant_extensions_page_empty_custom_tools">No custom tools yet. Create one in Tool Builder.</string>
   <string name="assistant_extensions_page_goto_extensions">Go to Extensions</string>
   <string name="assistant_extensions_page_goto_prompts">Go to Prompts</string>
   <string name="assistant_extensions_page_title">Extensions</string>
@@ -344,10 +345,12 @@
   <string name="extension_selector_mode_injections_empty">No mode injections available</string>
   <string name="extension_selector_quick_messages_empty">No quick messages available</string>
   <string name="extension_selector_skills_empty">No skills available</string>
+  <string name="extension_selector_custom_tools_empty">No custom tools available. Create one in Tool Builder.</string>
   <string name="extension_selector_tab_lorebooks">Lorebooks</string>
   <string name="extension_selector_tab_mode_injections">Mode Injections</string>
   <string name="extension_selector_tab_quick_messages">Quick Messages</string>
   <string name="extension_selector_tab_skills">Skills</string>
+  <string name="extension_selector_tab_custom_tools">Custom Tools</string>
   <string name="extensions_page_agent_skills">Agent Skills</string>
   <string name="extensions_page_agent_skills_desc">Manage skill packages for AI to load on demand</string>
   <string name="extensions_page_prompts">Prompts</string>

@@ -43,7 +43,8 @@ class CustomExtensionToolsTest {
                 enabledExtension("disabled-3", ExtensionPermission.DISABLED),
                 enabledExtension("changed-4").copy(implementation = "input.value + 100"),
                 enabledExtension("untested-5").copy(testedImplementationHash = null),
-            )
+            ),
+            selectedExtensionIds = setOf("enabled-1", "draft-2", "disabled-3", "changed-4", "untested-5"),
         )
 
         assertEquals(listOf("custom_extension_enabled1"), tools.map { it.name })
@@ -51,9 +52,19 @@ class CustomExtensionToolsTest {
     }
 
     @Test
+    fun unassignedExtensionsNeverBecomeTools() {
+        val tools = createCustomExtensionTools(
+            listOf(enabledExtension("for-another-assistant")),
+            selectedExtensionIds = emptySet(),
+        )
+        assertTrue(tools.isEmpty())
+    }
+
+    @Test
     fun askPermissionIsRequestedBeforeEveryInvocation() {
         val tool = createCustomExtensionTools(
-            listOf(enabledExtension("ask-me", ExtensionPermission.ASK_EVERY_TIME))
+            listOf(enabledExtension("ask-me", ExtensionPermission.ASK_EVERY_TIME)),
+            selectedExtensionIds = setOf("ask-me"),
         ).single()
 
         assertTrue(tool.needsApproval(Json.parseToJsonElement("""{"input":{"value":4}}""")))
@@ -62,7 +73,8 @@ class CustomExtensionToolsTest {
     @Test
     fun runsExtensionJavascriptWithIsolatedInput() = runBlocking {
         val tool = createCustomExtensionTools(
-            listOf(enabledExtension("double"))
+            listOf(enabledExtension("double")),
+            selectedExtensionIds = setOf("double"),
         ).single()
 
         val output = tool.execute(

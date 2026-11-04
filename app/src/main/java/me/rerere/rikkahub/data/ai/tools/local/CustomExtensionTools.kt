@@ -24,7 +24,9 @@ private const val MAX_EXTENSION_INPUT_LENGTH = 64 * 1024
  */
 internal fun createCustomExtensionTools(
     extensions: List<CustomExtension>,
+    selectedExtensionIds: Set<String>,
 ): List<Tool> = extensions
+    .filter { it.id in selectedExtensionIds }
     .filter { it.enabled && it.permission != ExtensionPermission.DISABLED }
     .filter { it.name.isNotBlank() && it.implementation.isNotBlank() }
     .filter { it.implementation.length <= MAX_EXTENSION_CODE_LENGTH }

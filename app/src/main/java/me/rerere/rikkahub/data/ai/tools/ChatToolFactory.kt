@@ -61,7 +61,7 @@ class ChatToolFactory(
                 addAll(createSearchTools(settings))
             }
             addAll(localTools.getTools(assistant.localTools))
-            addAll(createCustomExtensionTools(settings.customExtensions))
+            addAll(createCustomExtensionTools(settings.customExtensions, assistant.selectedCustomExtensionIds))
             if (assistant.enableRecentChatsReference) {
                 addAll(createConversationTools(conversationRepository, assistant.id))
             }
