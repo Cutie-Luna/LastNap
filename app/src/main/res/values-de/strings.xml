@@ -1817,4 +1817,6 @@
   <string name="extension_builder_page_test_passed">Test bestanden</string>
   <string name="extension_builder_page_test_result">Testausgabe: %1$s</string>
   <string name="extension_builder_page_enable">Diese Erweiterung aktivieren</string>
+    <string name="extensions_page_builder">Erweiterungs-Editor</string>
+    <string name="extensions_page_builder_desc">Erstelle gemeinsam mit KI eigene Tools und Funktionen</string>
 </resources>

@@ -1820,4 +1820,6 @@ mDNS 주소: .local 호스트네임을 사용하며, IP를 몰라도 같은 네�
     <string name="chat_page_compress_keep_recent">최근 메시지 유지</string>
     <string name="chat_page_compress_keep_recent_desc">이 메시지는 압축되지 않고 요약 뒤에 그대로 남습니다. 0으로 설정하면 모든 내용을 압축하고 프롬프트 캐시를 가장 효율적으로 사용합니다. 대화가 너무 길어 압축할 수 없다면 더 많은 메시지를 남기세요.</string>
     <string name="chat_page_compress_not_enough_messages">압축할 메시지가 충분하지 않습니다. 유지할 메시지 수를 줄이세요.</string>
+    <string name="extensions_page_builder">확장 프로그램 빌더</string>
+    <string name="extensions_page_builder_desc">AI와 함께 맞춤 도구와 기능 만들기</string>
 </resources>
