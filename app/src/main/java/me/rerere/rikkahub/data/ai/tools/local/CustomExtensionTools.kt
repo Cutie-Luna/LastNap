@@ -8,6 +8,7 @@ import me.rerere.ai.core.Tool
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.ExtensionPermission
+import me.rerere.rikkahub.data.model.extensionSha256
 
 private const val MAX_EXTENSION_NAME_LENGTH = 80
 private const val MAX_EXTENSION_DESCRIPTION_LENGTH = 2_000
@@ -16,7 +17,7 @@ private const val MAX_EXTENSION_CODE_LENGTH = 64_000
 private const val MAX_EXTENSION_INPUT_LENGTH = 64 * 1024
 
 /**
- * Creates isolated JavaScript-backed tools from enabled user extensions.
+ * Creates isolated JavaScript-backed tools from enabled, successfully tested extensions.
  *
  * Extensions receive only their JSON input. QuickJS has no Android, filesystem,
  * network, DOM, or Node bindings; each invocation gets a fresh bounded runtime.
@@ -27,6 +28,7 @@ internal fun createCustomExtensionTools(
     .filter { it.enabled && it.permission != ExtensionPermission.DISABLED }
     .filter { it.name.isNotBlank() && it.implementation.isNotBlank() }
     .filter { it.implementation.length <= MAX_EXTENSION_CODE_LENGTH }
+    .filter { it.testedImplementationHash == it.implementation.extensionSha256() }
     .mapNotNull { extension ->
         val safeId = extension.id.filter { it.isLetterOrDigit() }.take(32)
         if (safeId.isBlank()) return@mapNotNull null
