@@ -272,7 +272,7 @@ fun ExtensionBuilderPage(
                         showEditor = false
                     },
                 ) {
-                    Text(stringResource(R.string.save))
+                    Text(stringResource(R.string.extension_builder_page_save))
                 }
             },
             dismissButton = {
