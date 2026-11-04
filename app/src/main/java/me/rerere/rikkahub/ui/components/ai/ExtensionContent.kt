@@ -33,6 +33,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlin.uuid.Uuid
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.Link01
@@ -139,9 +141,17 @@ fun CustomExtensionsContent(
     onManage: (() -> Unit)? = null,
 ) {
     ExtensionList(items = extensions, modifier = modifier, contentPadding = contentPadding, onManage = onManage, key = { it.id }) { extension, shapes ->
-        val ready = extension.enabled && extension.permission != ExtensionPermission.DISABLED && extension.implementation.isNotBlank() && extension.testedImplementationHash == extension.implementation.extensionSha256()
+        val schemaIsValid = extension.inputSchema.length <= 16_000 && runCatching {
+            Json.parseToJsonElement(extension.inputSchema).jsonObject["type"]?.toString() == "\"object\""
+        }.getOrDefault(false)
+        val ready = extension.enabled &&
+            extension.permission != ExtensionPermission.DISABLED &&
+            extension.implementation.isNotBlank() &&
+            extension.testedImplementationHash == extension.implementation.extensionSha256() &&
+            schemaIsValid
         val status = when {
             ready -> ""
+            !schemaIsValid -> stringResource(R.string.extension_content_invalid_input_schema)
             !extension.enabled -> "Not enabled in Tool Builder"
             extension.permission == ExtensionPermission.DISABLED -> "Permission disabled"
             else -> "Needs a successful test"
