@@ -61,8 +61,29 @@ This file preserves the agreed product requirements and implementation order so 
 - [x] Added custom input-schema storage, validation, and runtime exposure. Invalid or oversized schemas are not exposed as callable tools.
 - [x] Added Simple and Advanced Tool Builder modes. Simple mode accepts copy-ready instructions, input schema, implementation, and example input drafted by an assistant with Tool Creator enabled; Advanced mode exposes the technical fields. Both use the same sandbox and test-before-enable gate.
 - [x] Added a direct Tool Builder shortcut from the assistant's custom-tools tab.
-- [x] The adaptive launcher icon change from the preceding commit remains in place; user artwork was not redrawn or replaced.
+- [x] Restored the LastNap cat artwork as both launcher and round icon (`@drawable/appicon`); kept the existing white `@drawable/noticon` for notification small icons.
 - [x] Unit tests, debug APK assembly/upload, and Android lint all passed in GitHub Actions run [#41888159799](https://github.com/Cutie-Luna/LastNap/actions/runs/41888159799) for commit `8a44de73`. The run produced `lastnap-debug-apk`, `lastnap-unit-test-reports`, and `lastnap-lint-reports` artifacts.
-- [ ] Navigation-delay profiling remains unverified. The repository has a physical-device macrobenchmark for cold startup, but no navigation-transition trace has been captured. Do not claim a performance fix until the target device is profiled.
+- [x] Replaced full-screen horizontal slide/scale navigation transitions with short 120 ms fade-in / 100 ms fade-out transitions to reduce avoidable transition work on lower-end devices.
+- [ ] The target itel P55 has not been profiled with Android Macrobenchmark/Perfetto. Navigation transitions are lighter now, but cold-start and page-entry latency still need measurement on the actual device; don't claim a fully measured performance fix.
+
+Implementation remains on `feature/extensions-foundation`; `master` was not changed.
+## Follow-up release and performance work — 2026-11-04
+
+- [x] Compared the app with upstream RikkaHub 3.1.1 (`https://github.com/rikkahub/rikkahub/releases/tag/3.1.1`). Upstream ARM64 APK: 16,250,504 bytes. LastNap 3.1.2 signed ARM64 APK: 16,126,412 bytes (15.38 MiB), about 124 KB smaller.
+- [x] Confirmed R8 release optimization, ARM64-only native libraries, and committed Baseline Profile assets are present in the release APK (`assets/dexopt/baseline.prof` and `baseline.profm`).
+- [x] Verified the packaged resource table contains both `appicon` and `noticon`; the manifest now points to the LastNap artwork, while notification construction continues using `R.drawable.noticon`.
+- [x] Built and signed `LastNap-3.1.2-arm64-v8a.apk`, application ID `com.lastnap.app`, version code 195, using Android APK Signature Schemes v2 and v3. `apksigner verify` passed. APK SHA-256: `fce2bce0b67a565ca8dafb98ea16851f0d092ced10f7a67188b67af200e72d27`.
+- [x] Release CI run [#41897065669](https://github.com/Cutie-Luna/LastNap/actions/runs/41897065669) passed release assembly, ARM64 packaging, and R8 mapping upload. The corresponding verification run [#41897065076](https://github.com/Cutie-Luna/LastNap/actions/runs/41897065076) passed unit tests, debug APK assembly, and lint.
+- [x] Exported Android `apksigner`/`zipalign` in helper workflow run [#41897646099](https://github.com/Cutie-Luna/LastNap/actions/runs/41897646099) so the personal release could be signed locally without committing a private key.
+- [x] Created a new personal signing keystore locally (not in the repository). Certificate SHA-256: `633bcb19f5dab86c5bf253b107458b4a9eb8bc332538d8fcdf28cbd644007787`. Keep the JKS and its separate password file safe; every future release update must use this same key. If lost, a differently signed APK cannot update this install in-place.
+- [ ] Have the user test 3.1.2 on the itel P55 and report cold-open time, first screen-ready time, and which page transitions still stutter. Then use a release Macrobenchmark/Perfetto trace on a real device before changing startup initialization or Compose screens.
+- [ ] Consider regenerating the Baseline Profile on a representative lower-end device for cold start, conversation opening, history, settings, assistant detail, and extension builder. The committed upstream profile exists and is packaged, but it has not yet been re-recorded for LastNap's changed startup/navigation paths.
+
+## Future small-update workflow
+
+- Prefer isolated small changes over broad refactors. For performance-related changes, measure before and after on the target device.
+- Keep the same application ID (`com.lastnap.app`) and monotonically increase versionCode for each release.
+- Sign every future personal update with the same private `LastNap-3.1.2-signing.jks` (alias `lastnap-release`). Do not commit the keystore or password to GitHub. Retain a separate backup of both.
+- Keep releases ARM64-only for this device; preserve R8, locale filtering, unused-class exclusions, and Baseline Profile unless measurements justify a change.
 
 Implementation remains on `feature/extensions-foundation`; `master` was not changed.
