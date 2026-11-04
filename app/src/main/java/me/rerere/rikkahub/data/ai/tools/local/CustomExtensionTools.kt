@@ -13,6 +13,7 @@ private const val MAX_EXTENSION_NAME_LENGTH = 80
 private const val MAX_EXTENSION_DESCRIPTION_LENGTH = 2_000
 private const val MAX_EXTENSION_SKILL_LENGTH = 16_000
 private const val MAX_EXTENSION_CODE_LENGTH = 64_000
+private const val MAX_EXTENSION_INPUT_LENGTH = 64 * 1024
 
 /**
  * Creates isolated JavaScript-backed tools from enabled user extensions.
@@ -72,6 +73,7 @@ internal fun createCustomExtensionTools(
             execute = { arguments ->
                 val input = arguments.jsonObject["input"]
                     ?: error("The input object is required")
+                require(input.toString().length <= MAX_EXTENSION_INPUT_LENGTH) { "Extension input exceeds the 64 KB limit" }
                 val code = "const input = $input;\n" + implementation
                 listOf(UIMessagePart.Text(evaluateJavascript(code)))
             },
