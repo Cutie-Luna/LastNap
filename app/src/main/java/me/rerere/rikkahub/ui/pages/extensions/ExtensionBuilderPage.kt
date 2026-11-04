@@ -75,7 +75,7 @@ fun ExtensionBuilderPage(
     var permissionName by rememberSaveable { mutableStateOf(ExtensionPermission.ASK_EVERY_TIME.name) }
     val permission = ExtensionPermission.valueOf(permissionName)
     val codeIsTested = implementation.isNotBlank() && testedHash == implementation.extensionSha256()
-    val inputSchemaIsValid = runCatching { Json.parseToJsonElement(inputSchema).jsonObject["type"]?.toString() == "\"object\"" }.getOrDefault(false)
+    val inputSchemaIsValid = inputSchema.length <= 16_000 && runCatching { Json.parseToJsonElement(inputSchema).jsonObject["type"]?.toString() == "\"object\"" }.getOrDefault(false)
 
     fun startNewDraft() {
         editingId = null
