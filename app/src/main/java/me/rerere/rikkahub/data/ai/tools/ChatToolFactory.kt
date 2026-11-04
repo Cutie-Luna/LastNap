@@ -9,6 +9,7 @@ import me.rerere.ai.provider.Model
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.tools.local.LocalTools
+import me.rerere.rikkahub.data.ai.tools.local.createCustomExtensionTools
 import me.rerere.rikkahub.data.datastore.Settings
 import me.rerere.rikkahub.data.files.FileFolders
 import me.rerere.rikkahub.data.model.Assistant
@@ -60,6 +61,7 @@ class ChatToolFactory(
                 addAll(createSearchTools(settings))
             }
             addAll(localTools.getTools(assistant.localTools))
+            addAll(createCustomExtensionTools(settings.customExtensions))
             if (assistant.enableRecentChatsReference) {
                 addAll(createConversationTools(conversationRepository, assistant.id))
             }
