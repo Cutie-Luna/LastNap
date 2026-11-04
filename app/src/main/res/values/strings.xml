@@ -1815,6 +1815,7 @@
   <string name="extension_builder_page_input_schema">Input schema (JSON)</string>
   <string name="extension_builder_page_generated_input_schema">Input shape from your assistant</string>
   <string name="extension_builder_page_input_schema_help">Define the object fields the model should send inside input.</string>
+  <string name="extension_builder_page_input_schema_invalid">Enter a valid JSON Schema object with type set to object.</string>
   <string name="extension_builder_page_generated_input_schema_help">Paste the input shape your assistant generated. You do not need to write JSON yourself.</string>
   <string name="extension_builder_page_generated_implementation_help">Paste the implementation drafted by your assistant. It will still be tested in the same isolated sandbox before it can be enabled.</string>
   <string name="extension_builder_page_generated_test_input">Example input from your assistant</string>

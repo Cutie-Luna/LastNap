@@ -65,6 +65,7 @@ fun ExtensionBuilderPage(
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var skill by rememberSaveable { mutableStateOf("") }
+    var inputSchema by rememberSaveable { mutableStateOf("{\"type\":\"object\",\"properties\":{},\"additionalProperties\":true}") }
     var implementation by rememberSaveable { mutableStateOf("") }
     var testInput by rememberSaveable { mutableStateOf("{}") }
     var testResult by rememberSaveable { mutableStateOf("") }
@@ -82,6 +83,7 @@ fun ExtensionBuilderPage(
         name = ""
         description = ""
         skill = ""
+        inputSchema = "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":true}"
         implementation = ""
         testInput = "{}"
         testResult = ""
@@ -97,6 +99,7 @@ fun ExtensionBuilderPage(
         name = extension.name
         description = extension.description
         skill = extension.skill
+        inputSchema = extension.inputSchema
         implementation = extension.implementation
         testInput = "{}"
         testResult = ""
@@ -251,6 +254,26 @@ fun ExtensionBuilderPage(
                     }
                     item {
                         OutlinedTextField(
+                            value = inputSchema,
+                            onValueChange = {
+                                if (it != inputSchema) {
+                                    inputSchema = it
+                                    testedHash = null
+                                    enabled = false
+                                    testResult = ""
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = !inputSchemaIsValid,
+                            label = { Text(stringResource(if (builderMode == "SIMPLE") R.string.extension_builder_page_generated_input_schema else R.string.extension_builder_page_input_schema)) },
+                            minLines = 3,
+                            supportingText = {
+                                Text(stringResource(if (!inputSchemaIsValid) R.string.extension_builder_page_input_schema_invalid else if (builderMode == "SIMPLE") R.string.extension_builder_page_generated_input_schema_help else R.string.extension_builder_page_input_schema_help))
+                            },
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
                             value = implementation,
                             onValueChange = {
                                 if (it != implementation) {
@@ -400,6 +423,7 @@ fun ExtensionBuilderPage(
                             name = name.trim(),
                             description = description.trim(),
                             skill = skill,
+                            inputSchema = inputSchema,
                             implementation = implementation,
                             permission = permission,
                             enabled = enabled && codeIsTested && inputSchemaIsValid,
