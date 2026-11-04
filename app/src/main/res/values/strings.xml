@@ -1805,13 +1805,13 @@
   <string name="extension_builder_page_skill">Assistant instructions (Skill)</string>
   <string name="extension_builder_page_skill_help">Explain when and how the assistant should use this extension.</string>
   <string name="extension_builder_page_implementation">Implementation</string>
-  <string name="extension_builder_page_implementation_help">Store a code or workflow draft here. It is not executed yet.</string>
+  <string name="extension_builder_page_implementation_help">JavaScript (ES2020) is the first supported implementation type. Enabled scripts run in an isolated QuickJS sandbox without Android, filesystem, network, DOM, or Node.js access. Other workflow and app integrations will come later.</string>
   <string name="extension_builder_page_permission">Permission preference</string>
   <string name="extension_builder_page_permission_always">Always allow</string>
   <string name="extension_builder_page_permission_ask">Ask every time (recommended)</string>
   <string name="extension_builder_page_permission_session">Allow this session (currently asks each time)</string>
   <string name="extension_builder_page_permission_disabled">Disabled</string>
-  <string name="extension_builder_page_not_executable_note">Extensions remain disabled drafts. Saving code here does not run it or grant device access. Testing and a safe execution system will come before activation.</string>
+  <string name="extension_builder_page_not_executable_note">Drafts stay disabled until you explicitly enable them. JavaScript execution is isolated and time- and memory-limited; scripts cannot directly access Android, files, or the network. Review code carefully before enabling it.</string>
 
   <string name="extension_builder_page_save">Save draft</string>
 </resources>
