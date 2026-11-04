@@ -181,6 +181,8 @@ fun AssistantExtensionsPage(id: String) {
                         if (settings.customExtensions.isEmpty()) {
                             ExtensionEmptyState(
                                 message = stringResource(R.string.assistant_extensions_page_empty_custom_tools),
+                                buttonText = stringResource(R.string.assistant_extensions_page_goto_tool_builder),
+                                onAction = { navController.navigate(Screen.ExtensionBuilder) },
                                 icon = ExtensionTab.CUSTOM_TOOLS.icon,
                             )
                         } else {

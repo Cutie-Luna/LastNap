@@ -23,6 +23,7 @@
   <string name="assistant_extensions_page_empty_skills">No skills available, install one in Extensions</string>
   <string name="assistant_extensions_page_empty_custom_tools">No custom tools yet. Create one in Tool Builder.</string>
   <string name="assistant_extensions_page_goto_extensions">Go to Extensions</string>
+  <string name="assistant_extensions_page_goto_tool_builder">Open Tool Builder</string>
   <string name="assistant_extensions_page_goto_prompts">Go to Prompts</string>
   <string name="assistant_extensions_page_title">Extensions</string>
   <string name="assistant_importer_import_failed">Import failed</string>
