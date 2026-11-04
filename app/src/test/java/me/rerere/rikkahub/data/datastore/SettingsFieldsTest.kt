@@ -43,7 +43,9 @@ class SettingsFieldsTest {
 
         val preferences = mutablePreferencesOf().apply { putSettings(SAMPLE) }
 
-        assertEquals(SAMPLE, preferences.toSettings())
+        val actual = preferences.toSettings()
+        val mismatchedFields = SETTINGS_FIELDS.filter { it.changed(SAMPLE, actual) }.map { it.property.name }
+        assertEquals("Settings fields did not round-trip: $mismatchedFields", SAMPLE, actual)
     }
 
     // 这里的 key 名和取值就是用户盘上的格式，改动它们等于丢掉已有的设置
@@ -216,6 +218,7 @@ private val STORED_KEYS = setOf(
     "mode_injections",
     "lorebooks",
     "quick_messages",
+    "custom_extensions",
     "backup_reminder_config",
     "sponsor_alert_dismissed_at",
 )
