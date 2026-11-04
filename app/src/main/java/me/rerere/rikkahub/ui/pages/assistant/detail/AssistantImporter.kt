@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -64,6 +65,7 @@ private fun SillyTavernImporter(
     onImport: (Assistant) -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val filesManager: FilesManager = koinInject()
     val scope = rememberCoroutineScope()
     val toaster = LocalToaster.current
@@ -86,7 +88,7 @@ private fun SillyTavernImporter(
                         )
                     }.onFailure { exception ->
                         exception.printStackTrace()
-                        toaster.show(exception.message ?: context.getString(R.string.assistant_importer_import_failed))
+                        toaster.show(exception.message ?: resources.getString(R.string.assistant_importer_import_failed))
                     }
                 } finally {
                     isLoading = false
@@ -112,7 +114,7 @@ private fun SillyTavernImporter(
                         )
                     }.onFailure { exception ->
                         exception.printStackTrace()
-                        toaster.show(exception.message ?: context.getString(R.string.assistant_importer_import_failed))
+                        toaster.show(exception.message ?: resources.getString(R.string.assistant_importer_import_failed))
                     }
                 } finally {
                     isLoading = false
@@ -157,9 +159,9 @@ private class CharaCardV2Parser : TavernCardParser {
     override val specName: String = "chara_card_v2"
 
     override fun parse(context: Context, json: JsonObject, background: String?): Assistant {
-        val data = json["data"]?.jsonObject ?: error(context.getString(R.string.assistant_importer_missing_data_field))
+        val data = json["data"]?.jsonObject ?: error(resources.getString(R.string.assistant_importer_missing_data_field))
         val name = data["name"]?.jsonPrimitiveOrNull?.contentOrNull
-            ?: error(context.getString(R.string.assistant_importer_missing_name_field))
+            ?: error(resources.getString(R.string.assistant_importer_missing_name_field))
         val firstMessage = data["first_mes"]?.jsonPrimitiveOrNull?.contentOrNull
         val system = data["system_prompt"]?.jsonPrimitiveOrNull?.contentOrNull
         val description = data["description"]?.jsonPrimitiveOrNull?.contentOrNull
@@ -196,8 +198,8 @@ private class CharaCardV3Parser : TavernCardParser {
     override val specName: String = "chara_card_v3"
 
     override fun parse(context: Context, json: JsonObject, background: String?): Assistant {
-        val data = json["data"]?.jsonObject ?: error(context.getString(R.string.assistant_importer_missing_data_field))
-        val name = data["name"]?.jsonPrimitiveOrNull?.contentOrNull ?: error(context.getString(R.string.assistant_importer_missing_name_field))
+        val data = json["data"]?.jsonObject ?: error(resources.getString(R.string.assistant_importer_missing_data_field))
+        val name = data["name"]?.jsonPrimitiveOrNull?.contentOrNull ?: error(resources.getString(R.string.assistant_importer_missing_name_field))
         val description = data["description"]?.jsonPrimitiveOrNull?.contentOrNull
         val firstMessage = data["first_mes"]?.jsonPrimitiveOrNull?.contentOrNull
         val system = data["system_prompt"]?.jsonPrimitiveOrNull?.contentOrNull
@@ -241,8 +243,8 @@ private fun parseAssistantFromJson(
     background: String?,
 ): Assistant {
     val spec = json["spec"]?.jsonPrimitive?.contentOrNull
-        ?: error(context.getString(R.string.assistant_importer_missing_spec_field))
-    val parser = TAVERN_PARSERS[spec] ?: error(context.getString(R.string.assistant_importer_unsupported_spec, spec))
+        ?: error(resources.getString(R.string.assistant_importer_missing_spec_field))
+    val parser = TAVERN_PARSERS[spec] ?: error(resources.getString(R.string.assistant_importer_unsupported_spec, spec))
     return parser.parse(context = context, json = json, background = background)
 }
 
@@ -271,11 +273,11 @@ private suspend fun importAssistantFromUri(
                 "application/json" -> {
                     val json = context.contentResolver.openInputStream(uri)?.bufferedReader()
                         .use { it?.readText() }
-                        ?: error(context.getString(R.string.assistant_importer_read_json_failed))
+                        ?: error(resources.getString(R.string.assistant_importer_read_json_failed))
                     json to null
                 }
 
-                else -> error(context.getString(R.string.assistant_importer_unsupported_file_type, mime ?: "unknown"))
+                else -> error(resources.getString(R.string.assistant_importer_unsupported_file_type, mime ?: "unknown"))
             }
         }
         val json = Json.parseToJsonElement(jsonString).jsonObject
@@ -284,7 +286,7 @@ private suspend fun importAssistantFromUri(
     } catch (exception: Exception) {
         exception.printStackTrace()
         toaster.show(
-            message = exception.message ?: context.getString(R.string.assistant_importer_import_failed),
+            message = exception.message ?: resources.getString(R.string.assistant_importer_import_failed),
             type = ToastType.Error
         )
     }

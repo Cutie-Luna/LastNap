@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,6 +112,7 @@ fun ChatDrawerContent(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val toaster = LocalToaster.current
     val repo = koinInject<ConversationRepository>()
 
@@ -676,7 +678,7 @@ fun ChatDrawerContent(
                             folderToDelete = null
                             conversations.refresh()
                         } else {
-                            toaster.show(context.getString(R.string.chat_page_delete_folder_generating), type = ToastType.Warning)
+                            toaster.show(resources.getString(R.string.chat_page_delete_folder_generating), type = ToastType.Warning)
                         }
                     }
                 ) { Text(stringResource(R.string.chat_page_delete)) }
