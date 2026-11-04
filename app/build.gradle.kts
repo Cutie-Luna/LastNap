@@ -73,7 +73,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Use the repository keystore when present. Otherwise CI creates an
+            // unsigned, aligned release for signing privately after download.
+            signingConfig = signingConfigs.getByName("release").takeIf {
+                it.storeFile?.isFile == true
+            }
             optimization {
                 enable = true
             }
