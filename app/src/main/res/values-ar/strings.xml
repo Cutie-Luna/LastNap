@@ -1814,4 +1814,7 @@
   <string name="extension_builder_page_test_passed">نجح الاختبار</string>
   <string name="extension_builder_page_test_result">مخرجات الاختبار: %1$s</string>
   <string name="extension_builder_page_enable">تفعيل هذا الامتداد</string>
+    <string name="chat_page_compress_keep_recent">الاحتفاظ بالرسائل الأخيرة</string>
+    <string name="chat_page_compress_keep_recent_desc">لا يتم ضغط هذه الرسائل، وتبقى بعد الملخص. يؤدي اختيار 0 إلى ضغط كل شيء والاستفادة القصوى من ذاكرة التخزين المؤقت للموجّه؛ إذا كانت المحادثة طويلة جدًا بحيث يتعذر ضغطها، فاحتفظ بعدد أكبر من الرسائل.</string>
+    <string name="chat_page_compress_not_enough_messages">لا توجد رسائل كافية لضغطها. قلّل عدد الرسائل المطلوب الاحتفاظ بها.</string>
 </resources>
