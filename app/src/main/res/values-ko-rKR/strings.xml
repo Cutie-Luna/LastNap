@@ -1822,4 +1822,21 @@ mDNS 주소: .local 호스트네임을 사용하며, IP를 몰라도 같은 네�
     <string name="chat_page_compress_not_enough_messages">압축할 메시지가 충분하지 않습니다. 유지할 메시지 수를 줄이세요.</string>
     <string name="extensions_page_builder">확장 프로그램 빌더</string>
     <string name="extensions_page_builder_desc">AI와 함께 맞춤 도구와 기능 만들기</string>
+    <string name="assistant_extensions_page_empty_custom_tools">아직 사용자 지정 도구가 없습니다. 도구 빌더에서 만들어 보세요.</string>
+    <string name="assistant_extensions_page_goto_tool_builder">도구 빌더 열기</string>
+    <string name="extension_content_invalid_input_schema">입력 스키마를 수정해야 합니다</string>
+    <string name="extension_selector_custom_tools_empty">사용할 수 있는 사용자 지정 도구가 없습니다. 도구 빌더에서 만들어 보세요.</string>
+    <string name="extension_selector_tab_custom_tools">사용자 지정 도구</string>
+    <string name="extension_builder_page_simple_mode">간단히</string>
+    <string name="extension_builder_page_advanced_mode">고급</string>
+    <string name="extension_builder_page_simple_help">지침 입력란에 도구가 해야 할 일을 설명하세요. Tool Creator 스킬을 활성화한 어시스턴트에게 입력 스키마, 구현 코드, 예제 입력을 작성해 달라고 한 다음 각 입력란에 붙여 넣으세요. 코드나 JSON을 직접 작성할 필요는 없습니다.</string>
+    <string name="extension_builder_page_generated_implementation">AI가 생성한 구현 코드</string>
+    <string name="extension_builder_page_input_schema">입력 스키마 (JSON)</string>
+    <string name="extension_builder_page_generated_input_schema">어시스턴트가 만든 입력 형식</string>
+    <string name="extension_builder_page_input_schema_help">모델이 input 안에 전달해야 하는 객체 필드를 정의하세요.</string>
+    <string name="extension_builder_page_input_schema_invalid">type이 object인 16KB 이하의 올바른 JSON Schema 객체를 입력하세요.</string>
+    <string name="extension_builder_page_generated_input_schema_help">어시스턴트가 만든 입력 형식을 붙여 넣으세요. JSON을 직접 작성할 필요는 없습니다.</string>
+    <string name="extension_builder_page_generated_implementation_help">어시스턴트가 만든 구현 코드를 붙여 넣으세요. 활성화하기 전에 격리된 샌드박스에서 테스트됩니다.</string>
+    <string name="extension_builder_page_generated_test_input">어시스턴트가 만든 예제 입력</string>
+    <string name="extension_builder_page_generated_test_input_help">어시스턴트가 만든 예제 입력을 붙여 넣으세요. JSON을 직접 작성할 필요는 없습니다.</string>
 </resources>

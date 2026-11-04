@@ -1822,4 +1822,21 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
     <string name="extension_builder_page_enable">启用此扩展</string>
     <string name="extensions_page_builder">扩展构建器</string>
     <string name="extensions_page_builder_desc">与 AI 一起构建自定义工具和功能</string>
+    <string name="assistant_extensions_page_empty_custom_tools">还没有自定义工具。请在工具构建器中创建。</string>
+    <string name="assistant_extensions_page_goto_tool_builder">打开工具构建器</string>
+    <string name="extension_content_invalid_input_schema">需要修正输入架构</string>
+    <string name="extension_selector_custom_tools_empty">没有可用的自定义工具。请在工具构建器中创建。</string>
+    <string name="extension_selector_tab_custom_tools">自定义工具</string>
+    <string name="extension_builder_page_simple_mode">简单</string>
+    <string name="extension_builder_page_advanced_mode">高级</string>
+    <string name="extension_builder_page_simple_help">在说明栏中描述工具需要完成的任务。请启用了 Tool Creator 技能的助手生成输入架构、实现代码和示例输入，然后将结果粘贴到对应字段。你无需自己编写代码或 JSON。</string>
+    <string name="extension_builder_page_generated_implementation">AI 生成的实现代码</string>
+    <string name="extension_builder_page_input_schema">输入架构 (JSON)</string>
+    <string name="extension_builder_page_generated_input_schema">助手生成的输入格式</string>
+    <string name="extension_builder_page_input_schema_help">定义模型应在 input 中发送的对象字段。</string>
+    <string name="extension_builder_page_input_schema_invalid">请输入小于 16 KB 且 type 为 object 的有效 JSON Schema 对象。</string>
+    <string name="extension_builder_page_generated_input_schema_help">粘贴助手生成的输入格式。你无需自己编写 JSON。</string>
+    <string name="extension_builder_page_generated_implementation_help">粘贴助手生成的实现代码。启用前仍会在隔离沙盒中进行测试。</string>
+    <string name="extension_builder_page_generated_test_input">助手生成的示例输入</string>
+    <string name="extension_builder_page_generated_test_input_help">粘贴助手生成的示例输入。你无需自己编写 JSON。</string>
 </resources>

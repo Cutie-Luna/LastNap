@@ -1819,4 +1819,21 @@
   <string name="extension_builder_page_enable">Diese Erweiterung aktivieren</string>
     <string name="extensions_page_builder">Erweiterungs-Editor</string>
     <string name="extensions_page_builder_desc">Erstelle gemeinsam mit KI eigene Tools und Funktionen</string>
+    <string name="assistant_extensions_page_empty_custom_tools">Noch keine benutzerdefinierten Tools. Erstelle eines im Tool-Builder.</string>
+    <string name="assistant_extensions_page_goto_tool_builder">Tool-Builder öffnen</string>
+    <string name="extension_content_invalid_input_schema">Das Eingabeschema muss korrigiert werden</string>
+    <string name="extension_selector_custom_tools_empty">Keine benutzerdefinierten Tools verfügbar. Erstelle eines im Tool-Builder.</string>
+    <string name="extension_selector_tab_custom_tools">Eigene Tools</string>
+    <string name="extension_builder_page_simple_mode">Einfach</string>
+    <string name="extension_builder_page_advanced_mode">Erweitert</string>
+    <string name="extension_builder_page_simple_help">Beschreibe im Anweisungsfeld, was das Tool tun soll. Bitte einen Assistenten mit aktiviertem Tool-Creator-Skill, Eingabeschema, Implementierung und Beispiel-Eingabe zu entwerfen, und füge die Ergebnisse in die Felder ein. Du musst weder Code noch JSON selbst schreiben.</string>
+    <string name="extension_builder_page_generated_implementation">Von der KI erstellte Implementierung</string>
+    <string name="extension_builder_page_input_schema">Eingabeschema (JSON)</string>
+    <string name="extension_builder_page_generated_input_schema">Eingabeform von deinem Assistenten</string>
+    <string name="extension_builder_page_input_schema_help">Lege die Objektfelder fest, die das Modell innerhalb von input senden soll.</string>
+    <string name="extension_builder_page_input_schema_invalid">Gib ein gültiges JSON-Schema-Objekt unter 16 KB mit type = object ein.</string>
+    <string name="extension_builder_page_generated_input_schema_help">Füge das von deinem Assistenten erstellte Eingabeschema ein. Du musst JSON nicht selbst schreiben.</string>
+    <string name="extension_builder_page_generated_implementation_help">Füge die von deinem Assistenten erstellte Implementierung ein. Vor der Aktivierung wird sie weiterhin in einer isolierten Sandbox getestet.</string>
+    <string name="extension_builder_page_generated_test_input">Beispieleingabe von deinem Assistenten</string>
+    <string name="extension_builder_page_generated_test_input_help">Füge die von deinem Assistenten erstellte Beispieleingabe ein. Du musst JSON nicht selbst schreiben.</string>
 </resources>

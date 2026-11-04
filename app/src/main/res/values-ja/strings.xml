@@ -1822,4 +1822,21 @@ mDNSアドレス: .localホスト名を使用し、IPを知らなくても同じ
     <string name="chat_page_compress_not_enough_messages">圧縮するメッセージが足りません。残すメッセージ数を減らしてください。</string>
     <string name="extensions_page_builder">拡張機能ビルダー</string>
     <string name="extensions_page_builder_desc">AIと一緒にカスタムツールや機能を作成</string>
+    <string name="assistant_extensions_page_empty_custom_tools">カスタムツールはまだありません。ツールビルダーで作成してください。</string>
+    <string name="assistant_extensions_page_goto_tool_builder">ツールビルダーを開く</string>
+    <string name="extension_content_invalid_input_schema">入力スキーマを修正してください</string>
+    <string name="extension_selector_custom_tools_empty">利用できるカスタムツールがありません。ツールビルダーで作成してください。</string>
+    <string name="extension_selector_tab_custom_tools">カスタムツール</string>
+    <string name="extension_builder_page_simple_mode">シンプル</string>
+    <string name="extension_builder_page_advanced_mode">詳細</string>
+    <string name="extension_builder_page_simple_help">指示欄にツールの動作を説明してください。Tool Creator スキルを有効にしたアシスタントに入力スキーマ、実装、入力例を作成してもらい、それぞれの欄に貼り付けてください。コードや JSON を自分で書く必要はありません。</string>
+    <string name="extension_builder_page_generated_implementation">AI が生成した実装</string>
+    <string name="extension_builder_page_input_schema">入力スキーマ (JSON)</string>
+    <string name="extension_builder_page_generated_input_schema">アシスタントが作成した入力形式</string>
+    <string name="extension_builder_page_input_schema_help">モデルが input 内で送信するオブジェクトのフィールドを定義します。</string>
+    <string name="extension_builder_page_input_schema_invalid">type が object の、16 KB 未満の有効な JSON Schema オブジェクトを入力してください。</string>
+    <string name="extension_builder_page_generated_input_schema_help">アシスタントが作成した入力形式を貼り付けてください。JSON を自分で書く必要はありません。</string>
+    <string name="extension_builder_page_generated_implementation_help">アシスタントが作成した実装を貼り付けてください。有効化する前に隔離されたサンドボックスでテストされます。</string>
+    <string name="extension_builder_page_generated_test_input">アシスタントが作成した入力例</string>
+    <string name="extension_builder_page_generated_test_input_help">アシスタントが作成した入力例を貼り付けてください。JSON を自分で書く必要はありません。</string>
 </resources>

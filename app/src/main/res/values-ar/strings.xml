@@ -1819,4 +1819,21 @@
     <string name="chat_page_compress_not_enough_messages">لا توجد رسائل كافية لضغطها. قلّل عدد الرسائل المطلوب الاحتفاظ بها.</string>
     <string name="extensions_page_builder">منشئ الإضافات</string>
     <string name="extensions_page_builder_desc">أنشئ أدوات وميزات مخصصة بمساعدة الذكاء الاصطناعي</string>
+    <string name="assistant_extensions_page_empty_custom_tools">لا توجد أدوات مخصصة بعد. أنشئ واحدة في منشئ الأدوات.</string>
+    <string name="assistant_extensions_page_goto_tool_builder">فتح منشئ الأدوات</string>
+    <string name="extension_content_invalid_input_schema">يحتاج مخطط الإدخال إلى تصحيح</string>
+    <string name="extension_selector_custom_tools_empty">لا توجد أدوات مخصصة متاحة. أنشئ واحدة في منشئ الأدوات.</string>
+    <string name="extension_selector_tab_custom_tools">أدوات مخصصة</string>
+    <string name="extension_builder_page_simple_mode">بسيط</string>
+    <string name="extension_builder_page_advanced_mode">متقدم</string>
+    <string name="extension_builder_page_simple_help">صف ما ينبغي أن تفعله الأداة في حقل التعليمات. اطلب من مساعد مفعّل لديه مهارة منشئ الأدوات إعداد مخطط الإدخال والتنفيذ ومثال الإدخال، ثم الصقها في الحقول. لا تحتاج إلى كتابة الشيفرة أو JSON بنفسك.</string>
+    <string name="extension_builder_page_generated_implementation">التنفيذ الذي أنشأه الذكاء الاصطناعي</string>
+    <string name="extension_builder_page_input_schema">مخطط الإدخال (JSON)</string>
+    <string name="extension_builder_page_generated_input_schema">شكل الإدخال من مساعدك</string>
+    <string name="extension_builder_page_input_schema_help">حدّد حقول الكائن التي ينبغي للنموذج إرسالها داخل input.</string>
+    <string name="extension_builder_page_input_schema_invalid">أدخل كائن JSON Schema صالحًا بحجم أقل من 16 كيلوبايت واجعل type يساوي object.</string>
+    <string name="extension_builder_page_generated_input_schema_help">الصق شكل الإدخال الذي أنشأه مساعدك. لا تحتاج إلى كتابة JSON بنفسك.</string>
+    <string name="extension_builder_page_generated_implementation_help">الصق التنفيذ الذي أعدّه مساعدك. سيظل خاضعًا للاختبار في بيئة معزولة قبل تفعيله.</string>
+    <string name="extension_builder_page_generated_test_input">مثال إدخال من مساعدك</string>
+    <string name="extension_builder_page_generated_test_input_help">الصق مثال الإدخال الذي أنشأه مساعدك. لا تحتاج إلى كتابة JSON بنفسك.</string>
 </resources>

@@ -1821,4 +1821,21 @@
     <string name="chat_page_compress_not_enough_messages">Недостаточно сообщений для сжатия. Уменьшите количество сообщений, которые нужно сохранить.</string>
     <string name="extensions_page_builder">Конструктор расширений</string>
     <string name="extensions_page_builder_desc">Создавайте собственные инструменты и функции вместе с ИИ</string>
+    <string name="assistant_extensions_page_empty_custom_tools">Пользовательских инструментов пока нет. Создайте инструмент в конструкторе.</string>
+    <string name="assistant_extensions_page_goto_tool_builder">Открыть конструктор инструментов</string>
+    <string name="extension_content_invalid_input_schema">Необходимо исправить схему входных данных</string>
+    <string name="extension_selector_custom_tools_empty">Нет доступных пользовательских инструментов. Создайте инструмент в конструкторе.</string>
+    <string name="extension_selector_tab_custom_tools">Свои инструменты</string>
+    <string name="extension_builder_page_simple_mode">Простой</string>
+    <string name="extension_builder_page_advanced_mode">Расширенный</string>
+    <string name="extension_builder_page_simple_help">Опишите в поле инструкций, что должен делать инструмент. Попросите ассистента с включённым навыком Tool Creator подготовить схему входных данных, реализацию и пример ввода, затем вставьте их в поля. Вам не нужно самостоятельно писать код или JSON.</string>
+    <string name="extension_builder_page_generated_implementation">Реализация, созданная ИИ</string>
+    <string name="extension_builder_page_input_schema">Схема входных данных (JSON)</string>
+    <string name="extension_builder_page_generated_input_schema">Форма входных данных от ассистента</string>
+    <string name="extension_builder_page_input_schema_help">Укажите поля объекта, которые модель должна передавать внутри input.</string>
+    <string name="extension_builder_page_input_schema_invalid">Введите корректный объект JSON Schema размером до 16 КБ с type = object.</string>
+    <string name="extension_builder_page_generated_input_schema_help">Вставьте форму входных данных, подготовленную ассистентом. Вам не нужно писать JSON самостоятельно.</string>
+    <string name="extension_builder_page_generated_implementation_help">Вставьте реализацию, подготовленную ассистентом. Перед включением она всё равно будет проверена в изолированной среде.</string>
+    <string name="extension_builder_page_generated_test_input">Пример входных данных от ассистента</string>
+    <string name="extension_builder_page_generated_test_input_help">Вставьте пример входных данных, подготовленный ассистентом. Вам не нужно писать JSON самостоятельно.</string>
 </resources>
