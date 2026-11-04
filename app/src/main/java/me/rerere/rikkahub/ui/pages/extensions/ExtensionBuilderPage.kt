@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
@@ -24,19 +25,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.parseToJsonElement
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.Add01
 import me.rerere.hugeicons.stroke.Puzzle
 import me.rerere.rikkahub.R
+import me.rerere.rikkahub.data.ai.tools.local.evaluateJavascript
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.ExtensionPermission
+import me.rerere.rikkahub.data.model.extensionSha256
 import me.rerere.rikkahub.ui.components.nav.BackButton
 import me.rerere.rikkahub.ui.components.ui.CardGroup
 import me.rerere.rikkahub.ui.components.ui.CardGroupIcon
@@ -58,8 +64,14 @@ fun ExtensionBuilderPage(
     var description by rememberSaveable { mutableStateOf("") }
     var skill by rememberSaveable { mutableStateOf("") }
     var implementation by rememberSaveable { mutableStateOf("") }
+    var testInput by rememberSaveable { mutableStateOf("{}") }
+    var testResult by rememberSaveable { mutableStateOf("") }
+    var testedHash by rememberSaveable { mutableStateOf<String?>(null) }
+    var enabled by rememberSaveable { mutableStateOf(false) }
+    var isTesting by rememberSaveable { mutableStateOf(false) }
     var permissionName by rememberSaveable { mutableStateOf(ExtensionPermission.ASK_EVERY_TIME.name) }
     val permission = ExtensionPermission.valueOf(permissionName)
+    val codeIsTested = implementation.isNotBlank() && testedHash == implementation.extensionSha256()
 
     fun startNewDraft() {
         editingId = null
@@ -67,6 +79,10 @@ fun ExtensionBuilderPage(
         description = ""
         skill = ""
         implementation = ""
+        testInput = "{}"
+        testResult = ""
+        testedHash = null
+        enabled = false
         permissionName = ExtensionPermission.ASK_EVERY_TIME.name
         showEditor = true
     }
@@ -77,6 +93,11 @@ fun ExtensionBuilderPage(
         description = extension.description
         skill = extension.skill
         implementation = extension.implementation
+        testInput = "{}"
+        testResult = ""
+        testedHash = extension.testedImplementationHash
+        enabled = extension.enabled &&
+            extension.testedImplementationHash == extension.implementation.extensionSha256()
         permissionName = extension.permission.name
         showEditor = true
     }
@@ -203,12 +224,95 @@ fun ExtensionBuilderPage(
                     item {
                         OutlinedTextField(
                             value = implementation,
-                            onValueChange = { implementation = it },
+                            onValueChange = {
+                                if (it != implementation) {
+                                    implementation = it
+                                    testedHash = null
+                                    enabled = false
+                                    testResult = ""
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.extension_builder_page_implementation)) },
                             minLines = 4,
                             supportingText = { Text(stringResource(R.string.extension_builder_page_implementation_help)) },
                         )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = testInput,
+                            onValueChange = { testInput = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.extension_builder_page_test_input)) },
+                            minLines = 2,
+                            supportingText = { Text(stringResource(R.string.extension_builder_page_test_input_help)) },
+                        )
+                    }
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                enabled = !isTesting && implementation.isNotBlank(),
+                                onClick = {
+                                    scope.launch {
+                                        isTesting = true
+                                        testedHash = null
+                                        enabled = false
+                                        testResult = ""
+                                        try {
+                                            val input = parseToJsonElement(testInput).jsonObject
+                                            val output = evaluateJavascript("const input = ${input};\\n$implementation")
+                                            val payload = parseToJsonElement(output).jsonObject
+                                            val error = payload["error"]
+                                            if (error != null) {
+                                                testResult = error.toString()
+                                            } else {
+                                                testedHash = implementation.extensionSha256()
+                                                testResult = payload["result"]?.toString() ?: output
+                                            }
+                                        } catch (error: Exception) {
+                                            testResult = error.message ?: "Test failed"
+                                        } finally {
+                                            isTesting = false
+                                        }
+                                    }
+                                },
+                            ) {
+                                Text(
+                                    if (isTesting) stringResource(R.string.extension_builder_page_testing)
+                                    else stringResource(R.string.extension_builder_page_run_test)
+                                )
+                            }
+                            if (codeIsTested) {
+                                Text(
+                                    stringResource(R.string.extension_builder_page_test_passed),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+                    if (testResult.isNotBlank()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.extension_builder_page_test_result, testResult),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (codeIsTested) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = enabled,
+                                enabled = codeIsTested,
+                                onCheckedChange = { enabled = it },
+                            )
+                            Text(
+                                stringResource(R.string.extension_builder_page_enable),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                     item {
                         Text(
@@ -219,7 +323,7 @@ fun ExtensionBuilderPage(
                     item {
                         Column {
                             ExtensionPermission.entries.forEach { option ->
-                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     RadioButton(
                                         selected = permission == option,
                                         onClick = { permissionName = option.name },
@@ -248,7 +352,7 @@ fun ExtensionBuilderPage(
             },
             confirmButton = {
                 TextButton(
-                    enabled = name.isNotBlank(),
+                    enabled = name.isNotBlank() && !isTesting,
                     onClick = {
                         val updated = CustomExtension(
                             id = editingId ?: CustomExtension(name = name.trim(), description = description.trim()).id,
@@ -257,7 +361,8 @@ fun ExtensionBuilderPage(
                             skill = skill,
                             implementation = implementation,
                             permission = permission,
-                            enabled = false,
+                            enabled = enabled && codeIsTested,
+                            testedImplementationHash = testedHash.takeIf { codeIsTested },
                         )
                         scope.launch {
                             settingsStore.update { current ->
