@@ -1814,4 +1814,11 @@
   <string name="extension_builder_page_not_executable_note">Drafts stay disabled until you explicitly enable them. JavaScript execution is isolated and time- and memory-limited; scripts cannot directly access Android, files, or the network. Review code carefully before enabling it.</string>
 
   <string name="extension_builder_page_save">Save draft</string>
+  <string name="extension_builder_page_test_input">Test input (JSON object)</string>
+  <string name="extension_builder_page_test_input_help">Provide sample data as a JSON object. It will be passed to the script as the input variable.</string>
+  <string name="extension_builder_page_run_test">Run sandbox test</string>
+  <string name="extension_builder_page_testing">Testing…</string>
+  <string name="extension_builder_page_test_passed">Test passed</string>
+  <string name="extension_builder_page_test_result">Test output: %1$s</string>
+  <string name="extension_builder_page_enable">Enable this extension</string>
 </resources>
