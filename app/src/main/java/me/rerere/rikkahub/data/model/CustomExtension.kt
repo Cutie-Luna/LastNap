@@ -1,6 +1,7 @@
 package me.rerere.rikkahub.data.model
 
 import kotlinx.serialization.Serializable
+import java.security.MessageDigest
 import kotlin.uuid.Uuid
 
 /**
@@ -19,6 +20,7 @@ data class CustomExtension(
     val implementation: String = "",
     val permission: ExtensionPermission = ExtensionPermission.ASK_EVERY_TIME,
     val enabled: Boolean = false,
+    val testedImplementationHash: String? = null,
 )
 
 @Serializable
@@ -27,4 +29,13 @@ enum class ExtensionPermission {
     ASK_EVERY_TIME,
     THIS_SESSION,
     DISABLED,
+}
+
+/**
+ * Stable fingerprint used to ensure that enabled code is exactly the code
+ * that was successfully tested in the extension workshop.
+ */
+fun String.extensionSha256(): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray(Charsets.UTF_8))
+    return digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 }
