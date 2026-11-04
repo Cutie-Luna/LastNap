@@ -13,6 +13,7 @@ import me.rerere.rikkahub.data.ai.prompts.DEFAULT_SUGGESTION_PROMPT
 import me.rerere.rikkahub.data.ai.prompts.DEFAULT_TITLE_PROMPT
 import me.rerere.rikkahub.data.ai.prompts.DEFAULT_TRANSLATION_PROMPT
 import me.rerere.rikkahub.data.model.Assistant
+import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.Avatar
 import me.rerere.rikkahub.data.model.Lorebook
 import me.rerere.rikkahub.data.model.PromptInjection
@@ -76,6 +77,7 @@ data class Settings(
     val modeInjections: List<PromptInjection.ModeInjection> = DEFAULT_MODE_INJECTIONS,
     val lorebooks: List<Lorebook> = emptyList(),
     val quickMessages: List<QuickMessage> = emptyList(),
+    val customExtensions: List<CustomExtension> = emptyList(),
     val webServerEnabled: Boolean = false,
     val webServerPort: Int = 8080,
     val webServerJwtEnabled: Boolean = false,
