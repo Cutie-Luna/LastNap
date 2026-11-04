@@ -1820,4 +1820,6 @@ mDNSアドレス: .localホスト名を使用し、IPを知らなくても同じ
     <string name="chat_page_compress_keep_recent">最近のメッセージを残す</string>
     <string name="chat_page_compress_keep_recent_desc">これらのメッセージは圧縮されず、要約の後に残ります。0 にするとすべてを圧縮し、プロンプトキャッシュを最も効率よく利用できます。会話が長すぎて圧縮できない場合は、残すメッセージを増やしてください。</string>
     <string name="chat_page_compress_not_enough_messages">圧縮するメッセージが足りません。残すメッセージ数を減らしてください。</string>
+    <string name="extensions_page_builder">拡張機能ビルダー</string>
+    <string name="extensions_page_builder_desc">AIと一緒にカスタムツールや機能を作成</string>
 </resources>

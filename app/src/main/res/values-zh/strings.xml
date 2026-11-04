@@ -1820,4 +1820,6 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
     <string name="extension_builder_page_test_passed">测试通过</string>
     <string name="extension_builder_page_test_result">测试输出：%1$s</string>
     <string name="extension_builder_page_enable">启用此扩展</string>
+    <string name="extensions_page_builder">扩展构建器</string>
+    <string name="extensions_page_builder_desc">与 AI 一起构建自定义工具和功能</string>
 </resources>
