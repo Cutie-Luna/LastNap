@@ -1,0 +1,49 @@
+name: Export Android APK Signing Tools
+
+on:
+  push:
+    branches:
+      - feature/extensions-foundation
+    paths:
+      - ".github/workflows/apksigner-tools.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "21"
+
+      - name: Set up Android SDK and build tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: build-tools;36.0.0
+
+      - name: Export and verify apksigner and zipalign
+        run: |
+          set -euo pipefail
+          tool_dir="$ANDROID_HOME/build-tools/36.0.0"
+          test -x "$tool_dir/apksigner"
+          test -x "$tool_dir/zipalign"
+          test -s "$tool_dir/lib/apksigner.jar"
+          mkdir -p export-tools/build-tools
+          cp "$tool_dir/apksigner" "$tool_dir/zipalign" export-tools/build-tools/
+          cp -a "$tool_dir/lib" export-tools/build-tools/
+          java -jar "$tool_dir/lib/apksigner.jar" version
+          "$tool_dir/zipalign" -h >/dev/null 2>&1 || true
+          tar -czf android-apk-signing-tools.tar.gz -C export-tools .
+
+      - name: Upload Android APK signing tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-signing-tools
+          path: android-apk-signing-tools.tar.gz
+          if-no-files-found: error
+          retention-days: 7
