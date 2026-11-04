@@ -1816,4 +1816,7 @@
   <string name="extension_builder_page_test_passed">Тест пройден</string>
   <string name="extension_builder_page_test_result">Результат теста: %1$s</string>
   <string name="extension_builder_page_enable">Включить это расширение</string>
+    <string name="chat_page_compress_keep_recent">Оставить последние сообщения</string>
+    <string name="chat_page_compress_keep_recent_desc">Эти сообщения не сжимаются и остаются после сводки. Значение 0 сжимает всё и лучше всего использует кеш промпта; если диалог слишком длинный для сжатия, оставьте больше сообщений.</string>
+    <string name="chat_page_compress_not_enough_messages">Недостаточно сообщений для сжатия. Уменьшите количество сообщений, которые нужно сохранить.</string>
 </resources>
