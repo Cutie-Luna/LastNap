@@ -1813,4 +1813,5 @@
   <string name="extension_builder_page_permission_disabled">Disabled</string>
   <string name="extension_builder_page_not_executable_note">Extensions remain disabled drafts. Saving code here does not run it or grant device access. Testing and a safe execution system will come before activation.</string>
 
+  <string name="extension_builder_page_save">Save draft</string>
 </resources>
