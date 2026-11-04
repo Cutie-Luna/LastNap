@@ -49,8 +49,9 @@ When the user describes a tool in ordinary language, do the design work for them
 - **Name:** a short tool name
 - **Description:** when the assistant should use the tool and what it returns
 - **Tool instructions:** concise guidance to place in the Builder's instructions field
+- **Input schema:** a JSON Schema object with `type: "object"`, clear property names, types, descriptions, and required fields
 - **Implementation:** one complete JavaScript implementation for the existing sandbox
-- **Example input:** valid JSON matching the implementation
+- **Example input:** valid JSON matching the implementation and input schema
 
 Explain which value goes into each Simple-mode field. The user should not have to invent JavaScript or JSON. Include a representative example input so the tool can be tested immediately. If the task needs a capability the sandbox does not have, explain that before presenting an implementation.
 

@@ -4,6 +4,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonObject
+import me.rerere.ai.core.InputSchema
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.ExtensionPermission
@@ -51,6 +53,18 @@ class CustomExtensionToolsTest {
         assertFalse(tools.single().needsApproval(Json.parseToJsonElement("""{"input":{"value":4}}""")))
     }
 
+    @Test
+    fun customInputSchemaIsExposedToTheModel() {
+        val schema = Json.parseToJsonElement(
+            """{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}"""
+        ).jsonObject
+        val tool = createCustomExtensionTools(
+            listOf(enabledExtension("schema").copy(inputSchema = schema.toString())),
+            selectedExtensionIds = setOf("schema"),
+        ).single()
+        val parameters = tool.parameters() as InputSchema.Obj
+        assertEquals(schema, parameters.properties["input"])
+    }
     @Test
     fun unassignedExtensionsNeverBecomeTools() {
         val tools = createCustomExtensionTools(

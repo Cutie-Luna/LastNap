@@ -17,6 +17,7 @@ data class CustomExtension(
     val name: String,
     val description: String,
     val skill: String = "",
+    val inputSchema: String = """{"type":"object","properties":{},"additionalProperties":true}""",
     val implementation: String = "",
     val permission: ExtensionPermission = ExtensionPermission.ASK_EVERY_TIME,
     val enabled: Boolean = false,

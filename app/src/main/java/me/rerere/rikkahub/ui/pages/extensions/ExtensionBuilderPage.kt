@@ -74,6 +74,7 @@ fun ExtensionBuilderPage(
     var permissionName by rememberSaveable { mutableStateOf(ExtensionPermission.ASK_EVERY_TIME.name) }
     val permission = ExtensionPermission.valueOf(permissionName)
     val codeIsTested = implementation.isNotBlank() && testedHash == implementation.extensionSha256()
+    val inputSchemaIsValid = runCatching { Json.parseToJsonElement(inputSchema).jsonObject["type"]?.toString() == "\"object\"" }.getOrDefault(false)
 
     fun startNewDraft() {
         editingId = null
@@ -286,7 +287,7 @@ fun ExtensionBuilderPage(
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
-                                enabled = !isTesting && implementation.isNotBlank(),
+                                enabled = !isTesting && implementation.isNotBlank() && inputSchemaIsValid,
                                 onClick = {
                                     scope.launch {
                                         isTesting = true
@@ -294,6 +295,7 @@ fun ExtensionBuilderPage(
                                         enabled = false
                                         testResult = ""
                                         val codeUnderTest = implementation
+                                        val schemaUnderTest = inputSchema
                                         val inputUnderTest = testInput
                                         try {
                                             val input = Json.parseToJsonElement(inputUnderTest).jsonObject
@@ -302,7 +304,7 @@ fun ExtensionBuilderPage(
                                             val error = payload["error"]
                                             if (error != null) {
                                                 testResult = error.toString()
-                                            } else if (implementation == codeUnderTest) {
+                                            } else if (implementation == codeUnderTest && inputSchema == schemaUnderTest) {
                                                 testedHash = codeUnderTest.extensionSha256()
                                                 testResult = payload["result"]?.toString() ?: output
                                             } else {
@@ -400,7 +402,7 @@ fun ExtensionBuilderPage(
                             skill = skill,
                             implementation = implementation,
                             permission = permission,
-                            enabled = enabled && codeIsTested,
+                            enabled = enabled && codeIsTested && inputSchemaIsValid,
                             testedImplementationHash = testedHash.takeIf { codeIsTested },
                         )
                         scope.launch {

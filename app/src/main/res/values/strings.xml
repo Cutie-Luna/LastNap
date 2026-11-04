@@ -1812,6 +1812,10 @@
   <string name="extension_builder_page_advanced_mode">Advanced</string>
   <string name="extension_builder_page_simple_help">Describe what the tool should do in the instructions field. Ask an assistant with the Tool Creator skill to draft the implementation, then paste its generated code and example input here. You do not need to write code or JSON yourself.</string>
   <string name="extension_builder_page_generated_implementation">AI-generated implementation</string>
+  <string name="extension_builder_page_input_schema">Input schema (JSON)</string>
+  <string name="extension_builder_page_generated_input_schema">Input shape from your assistant</string>
+  <string name="extension_builder_page_input_schema_help">Define the object fields the model should send inside input.</string>
+  <string name="extension_builder_page_generated_input_schema_help">Paste the input shape your assistant generated. You do not need to write JSON yourself.</string>
   <string name="extension_builder_page_generated_implementation_help">Paste the implementation drafted by your assistant. It will still be tested in the same isolated sandbox before it can be enabled.</string>
   <string name="extension_builder_page_generated_test_input">Example input from your assistant</string>
   <string name="extension_builder_page_generated_test_input_help">Paste the example input your assistant generated. You do not need to write JSON yourself.</string>

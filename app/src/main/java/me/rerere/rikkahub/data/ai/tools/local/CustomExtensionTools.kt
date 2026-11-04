@@ -1,8 +1,10 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonPrimitive
 import me.rerere.ai.core.InputSchema
 import me.rerere.ai.core.Tool
 import me.rerere.ai.ui.UIMessagePart
@@ -13,6 +15,7 @@ import me.rerere.rikkahub.data.model.extensionSha256
 private const val MAX_EXTENSION_NAME_LENGTH = 80
 private const val MAX_EXTENSION_DESCRIPTION_LENGTH = 2_000
 private const val MAX_EXTENSION_SKILL_LENGTH = 16_000
+private const val MAX_EXTENSION_SCHEMA_LENGTH = 16_000
 private const val MAX_EXTENSION_CODE_LENGTH = 64_000
 private const val MAX_EXTENSION_INPUT_LENGTH = 64 * 1024
 
@@ -31,6 +34,7 @@ internal fun createCustomExtensionTools(
     .filter { it.name.isNotBlank() && it.implementation.isNotBlank() }
     .filter { it.implementation.length <= MAX_EXTENSION_CODE_LENGTH }
     .filter { it.testedImplementationHash == it.implementation.extensionSha256() }
+    .filter { parseExtensionInputSchema(it.inputSchema) != null }
     .mapNotNull { extension ->
         val safeId = extension.id.filter { it.isLetterOrDigit() }.take(32)
         if (safeId.isBlank()) return@mapNotNull null
@@ -40,6 +44,7 @@ internal fun createCustomExtensionTools(
             .ifBlank { "User-created extension: ${extension.name}" }
             .take(MAX_EXTENSION_DESCRIPTION_LENGTH)
         val skill = extension.skill.take(MAX_EXTENSION_SKILL_LENGTH)
+        val inputSchema = parseExtensionInputSchema(extension.inputSchema) ?: return@mapNotNull null
         val implementation = extension.implementation
 
         Tool(
@@ -47,13 +52,7 @@ internal fun createCustomExtensionTools(
             description = description,
             parameters = {
                 InputSchema.Obj(
-                    properties = buildJsonObject {
-                        put("input", buildJsonObject {
-                            put("type", "object")
-                            put("description", "JSON input for this extension. Follow the extension instructions.")
-                            put("additionalProperties", true)
-                        })
-                    },
+                    properties = buildJsonObject { put("input", inputSchema) },
                     required = listOf("input"),
                 )
             },
@@ -94,3 +93,10 @@ private fun String.escapeExtensionXml(): String = buildString(length) {
         }
     }
 }
+
+private fun parseExtensionInputSchema(source: String) = runCatching {
+    require(source.length <= MAX_EXTENSION_SCHEMA_LENGTH)
+    Json.parseToJsonElement(source).jsonObject.takeIf {
+        it["type"]?.jsonPrimitive?.content == "object"
+    }
+}.getOrNull()
