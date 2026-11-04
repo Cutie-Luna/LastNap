@@ -1799,4 +1799,18 @@
   <string name="setting_model_page_memory_model">Memory Consolidation Model</string>
   <string name="setting_model_page_memory_model_desc">Model used to organize conversations into long-term memory in the background; uses the fast model when not set</string>
   <string name="setting_model_page_memory_model_follow_fast">Same as fast model</string>
+
+  <string name="extension_builder_page_edit">Edit</string>
+  <string name="extension_builder_page_edit_title">Edit extension draft</string>
+  <string name="extension_builder_page_skill">Assistant instructions (Skill)</string>
+  <string name="extension_builder_page_skill_help">Explain when and how the assistant should use this extension.</string>
+  <string name="extension_builder_page_implementation">Implementation</string>
+  <string name="extension_builder_page_implementation_help">Store a code or workflow draft here. It is not executed yet.</string>
+  <string name="extension_builder_page_permission">Permission preference</string>
+  <string name="extension_builder_page_permission_always">Always allow</string>
+  <string name="extension_builder_page_permission_ask">Ask every time (recommended)</string>
+  <string name="extension_builder_page_permission_session">Allow this session</string>
+  <string name="extension_builder_page_permission_disabled">Disabled</string>
+  <string name="extension_builder_page_not_executable_note">Extensions remain disabled drafts. Saving code here does not run it or grant device access. Testing and a safe execution system will come before activation.</string>
+
 </resources>
