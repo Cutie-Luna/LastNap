@@ -42,6 +42,18 @@ When the Tool Builder offers both modes:
 - Both modes must produce the same underlying custom tool and must retain the same sandbox restrictions, test-before-enable requirement, and permission controls.
 - Do not tell the user a mode exists in the app until it is actually present in the current app version.
 
+### Preparing a Simple-mode draft
+
+When the user describes a tool in ordinary language, do the design work for them and return a copy-ready draft with these clearly labelled parts:
+
+- **Name:** a short tool name
+- **Description:** when the assistant should use the tool and what it returns
+- **Tool instructions:** concise guidance to place in the Builder's instructions field
+- **Implementation:** one complete JavaScript implementation for the existing sandbox
+- **Example input:** valid JSON matching the implementation
+
+Explain which value goes into each Simple-mode field. The user should not have to invent JavaScript or JSON. Include a representative example input so the tool can be tested immediately. If the task needs a capability the sandbox does not have, explain that before presenting an implementation.
+
 ## Runtime and safety constraints
 
 - Treat tool input as untrusted data. Validate its shape and size before using it.
