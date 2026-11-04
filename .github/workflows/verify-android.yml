@@ -85,7 +85,20 @@ jobs:
           }
           JSON
 
-      - name: Run unit tests and assemble debug APK
+      - name: Run unit tests
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon testGithubDebugUnitTest lintGithubDebug assembleGithubDebug
+          ./gradlew --no-daemon testGithubDebugUnitTest
+
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lastnap-unit-test-reports
+          path: app/build/reports/tests/testGithubDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run lint and assemble debug APK
+        if: success()
+        run: ./gradlew --no-daemon lintGithubDebug assembleGithubDebug
