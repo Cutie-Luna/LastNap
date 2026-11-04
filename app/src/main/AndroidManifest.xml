@@ -92,12 +92,12 @@
       </intent-filter>
 
       <intent-filter>
-        <action android:name="me.rerere.rikkahub.action.TRANSLATE" />
+        <action android:name="com.lastnap.app.action.TRANSLATE" />
         <category android:name="android.intent.category.DEFAULT" />
       </intent-filter>
 
       <intent-filter>
-        <action android:name="me.rerere.rikkahub.action.MEDIA_CREATION" />
+        <action android:name="com.lastnap.app.action.MEDIA_CREATION" />
         <category android:name="android.intent.category.DEFAULT" />
       </intent-filter>
 
@@ -116,7 +116,7 @@
 
         <data
           android:host="shortcut"
-          android:scheme="rikkahub" />
+          android:scheme="lastnap" />
       </intent-filter>
     </activity>
     <service
