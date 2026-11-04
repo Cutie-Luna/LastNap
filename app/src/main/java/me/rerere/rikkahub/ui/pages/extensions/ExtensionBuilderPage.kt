@@ -450,7 +450,7 @@ fun ExtensionBuilderPage(
                     if (editingId != null) {
                         TextButton(
                             onClick = {
-                                val id = editingId
+                                val id = editingId ?: return@TextButton
                                 scope.launch {
                                     settingsStore.update { current ->
                                         current.copy(
