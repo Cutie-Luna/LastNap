@@ -7,24 +7,32 @@ import kotlinx.serialization.json.put
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.ExtensionPermission
+import me.rerere.rikkahub.data.model.extensionSha256
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CustomExtensionToolsTest {
+    private fun enabledExtension(
+        id: String,
+        permission: ExtensionPermission = ExtensionPermission.ALWAYS_ALLOW,
+        code: String = "input.value * 2",
+    ) = CustomExtension(
+        id = id,
+        name = "Test extension",
+        description = "A tested extension",
+        implementation = code,
+        enabled = true,
+        permission = permission,
+        testedImplementationHash = code.extensionSha256(),
+    )
+
     @Test
-    fun onlyEnabledNonDisabledExtensionsBecomeTools() {
+    fun onlyEnabledTestedNonDisabledExtensionsBecomeTools() {
         val tools = createCustomExtensionTools(
             listOf(
-                CustomExtension(
-                    id = "enabled-1",
-                    name = "Double",
-                    description = "Doubles a number",
-                    implementation = "input.value * 2",
-                    enabled = true,
-                    permission = ExtensionPermission.ALWAYS_ALLOW,
-                ),
+                enabledExtension("enabled-1"),
                 CustomExtension(
                     id = "draft-2",
                     name = "Draft",
@@ -32,14 +40,9 @@ class CustomExtensionToolsTest {
                     implementation = "1 + 1",
                     enabled = false,
                 ),
-                CustomExtension(
-                    id = "disabled-3",
-                    name = "Disabled",
-                    description = "Turned off",
-                    implementation = "1 + 1",
-                    enabled = true,
-                    permission = ExtensionPermission.DISABLED,
-                ),
+                enabledExtension("disabled-3", ExtensionPermission.DISABLED),
+                enabledExtension("changed-4").copy(implementation = "input.value + 100"),
+                enabledExtension("untested-5").copy(testedImplementationHash = null),
             )
         )
 
@@ -50,16 +53,7 @@ class CustomExtensionToolsTest {
     @Test
     fun askPermissionIsRequestedBeforeEveryInvocation() {
         val tool = createCustomExtensionTools(
-            listOf(
-                CustomExtension(
-                    id = "ask-me",
-                    name = "Careful tool",
-                    description = "Needs confirmation",
-                    implementation = "input.value",
-                    enabled = true,
-                    permission = ExtensionPermission.ASK_EVERY_TIME,
-                )
-            )
+            listOf(enabledExtension("ask-me", ExtensionPermission.ASK_EVERY_TIME))
         ).single()
 
         assertTrue(tool.needsApproval(Json.parseToJsonElement("""{"input":{"value":4}}""")))
@@ -68,16 +62,7 @@ class CustomExtensionToolsTest {
     @Test
     fun runsExtensionJavascriptWithIsolatedInput() = runBlocking {
         val tool = createCustomExtensionTools(
-            listOf(
-                CustomExtension(
-                    id = "double",
-                    name = "Double",
-                    description = "Doubles a number",
-                    implementation = "input.value * 2",
-                    enabled = true,
-                    permission = ExtensionPermission.ALWAYS_ALLOW,
-                )
-            )
+            listOf(enabledExtension("double"))
         ).single()
 
         val output = tool.execute(
