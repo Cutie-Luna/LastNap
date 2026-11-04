@@ -508,12 +508,12 @@ private fun handleScannedQRCode(
         val setting = decodeProviderSetting(content)
         onAdd(setting)
         toaster.show(
-            resources.getString(R.string.setting_provider_page_import_success),
+            context.getString(R.string.setting_provider_page_import_success),
             type = ToastType.Success
         )
     }.onFailure { error ->
         toaster.show(
-            resources.getString(R.string.setting_provider_page_qr_decode_failed, error.message ?: ""),
+            context.getString(R.string.setting_provider_page_qr_decode_failed, error.message ?: ""),
             type = ToastType.Error
         )
     }
@@ -531,7 +531,7 @@ private fun handleImageQRCode(
 
         if (qrContent.isNullOrEmpty()) {
             toaster.show(
-                resources.getString(R.string.setting_provider_page_no_qr_found),
+                context.getString(R.string.setting_provider_page_no_qr_found),
                 type = ToastType.Error
             )
             return
@@ -540,12 +540,12 @@ private fun handleImageQRCode(
         val setting = decodeProviderSetting(qrContent)
         onAdd(setting)
         toaster.show(
-            resources.getString(R.string.setting_provider_page_import_success),
+            context.getString(R.string.setting_provider_page_import_success),
             type = ToastType.Success
         )
     }.onFailure { error ->
         toaster.show(
-            resources.getString(R.string.setting_provider_page_image_qr_decode_failed, error.message ?: ""),
+            context.getString(R.string.setting_provider_page_image_qr_decode_failed, error.message ?: ""),
             type = ToastType.Error
         )
     }
