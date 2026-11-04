@@ -427,7 +427,12 @@ fun ExtensionBuilderPage(
                                 val id = editingId
                                 scope.launch {
                                     settingsStore.update { current ->
-                                        current.copy(customExtensions = current.customExtensions.filterNot { it.id == id })
+                                        current.copy(
+                                            customExtensions = current.customExtensions.filterNot { it.id == id },
+                                            assistants = current.assistants.map { assistant ->
+                                                assistant.copy(selectedCustomExtensionIds = assistant.selectedCustomExtensionIds - id)
+                                            },
+                                        )
                                     }
                                 }
                                 showEditor = false
