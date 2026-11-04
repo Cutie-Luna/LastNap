@@ -53,3 +53,16 @@ This file preserves the agreed product requirements and implementation order so 
 - Keep permission prompts and the current isolated JavaScript execution limits.
 - Do not silently change existing tool permissions.
 - Do not use placeholder icons or replace the user's icon artwork.
+
+## Progress update — 2026-11-04
+
+- [x] Added the built-in `tool-creator` Agent Skill under `assets/builtin_skills`; it remains assistant-scoped through the existing enabled-skills mechanism.
+- [x] Added assistant-specific custom-tool assignments. Existing assistants default to an empty selection; runtime tool definitions are filtered by the current assistant's selected IDs.
+- [x] Added custom input-schema storage, validation, and runtime exposure. Invalid or oversized schemas are not exposed as callable tools.
+- [x] Added Simple and Advanced Tool Builder modes. Simple mode accepts copy-ready instructions, input schema, implementation, and example input drafted by an assistant with Tool Creator enabled; Advanced mode exposes the technical fields. Both use the same sandbox and test-before-enable gate.
+- [x] Added a direct Tool Builder shortcut from the assistant's custom-tools tab.
+- [x] The adaptive launcher icon change from the preceding commit remains in place; user artwork was not redrawn or replaced.
+- [ ] Current branch changes still need unit-test, lint, and debug-APK verification. The GitHub Actions workflow has `workflow_dispatch`, but connector-created commits/PRs did not produce a run for the current head. The last successful run (#45) tested the earlier `48fc295` commit, not these subsequent changes.
+- [ ] Navigation-delay profiling remains unverified. The repository has a physical-device macrobenchmark for cold startup, but no navigation-transition trace has been captured. Do not claim a performance fix until the target device is profiled.
+
+Implementation remains on `feature/extensions-foundation`; `master` was not changed.
