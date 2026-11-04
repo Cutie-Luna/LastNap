@@ -44,7 +44,8 @@ android {
             isEnable = !isBuildingBundle
             reset()
             include("arm64-v8a", "x86_64")
-            // Keep ABI-specific APKs only; avoid producing an oversized all-ABI APK.\n            isUniversalApk = false
+            // Keep ABI-specific APKs only; avoid producing an oversized all-ABI APK.
+            isUniversalApk = false
         }
     }
 
