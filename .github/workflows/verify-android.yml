@@ -5,8 +5,6 @@ on:
     branches:
       - feature/extensions-foundation
   pull_request:
-    branches:
-      - feature/extensions-foundation
   workflow_dispatch:
 
 permissions:
@@ -88,4 +86,4 @@ jobs:
       - name: Run unit tests and assemble debug APK
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon testGithubDebugUnitTest assembleGithubDebug
+          ./gradlew --no-daemon testGithubDebugUnitTest lintGithubDebug assembleGithubDebug
