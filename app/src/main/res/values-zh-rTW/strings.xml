@@ -1815,4 +1815,7 @@
     <string name="extension_builder_page_test_passed">測試通過</string>
     <string name="extension_builder_page_test_result">測試輸出：%1$s</string>
     <string name="extension_builder_page_enable">啟用此擴充功能</string>
+    <string name="chat_page_compress_keep_recent">保留最近的訊息</string>
+    <string name="chat_page_compress_keep_recent_desc">這些訊息不會被壓縮，並會保留在摘要之後。設為 0 會壓縮所有內容，並最有效地重複使用提示快取；如果對話太長而無法壓縮，請保留更多訊息。</string>
+    <string name="chat_page_compress_not_enough_messages">沒有足夠的訊息可供壓縮。請減少要保留的訊息數量。</string>
 </resources>
