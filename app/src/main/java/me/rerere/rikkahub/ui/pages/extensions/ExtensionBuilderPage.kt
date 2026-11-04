@@ -262,7 +262,7 @@ fun ExtensionBuilderPage(
                                         val inputUnderTest = testInput
                                         try {
                                             val input = parseToJsonElement(inputUnderTest).jsonObject
-                                            val output = evaluateJavascript("const input = ${input};\\n$codeUnderTest")
+                                            val output = evaluateJavascript("const input = ${input};\n$codeUnderTest")
                                             val payload = parseToJsonElement(output).jsonObject
                                             val error = payload["error"]
                                             if (error != null) {
