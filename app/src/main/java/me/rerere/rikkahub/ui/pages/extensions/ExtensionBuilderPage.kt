@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +60,7 @@ fun ExtensionBuilderPage(
     val scope = rememberCoroutineScope()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showEditor by rememberSaveable { mutableStateOf(false) }
+    var builderMode by rememberSaveable { mutableStateOf("SIMPLE") }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
@@ -75,6 +77,7 @@ fun ExtensionBuilderPage(
 
     fun startNewDraft() {
         editingId = null
+        builderMode = "SIMPLE"
         name = ""
         description = ""
         skill = ""
@@ -89,6 +92,7 @@ fun ExtensionBuilderPage(
 
     fun editDraft(extension: CustomExtension) {
         editingId = extension.id
+        builderMode = "ADVANCED"
         name = extension.name
         description = extension.description
         skill = extension.skill
@@ -194,6 +198,29 @@ fun ExtensionBuilderPage(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = builderMode == "SIMPLE",
+                                onClick = { builderMode = "SIMPLE" },
+                                label = { Text(stringResource(R.string.extension_builder_page_simple_mode)) },
+                            )
+                            FilterChip(
+                                selected = builderMode == "ADVANCED",
+                                onClick = { builderMode = "ADVANCED" },
+                                label = { Text(stringResource(R.string.extension_builder_page_advanced_mode)) },
+                            )
+                        }
+                    }
+                    if (builderMode == "SIMPLE") {
+                        item {
+                            Text(
+                                stringResource(R.string.extension_builder_page_simple_help),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    item {
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
@@ -233,9 +260,13 @@ fun ExtensionBuilderPage(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.extension_builder_page_implementation)) },
+                            label = {
+                                Text(stringResource(if (builderMode == "SIMPLE") R.string.extension_builder_page_generated_implementation else R.string.extension_builder_page_implementation))
+                            },
                             minLines = 4,
-                            supportingText = { Text(stringResource(R.string.extension_builder_page_implementation_help)) },
+                            supportingText = {
+                                Text(stringResource(if (builderMode == "SIMPLE") R.string.extension_builder_page_generated_implementation_help else R.string.extension_builder_page_implementation_help))
+                            },
                         )
                     }
                     item {
@@ -243,9 +274,13 @@ fun ExtensionBuilderPage(
                             value = testInput,
                             onValueChange = { testInput = it },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.extension_builder_page_test_input)) },
+                            label = {
+                                Text(stringResource(if (builderMode == "SIMPLE") R.string.extension_builder_page_generated_test_input else R.string.extension_builder_page_test_input))
+                            },
                             minLines = 2,
-                            supportingText = { Text(stringResource(R.string.extension_builder_page_test_input_help)) },
+                            supportingText = {
+                                Text(stringResource(if (builderMode == "SIMPLE") R.string.extension_builder_page_generated_test_input_help else R.string.extension_builder_page_test_input_help))
+                            },
                         )
                     }
                     item {
