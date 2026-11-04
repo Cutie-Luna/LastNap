@@ -66,6 +66,15 @@ class CustomExtensionToolsTest {
         assertEquals(schema, parameters.properties["input"])
     }
     @Test
+    fun invalidInputSchemaDoesNotBecomeATool() {
+        val extension = enabledExtension("invalid-schema").copy(inputSchema = """{"type":"array"}""")
+        val tools = createCustomExtensionTools(
+            listOf(extension),
+            selectedExtensionIds = setOf("invalid-schema"),
+        )
+        assertTrue(tools.isEmpty())
+    }
+    @Test
     fun unassignedExtensionsNeverBecomeTools() {
         val tools = createCustomExtensionTools(
             listOf(enabledExtension("for-another-assistant")),
