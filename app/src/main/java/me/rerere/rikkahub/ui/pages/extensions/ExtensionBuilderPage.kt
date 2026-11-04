@@ -258,16 +258,20 @@ fun ExtensionBuilderPage(
                                         testedHash = null
                                         enabled = false
                                         testResult = ""
+                                        val codeUnderTest = implementation
+                                        val inputUnderTest = testInput
                                         try {
-                                            val input = parseToJsonElement(testInput).jsonObject
-                                            val output = evaluateJavascript("const input = ${input};\\n$implementation")
+                                            val input = parseToJsonElement(inputUnderTest).jsonObject
+                                            val output = evaluateJavascript("const input = ${input};\\n$codeUnderTest")
                                             val payload = parseToJsonElement(output).jsonObject
                                             val error = payload["error"]
                                             if (error != null) {
                                                 testResult = error.toString()
-                                            } else {
-                                                testedHash = implementation.extensionSha256()
+                                            } else if (implementation == codeUnderTest) {
+                                                testedHash = codeUnderTest.extensionSha256()
                                                 testResult = payload["result"]?.toString() ?: output
+                                            } else {
+                                                testResult = "The code changed while the test was running. Run the test again."
                                             }
                                         } catch (error: Exception) {
                                             testResult = error.message ?: "Test failed"
