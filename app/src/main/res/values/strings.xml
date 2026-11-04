@@ -1809,7 +1809,7 @@
   <string name="extension_builder_page_permission">Permission preference</string>
   <string name="extension_builder_page_permission_always">Always allow</string>
   <string name="extension_builder_page_permission_ask">Ask every time (recommended)</string>
-  <string name="extension_builder_page_permission_session">Allow this session</string>
+  <string name="extension_builder_page_permission_session">Allow this session (currently asks each time)</string>
   <string name="extension_builder_page_permission_disabled">Disabled</string>
   <string name="extension_builder_page_not_executable_note">Extensions remain disabled drafts. Saving code here does not run it or grant device access. Testing and a safe execution system will come before activation.</string>
 
