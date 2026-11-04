@@ -175,8 +175,6 @@ fun ExtensionSelector(
                     } else {
                         ExtensionEmptyState(
                             message = stringResource(R.string.extension_selector_custom_tools_empty),
-                            buttonText = stringResource(R.string.extension_selector_go_to_extensions),
-                            onAction = onNavigateToSkills,
                             icon = tab.icon,
                         )
                     }
