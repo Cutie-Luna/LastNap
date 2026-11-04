@@ -1787,7 +1787,7 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
   <string name="setting_model_page_memory_model_desc">用于在后台将对话整理为长期记忆的模型；未设置时使用快速模型</string>
   <string name="setting_model_page_memory_model_follow_fast">跟随快速模型</string>
     <string name="extension_builder_page_title">AI 扩展工作室</string>
-    <string name="extension_builder_page_title">AI 扩展工作室</string>
+
     <string name="extension_builder_page_intro_title">一起制作实用功能</string>
     <string name="extension_builder_page_intro_desc">从一个工具或功能的想法开始。每个扩展会集中保存其用途、助手指令、实现代码和权限设置。</string>
     <string name="extension_builder_page_foundation_note">你的想法会先保存为草稿。AI 辅助构建、可视化编辑、代码编辑和测试功能将在后续工作室步骤中加入。</string>

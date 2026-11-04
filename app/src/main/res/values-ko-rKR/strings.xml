@@ -1784,7 +1784,7 @@ mDNS 주소: .local 호스트네임을 사용하며, IP를 몰라도 같은 네�
   <string name="setting_model_page_memory_model_desc">백그라운드에서 대화를 장기 기억으로 정리하는 데 사용되는 모델입니다. 설정하지 않으면 빠른 모델을 사용합니다.</string>
   <string name="setting_model_page_memory_model_follow_fast">빠른 모델과 동일</string>
     <string name="extension_builder_page_title">AI 확장 프로그램 워크숍</string>
-    <string name="extension_builder_page_title">AI 확장 프로그램 워크숍</string>
+
     <string name="extension_builder_page_intro_title">유용한 무언가를 만들어 봐요</string>
     <string name="extension_builder_page_intro_desc">도구나 기능에 대한 아이디어로 시작하세요. 각 확장 프로그램에는 목적, 어시스턴트 지침, 구현 및 권한 설정이 함께 저장됩니다.</string>
     <string name="extension_builder_page_foundation_note">아이디어는 먼저 초안으로 저장됩니다. AI 지원 제작, 시각적 편집, 코드 편집 및 테스트 기능은 다음 워크숍 단계에서 추가됩니다.</string>

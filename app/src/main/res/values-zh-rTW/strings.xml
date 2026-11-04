@@ -1782,7 +1782,7 @@
   <string name="setting_model_page_memory_model_desc">用於在背景將對話整理為長期記憶的模型；未設定時會使用快速模型</string>
   <string name="setting_model_page_memory_model_follow_fast">跟隨快速模型</string>
     <string name="extension_builder_page_title">AI 擴充功能工作室</string>
-    <string name="extension_builder_page_title">AI 擴充功能工作室</string>
+
     <string name="extension_builder_page_intro_title">一起打造實用功能</string>
     <string name="extension_builder_page_intro_desc">從工具或功能的想法開始。每個擴充功能都會集中保存其用途、助理指示、實作內容和權限設定。</string>
     <string name="extension_builder_page_foundation_note">你的想法會先儲存為草稿。AI 輔助建立、視覺化編輯、程式碼編輯和測試功能將在後續工作室步驟中加入。</string>
