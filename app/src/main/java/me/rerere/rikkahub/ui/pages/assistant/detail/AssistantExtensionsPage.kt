@@ -193,6 +193,7 @@ fun AssistantExtensionsPage(id: String) {
                                     val ids = if (checked) assistant.selectedCustomExtensionIds + id else assistant.selectedCustomExtensionIds - id
                                     vm.update(assistant.copy(selectedCustomExtensionIds = ids))
                                 },
+                                onManage = { navController.navigate(Screen.ExtensionBuilder) },
                             )
                         }
                     }

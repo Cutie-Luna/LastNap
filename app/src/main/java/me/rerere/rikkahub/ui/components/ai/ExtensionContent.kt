@@ -136,8 +136,9 @@ fun CustomExtensionsContent(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     colors: ListItemColors = ListItemDefaults.segmentedColors(),
+    onManage: (() -> Unit)? = null,
 ) {
-    ExtensionList(items = extensions, modifier = modifier, contentPadding = contentPadding, onManage = null, key = { it.id }) { extension, shapes ->
+    ExtensionList(items = extensions, modifier = modifier, contentPadding = contentPadding, onManage = onManage, key = { it.id }) { extension, shapes ->
         val ready = extension.enabled && extension.permission != ExtensionPermission.DISABLED && extension.implementation.isNotBlank() && extension.testedImplementationHash == extension.implementation.extensionSha256()
         val status = when {
             ready -> ""
