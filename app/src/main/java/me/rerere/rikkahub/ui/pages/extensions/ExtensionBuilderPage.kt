@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.parseToJsonElement
+import kotlinx.serialization.json.Json
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.Add01
 import me.rerere.hugeicons.stroke.Puzzle
@@ -261,9 +261,9 @@ fun ExtensionBuilderPage(
                                         val codeUnderTest = implementation
                                         val inputUnderTest = testInput
                                         try {
-                                            val input = parseToJsonElement(inputUnderTest).jsonObject
+                                            val input = Json.parseToJsonElement(inputUnderTest).jsonObject
                                             val output = evaluateJavascript("const input = ${input};\n$codeUnderTest")
-                                            val payload = parseToJsonElement(output).jsonObject
+                                            val payload = Json.parseToJsonElement(output).jsonObject
                                             val error = payload["error"]
                                             if (error != null) {
                                                 testResult = error.toString()
