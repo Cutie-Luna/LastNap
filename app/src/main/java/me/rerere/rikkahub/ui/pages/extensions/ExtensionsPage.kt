@@ -81,6 +81,12 @@ fun ExtensionsPage() {
                         headlineContent = { Text(stringResource(R.string.extensions_page_workspace)) },
                         supportingContent = { Text(stringResource(R.string.extensions_page_workspace_desc)) },
                     )
+                    item(
+                        onClick = { navController.navigate(Screen.ExtensionBuilder) },
+                        leadingContent = { CardGroupIcon(HugeIcons.Puzzle, containerColor = containerColor, contentColor = contentColor) },
+                        headlineContent = { Text(stringResource(R.string.extensions_page_builder)) },
+                        supportingContent = { Text(stringResource(R.string.extensions_page_builder_desc)) },
+                    )
                 }
             }
         }
