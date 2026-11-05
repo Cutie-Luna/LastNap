@@ -264,6 +264,15 @@ fun ExtensionBuilderPage(
     }
 
     fun leaveEditor() {
+        val persistedNames = settings.customExtensions
+            .firstOrNull { it.id == draftId }
+            ?.secrets
+            ?.map { it.name }
+            ?.toSet()
+            .orEmpty()
+        scope.launch(Dispatchers.IO) {
+            secretStore.retainDeclaredSecrets(draftId, persistedNames)
+        }
         clearDraftState()
     }
 
@@ -275,12 +284,6 @@ fun ExtensionBuilderPage(
             testedDefinitionHash = testedHash.takeIf { hasCurrentTest },
         )
         val valuesToSave = variableValues.filterKeys { key -> saved.variables.any { it.name == key } }
-        val removedSecretNames = settings.customExtensions
-            .firstOrNull { it.id == draftId }
-            ?.secrets
-            .orEmpty()
-            .map { it.name }
-            .filterNot { name -> saved.secrets.any { it.name == name } }
         scope.launch {
             settingsStore.update { current ->
                 val next = if (isExistingDraft) {
@@ -296,7 +299,7 @@ fun ExtensionBuilderPage(
                 current.copy(customExtensions = next, customToolVariables = nextVariables)
             }
             withContext(Dispatchers.IO) {
-                removedSecretNames.forEach { name -> secretStore.deleteSecret(draftId, name) }
+                secretStore.retainDeclaredSecrets(draftId, saved.secrets.map { it.name }.toSet())
             }
             clearDraftState()
         }
@@ -810,6 +813,204 @@ fun ExtensionBuilderPage(
                                     )
                                 }
                             }
+                        }
+                    }
+                    item {
+                        BuilderSection(title = stringResource(R.string.extension_builder_page_secrets)) {
+                            Text(
+                                stringResource(R.string.extension_builder_page_secrets_help),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            secretDeclarations.forEach { declaration ->
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(declaration.name, style = MaterialTheme.typography.titleSmall)
+                                            if (declaration.description.isNotBlank()) {
+                                                Text(declaration.description, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                secretDeclarations = secretDeclarations.filterNot { it.name == declaration.name }
+                                                pendingSecretValues.remove(declaration.name)
+                                                savedSecretNames = savedSecretNames - declaration.name
+                                                testedHash = null
+                                                enabled = false
+                                                testPassed = null
+                                            },
+                                            enabled = !isTesting,
+                                        ) { Text(stringResource(R.string.extension_builder_page_remove)) }
+                                    }
+                                    OutlinedTextField(
+                                        value = pendingSecretValues[declaration.name].orEmpty(),
+                                        onValueChange = { pendingSecretValues[declaration.name] = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { Text(stringResource(R.string.extension_builder_page_secret_value)) },
+                                        visualTransformation = PasswordVisualTransformation(),
+                                        singleLine = true,
+                                        enabled = !isTesting,
+                                        supportingText = {
+                                            Text(
+                                                stringResource(
+                                                    if (declaration.name in savedSecretNames) R.string.extension_builder_page_secret_configured
+                                                    else R.string.extension_builder_page_secret_not_configured
+                                                )
+                                            )
+                                        },
+                                    )
+                                    OutlinedButton(
+                                        onClick = {
+                                            val value = pendingSecretValues[declaration.name].orEmpty()
+                                            scope.launch {
+                                                runCatching {
+                                                    withContext(Dispatchers.IO) {
+                                                        secretStore.putSecret(draftId, declaration.name, value)
+                                                    }
+                                                }.onSuccess {
+                                                    savedSecretNames = savedSecretNames + declaration.name
+                                                    pendingSecretValues.remove(declaration.name)
+                                                    testedHash = null
+                                                    enabled = false
+                                                    testPassed = null
+                                                    testResult = ""
+                                                }.onFailure {
+                                                    testPassed = false
+                                                    testResult = it.message ?: "Could not save Secret"
+                                                }
+                                            }
+                                        },
+                                        enabled = !isTesting && pendingSecretValues[declaration.name].orEmpty().isNotEmpty(),
+                                    ) {
+                                        Text(stringResource(R.string.extension_builder_page_save_secret))
+                                    }
+                                }
+                            }
+                            OutlinedTextField(
+                                value = secretNameInput,
+                                onValueChange = { secretNameInput = it.uppercase().filter { ch -> ch.isLetterOrDigit() || ch == '_' }.take(CustomExtensionLimits.MAX_VALUE_NAME_LENGTH) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.extension_builder_page_secret_name)) },
+                                singleLine = true,
+                            )
+                            OutlinedTextField(
+                                value = secretDescriptionInput,
+                                onValueChange = { secretDescriptionInput = it.take(CustomExtensionLimits.MAX_VALUE_DESCRIPTION_LENGTH) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.extension_builder_page_secret_description)) },
+                                singleLine = true,
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = secretRequiredInput, onCheckedChange = { secretRequiredInput = it })
+                                Text(stringResource(R.string.extension_builder_page_value_required))
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val declaration = CustomToolValueDeclaration(
+                                        name = secretNameInput.trim(),
+                                        description = secretDescriptionInput.trim(),
+                                        required = secretRequiredInput,
+                                    )
+                                    if (declaration.name.matches(Regex("[A-Z][A-Z0-9_]{0,63}")) &&
+                                        secretDeclarations.none { it.name == declaration.name } &&
+                                        variableDeclarations.none { it.name == declaration.name } &&
+                                        secretDeclarations.size < CustomExtensionLimits.MAX_VALUE_DECLARATIONS
+                                    ) {
+                                        secretDeclarations = secretDeclarations + declaration
+                                        secretNameInput = ""
+                                        secretDescriptionInput = ""
+                                        secretRequiredInput = true
+                                        testedHash = null
+                                        enabled = false
+                                    }
+                                },
+                                enabled = !isTesting && secretNameInput.isNotBlank(),
+                            ) { Text(stringResource(R.string.extension_builder_page_add_secret)) }
+                        }
+                    }
+                    item {
+                        BuilderSection(title = stringResource(R.string.extension_builder_page_variables)) {
+                            Text(
+                                stringResource(R.string.extension_builder_page_variables_help),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            variableDeclarations.forEach { declaration ->
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(declaration.name, style = MaterialTheme.typography.titleSmall)
+                                            if (declaration.description.isNotBlank()) {
+                                                Text(declaration.description, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                variableDeclarations = variableDeclarations.filterNot { it.name == declaration.name }
+                                                variableValues = variableValues - declaration.name
+                                                testedHash = null
+                                                enabled = false
+                                                testPassed = null
+                                            },
+                                            enabled = !isTesting,
+                                        ) { Text(stringResource(R.string.extension_builder_page_remove)) }
+                                    }
+                                    OutlinedTextField(
+                                        value = variableValues[declaration.name].orEmpty(),
+                                        onValueChange = {
+                                            variableValues = variableValues + (declaration.name to it.take(CustomExtensionLimits.MAX_SECRET_VALUE_LENGTH))
+                                            testedHash = null
+                                            enabled = false
+                                            testPassed = null
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { Text(declaration.name) },
+                                        singleLine = true,
+                                        enabled = !isTesting,
+                                    )
+                                }
+                            }
+                            OutlinedTextField(
+                                value = variableNameInput,
+                                onValueChange = { variableNameInput = it.uppercase().filter { ch -> ch.isLetterOrDigit() || ch == '_' }.take(CustomExtensionLimits.MAX_VALUE_NAME_LENGTH) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.extension_builder_page_variable_name)) },
+                                singleLine = true,
+                            )
+                            OutlinedTextField(
+                                value = variableDescriptionInput,
+                                onValueChange = { variableDescriptionInput = it.take(CustomExtensionLimits.MAX_VALUE_DESCRIPTION_LENGTH) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.extension_builder_page_variable_description)) },
+                                singleLine = true,
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = variableRequiredInput, onCheckedChange = { variableRequiredInput = it })
+                                Text(stringResource(R.string.extension_builder_page_value_required))
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val declaration = CustomToolValueDeclaration(
+                                        name = variableNameInput.trim(),
+                                        description = variableDescriptionInput.trim(),
+                                        required = variableRequiredInput,
+                                    )
+                                    if (declaration.name.matches(Regex("[A-Z][A-Z0-9_]{0,63}")) &&
+                                        variableDeclarations.none { it.name == declaration.name } &&
+                                        secretDeclarations.none { it.name == declaration.name } &&
+                                        variableDeclarations.size < CustomExtensionLimits.MAX_VALUE_DECLARATIONS
+                                    ) {
+                                        variableDeclarations = variableDeclarations + declaration
+                                        variableNameInput = ""
+                                        variableDescriptionInput = ""
+                                        variableRequiredInput = true
+                                        testedHash = null
+                                        enabled = false
+                                    }
+                                },
+                                enabled = !isTesting && variableNameInput.isNotBlank(),
+                            ) { Text(stringResource(R.string.extension_builder_page_add_variable)) }
                         }
                     }
                     if (builderMode == BuilderMode.SIMPLE) {
