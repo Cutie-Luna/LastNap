@@ -409,7 +409,7 @@
   <string name="extension_builder_page_enable_blocked">Check the required fields and run a successful test before enabling.</string>
   <string name="extension_builder_page_permission">Tool approval</string>
   <string name="extension_builder_page_need_approval">Need approval</string>
-  <string name="extension_builder_page_need_approval_help">When on, tool calls use the app's existing chat approval prompt. When off, this tool runs without asking.</string>
+  <string name="extension_builder_page_need_approval_help">When on, tool calls use the same approval prompt as other app tools. When off, this tool runs without asking.</string>
   <string name="extension_builder_page_approval_on">Approval required</string>
   <string name="extension_builder_page_approval_off">Approval not required</string>
   <string name="extension_builder_page_sandbox_note">JavaScript runs in a fresh, time- and memory-limited sandbox. It has no direct access to Android, your files, the network, the browser or Node.js. Review implementations before enabling them.</string>
