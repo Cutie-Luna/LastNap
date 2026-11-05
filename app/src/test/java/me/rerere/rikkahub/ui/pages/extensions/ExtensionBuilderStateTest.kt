@@ -42,6 +42,9 @@ class ExtensionBuilderStateTest {
         assertFalse(tested.copy(name = "").canBeEnabledFromBuilder())
         assertFalse(tested.copy(permission = ExtensionPermission.DISABLED).canBeEnabledFromBuilder())
         assertFalse(tested.copy(implementation = "").canBeEnabledFromBuilder())
+        assertFalse(
+            tested.copy(inputSchema = """{"type":"object","properties":[]}""").canBeEnabledFromBuilder()
+        )
     }
 
     @Test
