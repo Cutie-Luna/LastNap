@@ -31,7 +31,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "rikkahub"
+rootProject.name = "LastNap"
 include(":app")
 include(":ai")
 include(":search")
