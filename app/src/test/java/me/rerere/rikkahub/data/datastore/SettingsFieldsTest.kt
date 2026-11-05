@@ -16,8 +16,8 @@ import me.rerere.rikkahub.data.model.PromptInjection
 import me.rerere.rikkahub.data.model.QuickMessage
 import me.rerere.rikkahub.data.model.Tag
 import me.rerere.rikkahub.data.sync.s3.S3Config
-import me.rerere.rikkahub.utils.JsonInstant
 import me.rerere.rikkahub.ui.theme.CustomTheme
+import me.rerere.rikkahub.utils.JsonInstant
 import me.rerere.search.SearchCommonOptions
 import me.rerere.search.SearchServiceOptions
 import org.junit.Assert.assertEquals
