@@ -142,6 +142,7 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         } finally {
             temporary.delete()
         }
+        Unit
     }
 
     override fun delete(toolId: String, name: String): Boolean = synchronized(lock) {
