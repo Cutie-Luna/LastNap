@@ -183,7 +183,8 @@ fun ExtensionBuilderPage(
         runCatching { buildCustomExtensionTestCode(testInput, "0") }.exceptionOrNull()?.message
     }
     val canTest = !isTesting && implementation.isNotBlank() &&
-        implementationIsWithinLimit && schemaIsValid && apiPolicyIsValid && inputError == null
+        implementationIsWithinLimit && schemaIsValid && apiPolicyIsValid && inputError == null &&
+        pendingSecretValues.values.none { it.isNotEmpty() }
     val missingRequiredSecrets = if (apiAccessEnabled) {
         secretDeclarations.filter { it.required && it.name !in savedSecretNames }
     } else emptyList()
@@ -191,7 +192,8 @@ fun ExtensionBuilderPage(
         it.required && variableValues[it.name].isNullOrBlank()
     }
     val canEnable = draft.canBeEnabledFromBuilder() &&
-        missingRequiredSecrets.isEmpty() && missingRequiredVariables.isEmpty()
+        missingRequiredSecrets.isEmpty() && missingRequiredVariables.isEmpty() &&
+        pendingSecretValues.values.none { it.isNotEmpty() }
     val hasCurrentTest = draft.hasCurrentBuilderTest()
 
     fun clearDraftState() {
