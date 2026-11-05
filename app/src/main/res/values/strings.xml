@@ -357,6 +357,7 @@
   <string name="extension_builder_page_title">Custom Tools</string>
   <string name="extension_builder_page_intro_title">Build a tool for your assistants</string>
   <string name="extension_builder_page_intro_desc">Create, test and review reusable tools. A tool stays a draft until you save it, and it cannot run for an assistant until it is enabled and assigned.</string>
+  <string name="extension_builder_page_editor_intro">Shape the tool, test it in the isolated sandbox, then review the details before saving.</string>
   <string name="extension_builder_page_empty_title">No custom tools yet</string>
   <string name="extension_builder_page_empty_desc">Start with a plain-language idea. You can add the technical details now or ask an assistant to help draft them.</string>
   <string name="extension_builder_page_create">Create a tool</string>
