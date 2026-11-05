@@ -100,22 +100,78 @@ Acceptance:
 - Tests cover message-only deletion/regeneration, repeated deletion, deleting a chat during an active media-producing call, process death between metadata/file operations, tool deletion during an active media-producing call, and backup/restore consistency.
 - Tests verify temporary URL results are materialized and remain readable after URL expiry or tool deletion.
 
-Stage 1 audit acceptance:
-- Contracts and risks are documented in this new plan before source edits.
-- Any design that would require unrelated app changes is narrowed or rejected.
+### Stage 1 audit findings
+
+The following source facts were verified on the continuation branch's inherited source snapshot:
+
+**Custom tool lifecycle and execution**
+- `CustomExtension` definitions are stored in `Settings.customExtensions`; each assistant separately stores `selectedCustomExtensionIds`. `Settings.withoutInvalidReferences()` filters stale IDs, and the existing `Settings.removeCustomExtension(id)` transformation removes the definition and its assignment from every assistant in one Settings update.
+- `Tool.execute` is a suspend function. `ChatToolFactory.createTools()` builds the custom tools for each generation, and `ChatRequestFactory.createContext()` already has the conversation ID but does not currently pass it to `ChatToolFactory`. The new tool-media path must pass the target conversation ID explicitly.
+- The custom-tool runtime currently returns text only through `evaluateJavascript`. It does not receive `fetch`, storage, secret resolution, or media-save capabilities.
+- Builder tests currently call `evaluateJavascript` directly. Once capabilities exist, Builder tests and chat execution must invoke the same capability-aware runtime and policy, with isolated test outputs and no test-only bypass.
+- Tool names already bind to the immutable tool ID and tested-definition fingerprint. New capability declarations and allowed-host policy must be included in that fingerprint; secret values and ordinary variable values must not be.
+
+**QuickJS and network**
+- `QuickJSFetch.kt` is a synchronous OkHttp-backed bridge injected only by `CustomJsSearchService`. It returns status and text/json body only; it has no response headers or binary response path and currently reads the full response body into memory.
+- The search bridge's existing behavior is a compatibility contract. Do not silently change it to serve custom tools. Build a separate custom-tool bridge/runtime adapter and add regression tests proving Custom JS search remains unchanged.
+- The shared OkHttp client is configured in `DataSourceModule` with app proxy settings, redirects enabled, a 20-second connect timeout, a 10-minute read timeout, and a 120-second write timeout.
+- That client also has a `RequestLoggingInterceptor` which records request headers and request bodies, redacting only `Proxy-Authorization`. Its `HttpLoggingInterceptor` is configured at HEADERS level and also redacts only `Proxy-Authorization`. API credentials in an `Authorization` or custom header could therefore be logged if custom tools used this client. Custom-tool requests must use a dedicated client with no request/body/header logging interceptors and must redact sensitive values from all surfaced errors.
+- The dedicated client may reuse the user's configured proxy selector/authenticator, but it must not inherit app-wide logging, AI request, or search behavior. Use shorter bounded timeouts, bounded request/response streaming, explicit redirect handling, and DNS/address validation.
+
+**Secrets, settings, storage, and backups**
+- Existing `SecretCipher` uses AES-GCM with Android Keystore alias `rikkahub_secret_cipher` for SSH credentials. Its ciphertext is device-bound. Preserve the class, alias, data model, and all SSH call sites unchanged.
+- Custom tool Secrets will use a separate AES-GCM Keystore alias and a dedicated store under `noBackupFilesDir`. Bind ciphertext to both immutable tool ID and secret name (authenticated additional data) so values cannot be swapped between tools/names. The store must be atomic, masked, and never expose plaintext through a getter to JavaScript or AI.
+- Settings are persisted by Preferences DataStore and the app's manual `BackupManager` serializes the Settings model. Tool definitions and non-secret Variables can be backed up with Settings. Tool definition export/import is not currently implemented in the audited source; when added, export only the definition/declarations, not local values or Secrets, and assign a fresh tool ID on import.
+- Android Auto Backup is enabled. The legacy `backup_rules.xml` currently includes `upload/`; Android 12+ `data_extraction_rules.xml` has empty/commented cloud and device-transfer rules. Custom-tool private data should live under `noBackupFilesDir`, rather than depending on fragile exclusion rules.
+- Manual `BackupManager` currently includes `upload`, `skills`, `fonts`, and `media_creation`; only Skills and Media Creation are treated as nested folders. If a dedicated conversation-media folder is used, add it to the manual backup folder set and nested-folder set, plus the legacy Android backup include rule. Restore validation must accept only paths under that explicit folder.
+- Variables are ordinary, non-secret values. Keep their local values separate from the tool definition, keyed by tool ID/name, and include them in the app Settings backup. Do not include them in an exported tool definition. Secrets and per-tool storage are not backed up.
+- Per-tool storage will live under `noBackupFilesDir/custom_tool_storage/<toolId>/`; it is lazily created, inaccessible by arbitrary path, and removed only by explicit tool deletion. Disabling storage blocks reads/writes but retains the data until deletion or re-enabling. Restore/re-import must never silently regain an old tool's storage namespace.
+
+**Conversation media and deletion**
+- `Conversation.files` walks all message nodes and all branches. The local-file collector also descends recursively into nested `UIMessagePart.Tool.output` and includes Image, Video, Audio, and Document `file://` URLs.
+- `Conversation.fork()` copies local file URLs; forked chats therefore get independent copies rather than sharing the original file. Keep that isolation for custom-tool media and test that deleting either fork never removes the other's copy.
+- `ChatService.deleteConversation()` uses `ConversationSession.replace()`, which cancels and joins the session's active jobs before replacing its state and deleting the persisted conversation. This is the existing foundation for preventing late tool work from publishing into a deleted conversation.
+- `ConversationRepository.deleteConversation()` deletes conversation/message rows in a Room transaction, then calls `FilesManager.deleteChatFiles()`. That file helper deletes the disk file immediately but removes managed-file rows asynchronously. A process death or I/O failure can leave an orphaned file or stale managed-file row; cleanup cannot depend on a single best-effort callback.
+- Message edits/deletes persist new message nodes and then remove files no longer referenced by that conversation. Queued-attachment cleanup checks database references and active sessions, but ordinary `deleteUnreferencedFiles()` only compares the previous/current conversation plus its queue. New conversation media must use unique per-conversation paths, and physical cleanup must also verify that no surviving message in any conversation references the file.
+- Use the existing `managed_files` table rather than adding an owner table unless implementation proves it is necessary. Its `folder` and `relative_path` fields can represent a dedicated `conversation_media/<conversationId>/` namespace. Save generated assets there under random filenames, never in tool storage. Forking copies them into the fork's own conversation namespace.
+- Add an idempotent startup reconciliation for this dedicated folder: retain files referenced by persisted message nodes; delete only confirmed unreferenced files and stale managed-file records. If cleanup cannot prove a file is unreferenced, keep it. This repairs crashes between Room changes and file deletion without scanning/deleting unrelated uploads.
+- New API media must be saved before the tool returns the typed message part. If generation is cancelled before the output is committed, clean its temporary file; if a process dies in that interval, the startup reconciliation removes the orphan. Deleting a conversation cancels/joins its session first, then removes that conversation's media namespace and confirms no surviving reference points into it.
+- Manual backup and Android backup must include conversation media with the database so message URLs remain valid. When a user chooses a database-only manual backup, missing media must render as unavailable placeholders instead of crashing the chat. An explicit Save/Export to a user-owned library creates a separate copy that survives conversation deletion.
+
+**Model handoff and video**
+- Typed `UIMessagePart.Image` is already rendered in generic tool results by `ChatMessageTools`. The Claude and Google provider adapters already encode image parts from local files; image understanding still depends on the selected model's advertised input modality. Stage 6 should deliver images only until the complete UI/provider path for another media type is verified.
+- Markdown currently registers a custom image renderer but no inline video renderer. Media3 ExoPlayer and UI dependencies are already present in `app/build.gradle.kts` (version catalog Media3 1.11.1), so Stage 8 should audit and reuse them rather than add a dependency.
+- The built-in Tool Creator skill accurately describes the current sandbox as having no network or filesystem access. Update it only after each advertised runtime capability is implemented and tested.
+
+### Frozen design choices
+
+1. **Network capability:** API access is disabled by default for existing and newly created tools. Enabling it is a separate capability toggle, not an approval setting. Each tool must also declare allowed host patterns; the native bridge enforces them on every request. HTTPS is the default. Loopback, link-local, private, and other non-public destinations are blocked unless the separate local-network capability is explicitly enabled. Resolve and validate addresses at connection time to resist DNS rebinding. Do not follow cross-origin redirects with credentials or downgrade HTTPS to HTTP; allow only safe same-origin redirects under the same validation rules.
+2. **Credential handling:** support non-secret Variables in the JS runtime as a plain `variables` object. Expose a declared Secret only as an opaque reference token; resolve it natively at request construction and initially allow substitution only into explicitly declared HTTP headers. Never substitute a Secret into URL, query parameters, body, JS-readable values, logs, or error text. Missing required values prevent enablement/invocation.
+3. **Network isolation:** custom tools use a dedicated OkHttp client. It may honor the app's configured proxy but contains no request logger, HTTP logger, AI interceptor, or inherited search behavior. Bound total execution time, connect/read/write durations, request size, text response size, and image byte size. Handle redirects explicitly and strip/reject credentials on any origin change.
+4. **Tool value ownership:** declaration metadata lives with the tool definition. Non-secret Variable values live separately in Settings keyed by immutable tool ID/name and participate in the app Settings backup. Secret values are encrypted with a custom-tool-only Keystore alias under no-backup app-private storage, with tool ID and name authenticated as associated data. Tool export excludes local values; import assigns a new tool ID.
+5. **Tool storage:** private storage is keyed by immutable tool ID under `noBackupFilesDir`, not `filesDir`, Settings, Room, or shared managed uploads. It is lazy, separately quota-limited, and only exposed through a narrow native interface. Disablement retains but blocks it; deletion removes it; export/backup never includes it.
+6. **Conversation media:** generated image assets use `filesDir/conversation_media/<conversationId>/<randomName>` and existing managed-file metadata. No blob deduplication is introduced. Forks copy files to their own namespace. File deletion checks global persisted references and active sessions; a startup orphan sweep repairs interrupted cleanup. Conversation media is included when backups include files; missing files in database-only restores display a safe unavailable state.
+7. **Deletion transaction:** tool deletion is a durable, idempotent lifecycle operation: write a deletion tombstone, mark the runtime tool unavailable, block new invocations, cancel/join active invocations, remove the definition and all assistant assignments with the existing atomic Settings transformation, delete tool-scoped Secrets/Variables and only that tool's private storage, then clear the tombstone. A startup recovery finishes any interrupted deletion. Already-committed conversation media is not part of this transaction.
+8. **Initial media support:** custom tools initially return typed images only. Audio/video/document outputs remain unavailable until their renderer, provider input adapter, backup path, and deletion lifecycle all pass end-to-end tests.
+
+### Stage 1 audit acceptance
+- Source facts and implementation contracts are recorded above before source edits.
+- HTTP logging, credential leakage, cancellation, URL security, file ownership, backups, and recovery are explicitly addressed.
+- No broad refactor or unrelated behavior change is required for the chosen implementation.
 
 ## Stage 2 — Implement the opted-in HTTP/API runtime
 
 **Goal:** make custom tools capable of real HTTP API calls without granting network access to other scripts.
 
 Tasks:
-- Reuse and extend the existing native QuickJS fetch bridge behind a custom-tool-only adapter.
+- Build a custom-tool-specific native QuickJS HTTP bridge. Reuse lower-level OkHttp/QuickJS patterns where useful, but leave the existing QuickJSFetch implementation and Custom JS search caller unchanged.
 - Preserve Custom JS search's current contract and behavior; add focused regression tests around its caller.
-- Add only the request/response features required by the frozen contract, including binary-safe transfer for media.
+- Add only the request/response features required by the frozen contract, including status/headers, JSON/text access, bounded binary response handling, and native image materialization without returning Base64 as model text.
+- Pass the target conversation ID from ChatRequestFactory through ChatToolFactory into the runtime so media can be stored under the correct conversation namespace.
 - Enforce opt-in capability at the host boundary.
-- Enforce timeout, cancellation, request/response size limits, safe URL handling, redirect policy, and clear errors.
+- Enforce allowed-host policy, DNS/IP checks, HTTPS and local-network rules, timeout/cancellation, request/response size limits, safe redirects, response-header filtering, and clear redacted errors.
 - Ensure HTTP response metadata and binary data are not silently converted into lossy text.
-- Add fake-server tests for supported methods, query/headers/bodies, response forms, errors, timeouts, cancellation, limits, redirects, and disabled capability.
+- Add fake-server tests for supported methods, query/headers/bodies, response forms, errors, timeouts, cancellation, limits, allowed/blocked hosts, DNS/private-address checks, redirects, secret redaction, and disabled capability.
 
 Acceptance:
 - Opted-in tools can call a local fake HTTP server and receive correct structured results.
@@ -129,14 +185,14 @@ Acceptance:
 
 Tasks:
 - Add a dedicated local secret store, separate from Settings and database exports, using Android Keystore-backed encryption and app-private no-backup storage.
-- Preserve the existing SecretCipher alias, SSH model, and SSH call sites.
-- Store ordinary Variables separately from sensitive Secrets and define their backup/export behavior explicitly.
+- Preserve the existing SecretCipher class, `rikkahub_secret_cipher` alias, SSH model, and SSH call sites. Use a separate custom-tool-only Keystore alias for API Secrets.
+- Store ordinary Variables separately from sensitive Secrets; keep their non-secret values in Settings keyed by tool ID/name so they are included in app Settings backups but excluded from exported tool definitions.
 - Add per-tool declarations of required and optional names, descriptions, and intended use.
 - Add a dedicated masked management flow to create, update, and delete named values.
 - Namespace values by immutable tool ID. Deleting a tool removes only values it owns; if cross-tool sharing is ever introduced, remove the deleted tool's reference and retain a shared value until its final owner explicitly releases it.
 - Resolve secret references only inside native request construction. JavaScript, AI prompts, test output, diagnostics, logs, tool exports, and serialized definitions never receive the plaintext.
 - Make missing required values visible and actionable.
-- Handle reinstall/device restore by asking the user to recreate unavailable local Secrets; never silently substitute or export them.
+- Handle reinstall/device restore by asking the user to recreate unavailable local Secrets; never silently substitute or export them. Local Variables may restore from Settings backup; per-tool storage and Secrets do not.
 - Add tests for encryption/decryption, persistence, atomic writes, missing values, redaction, backup/export exclusion, and unchanged SSH behavior.
 
 Acceptance:
@@ -151,7 +207,7 @@ Acceptance:
 **Goal:** let a tool persist its own files/data without general filesystem access.
 
 Tasks:
-- Add a narrow native storage service that derives its private directory from an immutable tool ID.
+- Add a narrow native storage service that derives its private directory from an immutable tool ID under `noBackupFilesDir/custom_tool_storage/<toolId>/`.
 - Expose only safe relative filenames and bounded read/write/list/delete operations that the product contract actually needs.
 - Create the folder only on the first successful write when storage is enabled.
 - Keep one folder per tool, shared across assistants using that tool.
@@ -165,7 +221,7 @@ Tasks:
 - Storage disablement blocks future reads/writes but retains existing data until the user explicitly deletes it or deletes the tool; show that retained data exists and explain its ownership.
 - Define behavior for tool deletion while a call is running and for storage writes racing with deletion. A late completion must not recreate deleted storage.
 - Keep tool storage separate from the Secret store.
-- Exclude tool data from backup unless an explicit product decision and safe implementation are documented.
+- Keep tool data in no-backup storage; never include it in Android Auto Backup, manual backups, database exports, or tool exports.
 - Add tests for lazy creation, restart persistence, tool isolation, shared assistant access, quotas, path traversal, disablement, deletion, and import behavior.
 
 Acceptance:
@@ -229,7 +285,7 @@ Acceptance:
 **Goal:** prove the complete custom-tool feature before beginning video work.
 
 Tasks:
-- Run all focused custom-tool, QuickJS, credential, storage, media ownership/lifecycle, settings normalization, backup/restore, and skill tests.
+- Run all focused custom-tool, QuickJS, credential, storage, media ownership/lifecycle, settings normalization, backup/restore, allowed-host/SSRF, and skill tests.
 - Verify chat backup/restore preserves media ownership and message references, and that deleting a tool does not alter chat backup data.
 - Run lint, all unit tests, debug APK build, and the configured signed ARM64 release workflow.
 - Inspect workflow logs and artifacts; verify APK package, ABI, signature, and version metadata where the workflow provides them.
@@ -254,7 +310,7 @@ Acceptance:
 Behavior:
 - Inline, borderless, no extra card/frame/padding, natural aspect ratio, bounded by chat width.
 - No autoplay.
-- Local video shows its actual first frame without starting playback.
+- Local video shows its actual first frame without starting playback. Reuse the existing Media3 dependencies; do not add another playback stack unless the audit reveals a concrete blocker.
 - Remote video URL is not fetched/downloaded merely to render or create a preview. Use a supplied poster if available; otherwise show a lightweight placeholder until explicit Play.
 - Tap Play to load/start. While controls are visible, tap empty video area to hide controls without pausing. Tap again to reveal them.
 - Controls fade after inactivity during playback; controls remain visible while paused.
