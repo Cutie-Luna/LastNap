@@ -69,7 +69,6 @@ val dataSourceModule = module {
 
     single {
         CustomToolHttpRuntime.create(
-            settingsStore = get(),
             secretStore = get(),
             storage = get(),
         )
