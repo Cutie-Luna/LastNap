@@ -115,6 +115,13 @@ class CustomToolHttpRuntime(
         }
         fun errorPayload(message: String) = buildJsonObject { put("error", message) }.toString()
 
+        val executionJob = currentCoroutineContext().job
+        val jobs = activeExecutions.computeIfAbsent(extension.id) { ConcurrentHashMap.newKeySet<Job>() }
+        jobs.add(executionJob)
+        if (extension.id in revokedToolIds) {
+            jobs.remove(executionJob)
+            throw CancellationException("Custom tool was deleted")
+        }
         try {
             withTimeoutOrNull(timeoutMillis.milliseconds) {
                 val executionJob = currentCoroutineContext().job
