@@ -90,7 +90,12 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                     function("__rikkahubLog") { args -> appendLog(args[0] as String) }
 
                     if (extension.apiAccessEnabled) {
+                        var requestCount = 0
                         function("__customToolHttpRequest") { args ->
+                            requestCount += 1
+                            require(requestCount <= MAX_REQUESTS_PER_EXECUTION) {
+                                "Custom tool exceeded the HTTP request limit"
+                            }
                             executeHttpRequest(
                                 extension = extension,
                                 client = toolClient,
@@ -467,6 +472,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         private const val MAX_TEXT_RESPONSE_BYTES = 1024 * 1024
         private const val MAX_BINARY_RESPONSE_BYTES = 8 * 1024 * 1024
         private const val MAX_REDIRECTS = 5
+        private const val MAX_REQUESTS_PER_EXECUTION = 20
         private val ALLOWED_METHODS = setOf("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         private val BLOCKED_REQUEST_HEADERS = setOf(
