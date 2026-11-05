@@ -63,7 +63,7 @@ class CustomToolStorageTest {
     }
 
     @Test
-    fun disablingStorageDoesNotImplyDeletion() {
+    fun explicitToolDeletionRemovesItsPrivateStorage() {
         val (parent, storage) = newStorage()
         try {
             storage.writeBytes("tool-a", "cache.txt", "keep".toByteArray())
