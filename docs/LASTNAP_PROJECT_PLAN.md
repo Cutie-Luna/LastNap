@@ -876,3 +876,45 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - No separate lint task, full assemble task, signed APK build, signature check, install, or phone verification was run. This is intentional: those remain Stage 8 gates. No phone action is needed from the user now.
 - The ChatService approval/resumption path was compiled and reviewed, while the focused tests exercise its exact grant-resolution policy rather than a full live conversation. Provider-specific schema compatibility and full chat/UI integration remain Stage 7 verification work.
 - **Next stage:** Stage 5 — implement the Simple / Advanced Tool Builder interface, following the documented original-RikkaHub-preservation boundary. Do not begin Stage 6 skills/entry points until Stage 5 is reviewed and accepted.
+
+
+## 38. Stage 5 Builder UI design and parity checklist — reviewed before UI edits (2026-11-05)
+
+### Existing implementation inspected
+
+- Historical reference: app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderPage.kt on feature/extensions-foundation (478 lines). It contains a global draft list and one AlertDialog editor. The editor is the cramped modal being replaced; the surrounding RikkaHub navigation and extension pages are not targets for redesign.
+- The old Builder's data flow uses SettingsStore.settingsFlow and SettingsStore.update, creates or edits CustomExtension records, runs the existing evaluateJavascript QuickJS helper, and removes an edited/deleted tool's assistant references when deleting it. These are reusable behaviors, not permission to port the old page wholesale.
+- Two historical test-flow defects must not return: its successful-test hash covered only implementation text, and it interpolated parsed JSON into a JavaScript object literal. The current model uses CustomExtension.testFingerprint() over exact schema + implementation, and the Stage 4 runtime reconstructs input with JSON.parse. The Builder must follow those current contracts and must use testedDefinitionHash, not the removed historical field name.
+- The clean branch intentionally has no ExtensionBuilderPage, Screen.ExtensionBuilder route, or assistant custom-tools tab. The historical assistant-specific tab/selector belongs to Stage 6; do not restore or alter AssistantExtensionsPage in Stage 5.
+- Current ExtensionsPage is a small, original-style global hub with Quick Messages, Prompts, Agent Skills and Workspace cards. Add only a focused Custom Tools entry there to reach the new dedicated Builder page; do not add assistant-specific selection controls or modify other extension cards.
+
+### Builder parity checklist (all existing popup behavior retained)
+
+- Draft collection: empty state, draft name/description display, create-new action, open/edit an existing draft.
+- Definition fields: name; description/purpose; assistant instructions (skill); JSON-object input schema; JavaScript implementation.
+- Test fields and state: sample JSON-object input; running/loading state; sandbox execution; successful result display; error/failed result display; current-test indicator; edited/stale-test indicator.
+- Enablement: explicit checkbox only after the current schema + implementation have passed a test and the complete model validation succeeds. Editing either schema or implementation clears the test marker, clears the prior result and unchecks enabled. Other descriptive edits do not invalidate the execution test.
+- Permissions: preserve ALWAYS_ALLOW, ASK_EVERY_TIME, THIS_SESSION and DISABLED, with clear explanations that match the Stage 4 runtime behavior.
+- Actions: save as new draft; update existing draft; delete existing draft with confirmation and clean all assistant references; leave/cancel without saving; run the test.
+- States to cover: empty list; new incomplete draft; malformed/non-object/oversized schema; invalid/oversized test input; empty or oversized implementation; running test; failed test; successful current test; stale test after schema/code edits; disabled draft; enabled valid definition; all permission choices.
+- Preview/review is informational only: summarize name, description, input schema, implementation, permission, enablement and current test status. It must not execute JavaScript, mark a test successful, save, or enable a tool.
+
+### Stage 5 UI design decisions
+
+- Replace the AlertDialog with a dedicated page-like editor hosted by Screen.ExtensionBuilder. Use the existing LargeFlexibleTopAppBar, BackButton, CustomColors and original NavDisplay transition defaults. Do not modify global navigation animation specifications.
+- Keep the draft list as the Builder landing state and switch to a full-screen editor state for create/edit. Use a single-column LazyColumn with grouped sections and comfortable spacing, optimized for phones.
+- Provide a clearly visible Simple / Advanced switch. Both modes edit exactly the same draft fields. Simple mode emphasizes plain-language purpose/instructions and keeps technical schema/code/sample fields under a clearly labeled expandable “Build details” group; Advanced mode shows all fields in readable groups. No AI-generation action or tool-creator skill is introduced here; those belong to Stage 6. Simple mode explains how the user can use natural language and paste generated schema/code from an assistant without pretending LastNap has integrated a builder assistant yet.
+- Add a distinct Review state before saving. It is a read-only summary; return to editing to change anything. The review footer offers Back to edit and Save draft. It never runs tests or turns on enablement.
+- Keep a persistent, unobtrusive bottom action area on the editor for Back, Run test and Review. Keep Delete as a separate confirmed action inside the editor for existing drafts, avoiding a crowded footer.
+- Draft persistence stays in SettingsStore and the persisted CustomExtension format. Test input/output remain transient UI state; do not add persistence or a database. Saving an incomplete draft is allowed for recovery, but invalid definitions remain disabled and cannot become runtime tools.
+- Show the actual THIS_SESSION semantics: approval is remembered for this conversation and definition during the current app process. Do not reuse the old inaccurate “currently asks each time” label.
+- Add the Builder route and a Custom Tools card to the global Extensions hub only. Leave assistant custom-tool assignment UI for Stage 6 and all unrelated pages/screens unchanged.
+
+### Stage 5 intended source and test scope
+
+- New app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderPage.kt: list, full-page editor, Simple/Advanced presentation, Review state, validation/test/enable/save/delete flow.
+- Minimal update to app/src/main/java/me/rerere/rikkahub/RouteActivity.kt: import and register Screen.ExtensionBuilder using the existing default transition behavior; add the Screen key.
+- Minimal update to app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionsPage.kt: one Custom Tools entry card.
+- Add only required English base strings in app/src/main/res/values/strings.xml. Translations are reserved for Stage 7.
+- Add focused state/logic tests if pure Builder validation/test-gate logic can be extracted without adding a new ViewModel or broad UI test framework. CI must at least compile the page and rerun the focused model/runtime tests.
+- Acceptance: no popup editor remains; full-screen page is open/readable on phones; both modes and every checklist item remain usable; Review is informational; test-before-enable and schema+code fingerprint rules are enforced; permissions match Stage 4; delete cleans assistant references; no unrelated RikkaHub UI or behavior is changed.
