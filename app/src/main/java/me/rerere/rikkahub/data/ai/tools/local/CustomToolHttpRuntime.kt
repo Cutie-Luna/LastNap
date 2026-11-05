@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
@@ -61,6 +62,12 @@ class CustomToolHttpRuntime(
         activeExecutions[toolId]?.toList()?.forEach { job ->
             job.cancel(CancellationException("Custom tool was deleted"))
         }
+    }
+
+    /** Waits for all in-flight work to stop before its private files are removed. */
+    suspend fun revokeToolAndJoin(toolId: String) {
+        revokeTool(toolId)
+        activeExecutions[toolId]?.toList()?.joinAll()
     }
 
 
