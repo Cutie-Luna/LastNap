@@ -10,11 +10,13 @@ import me.rerere.asr.ASRProviderSetting
 import me.rerere.mediagen.provider.MediaGenerationProviderSetting
 import me.rerere.rikkahub.data.ai.mcp.McpServerConfig
 import me.rerere.rikkahub.data.model.Assistant
+import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.Lorebook
 import me.rerere.rikkahub.data.model.PromptInjection
 import me.rerere.rikkahub.data.model.QuickMessage
 import me.rerere.rikkahub.data.model.Tag
 import me.rerere.rikkahub.data.sync.s3.S3Config
+import me.rerere.rikkahub.utils.JsonInstant
 import me.rerere.rikkahub.ui.theme.CustomTheme
 import me.rerere.search.SearchCommonOptions
 import me.rerere.search.SearchServiceOptions
@@ -74,8 +76,20 @@ class SettingsFieldsTest {
         assertEquals(DEFAULT_SYSTEM_TTS_ID, settings.selectedTTSProviderId)
         assertEquals(null, settings.selectedASRProviderId)
         assertEquals(null, settings.memoryModelId)
+        assertEquals(emptyList<CustomExtension>(), settings.customExtensions)
+        assertEquals(emptySet<String>(), settings.assistants.first().selectedCustomExtensionIds)
         assertEquals(true, settings.dynamicColor)
         assertEquals(8080, settings.webServerPort)
+    }
+
+    @Test
+    fun `legacy settings json defaults custom tools and assistant selections to empty`() {
+        val legacyJson = """{"assistants":[{"id":"00000000-0000-0000-0000-000000000020","name":"Legacy"}]}"""
+
+        val settings = JsonInstant.decodeFromString<Settings>(legacyJson)
+
+        assertEquals(emptyList<CustomExtension>(), settings.customExtensions)
+        assertEquals(emptySet<String>(), settings.assistants.single().selectedCustomExtensionIds)
     }
 
     @Test
@@ -137,7 +151,15 @@ private val SAMPLE = Settings(
     ocrPrompt = "ocr",
     assistantId = id(20),
     providers = listOf(ProviderSetting.OpenAI(id = id(31), name = "Provider")),
-    assistants = listOf(Assistant(id = id(20), name = "Assistant")),
+    assistants = listOf(Assistant(id = id(20), name = "Assistant", selectedCustomExtensionIds = setOf("tool-1"))),
+    customExtensions = listOf(
+        CustomExtension(
+            id = "tool-1",
+            name = "Example tool",
+            description = "A disabled example draft",
+            implementation = "input.value",
+        )
+    ),
     assistantTags = listOf(Tag(id = id(7), name = "tag")),
     searchServices = listOf(
         SearchServiceOptions.BingLocalOptions(id = id(21)),
@@ -195,6 +217,7 @@ private val STORED_KEYS = setOf(
     "select_assistant",
     "assistants",
     "assistant_tags",
+    "custom_extensions",
     "search_services",
     "search_common",
     "search_selected",
