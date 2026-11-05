@@ -4,21 +4,18 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import me.rerere.rikkahub.data.model.CustomExtension
-import me.rerere.rikkahub.data.model.ExtensionPermission
 import me.rerere.rikkahub.data.model.testFingerprint
 
 class ExtensionBuilderStateTest {
     private fun testedExtension(
         schema: String = """{"type":"object","properties":{"value":{"type":"integer"}}}""",
         code: String = "input.value * 2",
-        permission: ExtensionPermission = ExtensionPermission.ASK_EVERY_TIME,
     ): CustomExtension {
         val draft = CustomExtension(
             name = "Double a value",
             description = "Returns twice the supplied value",
             inputSchema = schema,
             implementation = code,
-            permission = permission,
         )
         return draft.copy(testedDefinitionHash = draft.testFingerprint())
     }
@@ -40,7 +37,6 @@ class ExtensionBuilderStateTest {
         assertTrue(tested.canBeEnabledFromBuilder())
         assertFalse(tested.copy(testedDefinitionHash = null).canBeEnabledFromBuilder())
         assertFalse(tested.copy(name = "").canBeEnabledFromBuilder())
-        assertFalse(tested.copy(permission = ExtensionPermission.DISABLED).canBeEnabledFromBuilder())
         assertFalse(tested.copy(implementation = "").canBeEnabledFromBuilder())
         assertFalse(
             tested.copy(inputSchema = """{"type":"object","properties":[]}""").canBeEnabledFromBuilder()
