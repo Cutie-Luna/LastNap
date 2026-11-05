@@ -11,9 +11,15 @@ on:
       - "web-ui/**"
       - ".github/workflows/release-build.yml"
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Create a draft GitHub Release after the signed APK passes verification"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: lastnap-release-${{ github.ref }}
@@ -71,22 +77,22 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           set -euo pipefail
-          if [ -n "$KEY_BASE64" ] && [ -n "$SIGNING_CONFIG" ]; then
-            printf '%s' "$KEY_BASE64" | base64 -d > app/app.key
-            printf '%s\n' "$SIGNING_CONFIG" > local.properties
-            test -s app/app.key
-            test -s local.properties
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::No repo signing secrets; will build unsigned and sign privately after download."
-            echo "signed=false" >> "$GITHUB_OUTPUT"
+          if [ -z "$KEY_BASE64" ] || [ -z "$SIGNING_CONFIG" ]; then
+            echo "::error::Release signing secrets are missing. Refusing to create an unsigned APK."
+            exit 1
           fi
+          printf '%s' "$KEY_BASE64" | base64 -d > app/app.key
+          printf '%s\\n' "$SIGNING_CONFIG" > local.properties
+          test -s app/app.key
+          test -s local.properties
+          echo "signed=true" >> "$GITHUB_OUTPUT"
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf '%s\n' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            printf '%s\\n' "$GOOGLE_SERVICES_JSON" > app/google-services.json
           else
-            printf '%s\n' '{"project_info":{"project_number":"123456789012","project_id":"lastnap-personal-build","storage_bucket":"lastnap-personal-build.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0123456789abcdef","android_client_info":{"package_name":"com.lastnap.app"}},"api_key":[{"current_key":"personal-build-placeholder-not-a-production-key"}],"services":{}}],"configuration_version":"1"}' > app/google-services.json
+            printf '%s\\n' '{"project_info":{"project_number":"123456789012","project_id":"lastnap-personal-build","storage_bucket":"lastnap-personal-build.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0123456789abcdef","android_client_info":{"package_name":"com.lastnap.app"}},"api_key":[{"current_key":"personal-build-placeholder-not-a-production-key"}],"services":{}}],"configuration_version":"1"}' > app/google-services.json
           fi
           test -s app/google-services.json
+
       - name: Assemble optimized ARM64 release
         run: |
           chmod +x ./gradlew
@@ -94,22 +100,16 @@ jobs:
 
       - name: Verify and prepare ARM64 APK
         id: apk
-        env:
-          RELEASE_SIGNED: ${{ steps.prepare.outputs.signed }}
         run: |
           set -euo pipefail
           apk="$(find app/build/outputs/apk/github/release -maxdepth 1 -type f -name '*arm64-v8a*.apk' -print -quit)"
-          test -n "$apk" || { echo "ARM64 release APK was not produced"; exit 1; }
+          test -n "$apk" || { echo "::error::ARM64 release APK was not produced"; exit 1; }
           mkdir -p release-assets
           cp "$apk" release-assets/LastNap-3.1.2-arm64-v8a.apk
-          if [ "$RELEASE_SIGNED" = "true" ]; then
-            apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print -quit)"
-            test -n "$apksigner" || { echo "Android apksigner was not found"; exit 1; }
-            "$apksigner" verify --verbose --print-certs release-assets/LastNap-3.1.2-arm64-v8a.apk
-            signature_status="Signed release APK verified by apksigner"
-          else
-            signature_status="Unsigned release APK; local signing is required before installation"
-          fi
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print -quit)"
+          test -n "$apksigner" || { echo "::error::Android apksigner was not found"; exit 1; }
+          "$apksigner" verify --verbose --print-certs release-assets/LastNap-3.1.2-arm64-v8a.apk
+          signature_status="Signed release APK verified by apksigner"
           size="$(stat -c '%s' release-assets/LastNap-3.1.2-arm64-v8a.apk)"
           sha="$(sha256sum release-assets/LastNap-3.1.2-arm64-v8a.apk | cut -d ' ' -f1)"
           echo "size=$size" >> "$GITHUB_OUTPUT"
@@ -121,8 +121,11 @@ jobs:
             echo "- Size: $size bytes"
             echo "- SHA-256: $sha"
             echo "- ABI: arm64-v8a"
-            echo "- Build: R8-optimized release variant with the committed Baseline Profile"
+            echo "- Package: com.lastnap.app"
+            echo "- Version code: 195"
+            echo "- R8-optimized release variant with the committed Baseline Profile"
           } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload signed ARM64 release APK
         uses: actions/upload-artifact@v4
         with:
@@ -130,6 +133,41 @@ jobs:
           path: release-assets/LastNap-3.1.2-arm64-v8a.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish draft GitHub Release
+        if: ${{ inputs.publish_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: LastNap-3.1.2
+          target_commitish: feature/extensions-foundation
+          name: LastNap 3.1.2
+          draft: true
+          prerelease: false
+          files: release-assets/LastNap-3.1.2-arm64-v8a.apk
+          body: |
+            ## LastNap 3.1.2
+
+            Personal ARM64 build for Android devices.
+
+            ### What's included
+            - Assistant-scoped custom tool assignments and the built-in Tool Creator skill.
+            - Simple and Advanced modes in the Tool Builder, sharing the same sandbox and test-before-enable protections.
+            - Restored LastNap launcher artwork.
+            - Shorter fade-based navigation transitions.
+            - R8-optimized ARM64 release with the packaged Baseline Profile.
+
+            ### Compatibility
+            - Android package: `com.lastnap.app`
+            - Version code: `195`
+            - ABI: `arm64-v8a`
+
+            ### Installation
+            Download the APK asset, open it on your Android device, and allow installation from that source if Android asks. This is a personal GitHub build, not a Google Play release.
+
+            The APK is signed and verified by the release workflow. Its exact file size and SHA-256 checksum are recorded in the workflow run summary.
+
+            This is a personal build, not an official Google Play distribution.
+          fail_on_unmatched_files: true
 
       - name: Upload R8 mapping file
         uses: actions/upload-artifact@v4
