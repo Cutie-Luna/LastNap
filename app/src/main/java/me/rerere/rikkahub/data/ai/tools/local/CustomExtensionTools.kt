@@ -31,6 +31,25 @@ internal fun CustomExtension.sessionGrant(assistantId: Uuid) = CustomExtensionSe
     definitionHash = testFingerprint(),
 )
 
+/** Resolves only the exact currently selected THIS_SESSION definition that was approved. */
+internal fun findApprovedCustomExtensionSessionGrant(
+    extensions: List<CustomExtension>,
+    selectedExtensionIds: Set<String>,
+    assistantId: Uuid,
+    toolName: String?,
+): CustomExtensionSessionGrant? {
+    if (toolName == null) return null
+    val extension = extensions.firstOrNull {
+        it.id in selectedExtensionIds &&
+            it.enabled &&
+            it.permission == ExtensionPermission.THIS_SESSION &&
+            it.validationErrors().isEmpty() &&
+            parseCustomInputSchema(it.inputSchema) != null &&
+            customExtensionToolName(it) == toolName
+    } ?: return null
+    return extension.sessionGrant(assistantId)
+}
+
 /**
  * The provider-visible name is bound to both identity and the tested definition.
  * Editing schema or code therefore makes an older pending tool call unresolvable.
