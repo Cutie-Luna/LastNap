@@ -1,6 +1,7 @@
 package me.rerere.rikkahub.data.skills
 
 import java.io.File
+import me.rerere.rikkahub.data.model.Assistant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,6 +20,14 @@ class BuiltinSkillsTest {
 
         assertEquals(listOf("shared", "only-builtin"), merged.map { it.name })
         assertEquals(local, merged.first())
+    }
+
+    @Test
+    fun `tool creator is bundled but not enabled for new assistants`() {
+        val skillFile = File("src/main/assets/builtin_skills/tool-creator/SKILL.md")
+
+        assertTrue("Tool Creator skill is missing", skillFile.isFile)
+        assertTrue("New assistants must opt in to skills", Assistant().enabledSkills.isEmpty())
     }
 
     @Test
