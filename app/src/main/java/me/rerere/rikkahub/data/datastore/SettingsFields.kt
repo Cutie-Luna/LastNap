@@ -120,6 +120,7 @@ internal val SETTINGS_FIELDS: List<SettingsField<*, *>> = with(SettingsStore) {
         uuid(SELECT_ASSISTANT, Settings::assistantId) { copy(assistantId = it) },
         json(ASSISTANTS, Settings::assistants) { copy(assistants = it) },
         json(ASSISTANT_TAGS, Settings::assistantTags) { copy(assistantTags = it) },
+        json(CUSTOM_EXTENSIONS, Settings::customExtensions) { copy(customExtensions = it) },
 
         // 搜索
         json(SEARCH_SERVICES, Settings::searchServices) { copy(searchServices = it) },
