@@ -1,29 +1,30 @@
 <div align="center">
-  <img src="docs/icon.png" alt="App 圖標" width="100" />
-  <h1>RikkaHub</h1>
+  <img src="app/src/main/res/drawable-nodpi/appicon.png" alt="LastNap 應用圖示" width="100" />
+  <h1>LastNap</h1>
 
-一個原生Android LLM 聊天客戶端，支持切換不同的供應商進行聊天 🤖💬
+LastNap 是 RikkaHub 的個人分支版本，基於原生 Android LLM 聊天客戶端，可切換不同的模型供應商進行對話 🤖💬
 
-點擊加入我們的Discord伺服器 👉 [【RikkaHub】](https://discord.gg/9weBqxe5c4)
+上游 RikkaHub Discord 社群：[【RikkaHub】](https://discord.gg/9weBqxe5c4)
 
 [English](README.md) | 繁體中文 | [简体中文](README_ZH_CN.md)
 
 </div>
 
 <div align="center">
-  <img src="docs/img/poster.png" alt="RikkaHub" width="800" />
+  <img src="docs/img/poster.png" alt="應用預覽" width="800" />
 </div>
 
 ## 🚀 下載
 
-🔗 [前往官網下載](https://rikka-ai.com/download)（推薦）
+LastNap 目前尚無已發布版本。完成發布驗證後，APK 將發布在 [LastNap GitHub Releases](https://github.com/Cutie-Luna/LastNap/releases)。
 
-🔗 [前往 Google Play 下載](https://play.google.com/store/apps/details?id=me.rerere.rikkahub)
+原版 RikkaHub 下載（並非 LastNap）：
+- [RikkaHub 官方網站](https://rikka-ai.com/download)
+- [RikkaHub Google Play](https://play.google.com/store/apps/details?id=me.rerere.rikkahub)
 
-> [!WARNING]
-> RikkaHub 存在許多 fork 版本，fork 版本出現問題與 RikkaHub 無關，請謹慎使用 fork 版本，避免隱私洩露或者過度索要權限問題。
+> LastNap 是 RikkaHub 的獨立個人分支版本，並非 RikkaHub 官方版本。LastNap 相關問題請在本儲存庫回報。
 
-## 💖 贊助商
+## 💖 上游 RikkaHub 贊助商（非 LastNap 贊助）
 
 | 贊助商 | 介紹 |
 |:---:|:---|
@@ -80,9 +81,9 @@
 * [Ko-fi](https://ko-fi.com/reovodev)
 * [愛發電](https://afdian.com/a/reovo)
 
-## ⭐ Star History
+## ⭐ 上游 RikkaHub Star History
 
-如果喜歡這個項目，請給個Star ⭐
+下方圖表展示的是上游 RikkaHub 儲存庫的 Star 歷史。
 
 <a href="https://www.star-history.com/?type=date&repos=re-ovo%2Frikkahub">
  <picture>
