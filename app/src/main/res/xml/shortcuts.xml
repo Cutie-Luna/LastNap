@@ -9,7 +9,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetClass="me.rerere.rikkahub.ui.activity.ShortcutHandlerActivity"
-            android:data="rikkahub://shortcut" />
+            android:data="lastnap://shortcut" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
     <shortcut
@@ -19,7 +19,7 @@
         android:shortcutShortLabel="@string/translator_page_title"
         android:shortcutLongLabel="@string/translator_page_title">
         <intent
-            android:action="me.rerere.rikkahub.action.TRANSLATE"
+            android:action="com.lastnap.app.action.TRANSLATE"
             android:targetClass="me.rerere.rikkahub.RouteActivity" />
     </shortcut>
     <shortcut
@@ -29,7 +29,7 @@
         android:shortcutShortLabel="@string/shortcut_media_creation"
         android:shortcutLongLabel="@string/shortcut_media_creation">
         <intent
-            android:action="me.rerere.rikkahub.action.MEDIA_CREATION"
+            android:action="com.lastnap.app.action.MEDIA_CREATION"
             android:targetClass="me.rerere.rikkahub.RouteActivity" />
     </shortcut>
 </shortcuts>

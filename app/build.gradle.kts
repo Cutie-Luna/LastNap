@@ -23,11 +23,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "me.rerere.rikkahub"
+        applicationId = "com.lastnap.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 194
-        versionName = "3.1.1"
+        versionCode = 196
+        versionName = "3.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

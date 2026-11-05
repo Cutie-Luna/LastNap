@@ -166,7 +166,7 @@ fun SettingAboutPage() {
                         )
 
                         Text(
-                            text = "RikkaHub",
+                            text = "LastNap",
                             style = MaterialTheme.typography.headlineLargeEmphasized.copy(
                                 fontWeight = FontWeight.Black,
                             ),
@@ -210,15 +210,15 @@ fun SettingAboutPage() {
                             headlineContent = { Text(stringResource(R.string.about_page_website)) },
                         )
                         item(
-                            onClick = { context.openUrl("https://github.com/rikkahub/rikkahub") },
+                            onClick = { context.openUrl("https://github.com/Cutie-Luna/LastNap") },
                             leadingContent = { CardGroupIcon(HugeIcons.Github, containerColor = containerColor, contentColor = contentColor) },
-                            supportingContent = { Text("https://github.com/rikkahub/rikkahub") },
+                            supportingContent = { Text("https://github.com/Cutie-Luna/LastNap") },
                             headlineContent = { Text(stringResource(R.string.about_page_github)) },
                         )
                         item(
-                            onClick = { context.openUrl("https://github.com/rikkahub/rikkahub/blob/master/LICENSE") },
+                            onClick = { context.openUrl("https://github.com/Cutie-Luna/LastNap/blob/master/LICENSE") },
                             leadingContent = { CardGroupIcon(HugeIcons.File02, containerColor = containerColor, contentColor = contentColor) },
-                            supportingContent = { Text("https://github.com/rikkahub/rikkahub/blob/master/LICENSE") },
+                            supportingContent = { Text("https://github.com/Cutie-Luna/LastNap/blob/master/LICENSE") },
                             headlineContent = { Text(stringResource(R.string.about_page_license)) },
                         )
                     }
