@@ -121,6 +121,7 @@ internal val SETTINGS_FIELDS: List<SettingsField<*, *>> = with(SettingsStore) {
         json(ASSISTANTS, Settings::assistants) { copy(assistants = it) },
         json(ASSISTANT_TAGS, Settings::assistantTags) { copy(assistantTags = it) },
         json(CUSTOM_EXTENSIONS, Settings::customExtensions) { copy(customExtensions = it) },
+        json(CUSTOM_TOOL_VARIABLES, Settings::customToolVariables) { copy(customToolVariables = it) },
 
         // 搜索
         json(SEARCH_SERVICES, Settings::searchServices) { copy(searchServices = it) },
