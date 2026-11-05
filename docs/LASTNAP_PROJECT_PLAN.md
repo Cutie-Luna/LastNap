@@ -704,3 +704,36 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Acceptance:** existing settings and assistants deserialize unchanged; new fields default safely (empty custom-tool collection and empty assignment IDs); round-trip serialization works; deletion/missing-ID normalization is defined and tested; oversized/invalid tool fields are rejected at the model/validation boundary; no tool becomes callable solely because it exists.
 - **Risks:** Settings are user data and may be backed up/restored; migrations must preserve old serialized payload compatibility. IDs must be stable across backup/restore. New model fields must not collide with built-in `Tool` APIs. Avoid introducing a new database table unless existing repository patterns make Settings JSON storage unsuitable.
 - **Next actions:** inspect the listed model/storage/runtime/test files on both the clean branch and historical feature branch; produce a file-level parity matrix and data-model proposal; only then update this plan with the chosen schema and begin Stage 3 edits.
+
+
+## 31. Stage 3 data-model proposal — reviewed before source edits (2026-11-05)
+
+### Chosen persisted shape
+
+- Add `CustomExtension` as a user-level serializable record in `app/src/main/java/me/rerere/rikkahub/data/model/CustomExtension.kt`, based on the previously reviewed old-branch model to preserve the feature's existing conceptual shape: stable string UUID `id`, `name`, `description`, optional assistant instructions `skill`, JSON-object `inputSchema`, JavaScript `implementation`, `ExtensionPermission`, `enabled` (default false), and `testedImplementationHash` (default null). Keep test input/output as transient Builder UI state (Stage 5), not persisted tool data.
+- Add `Settings.customExtensions: List<CustomExtension> = emptyList()` and a `custom_extensions` JSON-string DataStore key. Register the new field in `SETTINGS_FIELDS` exactly once, preserving the existing one-field/one-key storage invariant.
+- Add `Assistant.selectedCustomExtensionIds: Set<String> = emptySet()` so each assistant explicitly opts in. Existing assistant JSON without the field deserializes to an empty set. A tool existing in `Settings.customExtensions` does not implicitly assign it to any assistant.
+- Keep the old model defaults for safety: new tools start disabled, permission defaults to `ASK_EVERY_TIME`, and no successful test hash exists until a later test flow runs. Stage 3 does not make any tool callable.
+
+### Validation contract
+
+- Reuse the limits already exercised by the old feature branch: name 80 chars, description 2,000, skill text 16,000, input schema 16,000, implementation 64,000, and runtime input 64 KiB.
+- Add a pure model-level validator that reports blank ID/name, over-limit fields, malformed JSON, and non-object root schemas. Blank description/skill/implementation remain allowed for an incomplete draft; a blank implementation can never count as tested/executable. Do not delete a user's draft merely because it is currently incomplete; Stage 4 runtime and Stage 5 save/enable actions must consult validation.
+- Preserve the existing SHA-256 helper for `testedImplementationHash`. Stage 4 will separately audit whether the stored test fingerprint must bind both schema and implementation; Stage 3 does not execute code or create test results.
+
+### Normalization and deletion
+
+- Extend `Settings.withoutInvalidReferences()` to drop duplicate/blank custom-tool IDs and remove assistant selections that do not refer to an existing custom tool. Keep valid selected IDs only.
+- Add a pure `Settings.removeCustomExtension(id)` helper that deletes the definition and removes that ID from every assistant in the same Settings value. This provides an atomic cleanup primitive for the later UI without adding screens or runtime registration now.
+- Do not auto-assign tools to default assistants. Missing or deleted definitions always leave assistants with no dangling selection.
+
+### Migration and backup decision
+
+- No DataStore version bump or V6 migration is needed: the new key is absent on old installations, and the existing field reader falls back to the `Settings` constructor default (`emptyList()`). The existing backup path serializes `Settings` to `settings.json` and decodes it with defaults; old backup JSON missing `customExtensions` and `selectedCustomExtensionIds` therefore remains compatible.
+- Add regression tests for DataStore field mapping/round-trip/absent-key defaults, deserialization of pre-feature Settings and Assistant JSON, normalization of duplicate/deleted IDs, atomic deletion cleanup, and model validation limits/schema shape.
+
+### Implementation boundary
+
+- Stage 3 source files: new `CustomExtension.kt`; `Assistant.kt`; `Settings.kt`; `PreferencesStore.kt`; `SettingsFields.kt`; `SettingsNormalization.kt`; focused tests under `app/src/test/.../data/model` and `.../data/datastore`.
+- Do not touch `ChatToolFactory.kt`, `JavascriptTool.kt`, runtime tool filtering, QuickJS execution, permission enforcement, Tool Builder screen, navigation, skills, or locales in Stage 3. Those belong to Stages 4–7.
+- **Acceptance:** Settings/Assistant round-trip, old JSON defaults, default-empty assistant selection, cleanup/deletion, and validation tests are written. No existing Settings key or backup payload shape is renamed. No custom tool becomes callable.
