@@ -91,6 +91,7 @@ fun ExtensionBuilderPage(
     settingsStore: SettingsStore = koinInject(),
     httpRuntime: CustomToolHttpRuntime = koinInject(),
     secretStore: CustomToolSecretStore = koinInject(),
+    storage: CustomToolStorage = koinInject(),
 ) {
     val settings by settingsStore.settingsFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
