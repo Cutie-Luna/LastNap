@@ -65,6 +65,11 @@ class CustomToolHttpRuntime(
         }
     }
 
+    /** Re-enables an ID only when a deletion attempt failed before its definition was removed. */
+    fun restoreToolAfterFailedDeletion(toolId: String) {
+        revokedToolIds.remove(toolId)
+    }
+
     /** Waits for all in-flight work to stop before its private files are removed. */
     suspend fun revokeToolAndJoin(toolId: String) {
         revokeTool(toolId)
