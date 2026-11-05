@@ -37,6 +37,7 @@ internal fun createCustomExtensionTools(
     selectedExtensionIds: Set<String>,
     reservedToolNames: Set<String> = emptySet(),
     onNameCollision: (String) -> Unit = {},
+    httpRuntime: CustomToolHttpRuntime? = null,
 ): List<Tool> {
     val usedNames = reservedToolNames.toMutableSet()
     val seenIds = mutableSetOf<String>()
@@ -46,6 +47,8 @@ internal fun createCustomExtensionTools(
         if (extension.id !in selectedExtensionIds) return@mapNotNull null
         if (!extension.enabled) return@mapNotNull null
         if (extension.validationErrors().isNotEmpty()) return@mapNotNull null
+        // API-enabled tools must never silently fall back to the no-network evaluator.
+        if (extension.apiAccessEnabled && httpRuntime == null) return@mapNotNull null
 
         val inputSchema = parseCustomInputSchema(extension.inputSchema) ?: return@mapNotNull null
         val toolName = customExtensionToolName(extension)
@@ -81,6 +84,12 @@ internal fun createCustomExtensionTools(
                     }
                     appendLine("Call this tool with the user's JSON object inside the required input field.")
                     appendLine("The implementation runs in an isolated JavaScript runtime.")
+                    if (extension.apiAccessEnabled) {
+                        appendLine("HTTP fetch is enabled only for the tool's configured allowed hosts.")
+                        appendLine("Use fetch(url, { method, headers, body }) to make bounded API requests.")
+                    } else {
+                        appendLine("Network access is not available to this tool.")
+                    }
                 }
             },
             needsApproval = { _ -> extension.needsApproval },
@@ -96,7 +105,12 @@ internal fun createCustomExtensionTools(
                 val serializedInput = input.toString()
                 val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
                 val code = "const input = JSON.parse($serializedInputLiteral);\n$implementation"
-                listOf(UIMessagePart.Text(evaluateJavascript(code)))
+                val output = if (extension.apiAccessEnabled) {
+                    requireNotNull(httpRuntime).evaluate(extension, code)
+                } else {
+                    evaluateJavascript(code)
+                }
+                listOf(UIMessagePart.Text(output))
             },
         )
     }
