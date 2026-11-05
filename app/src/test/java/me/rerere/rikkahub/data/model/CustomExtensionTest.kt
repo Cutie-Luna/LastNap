@@ -90,6 +90,10 @@ class CustomExtensionTest {
             CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST in
                 tested.copy(implementation = "input.value + 2").validationErrors()
         )
+        assertTrue(
+            CustomExtensionValidationError.ENABLED_WITH_DISABLED_PERMISSION in
+                tested.copy(permission = ExtensionPermission.DISABLED).validationErrors()
+        )
     }
 
     @Test
