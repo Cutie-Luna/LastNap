@@ -164,6 +164,7 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         requireOwnedDirectory(toolId, file.parentFile ?: error("Storage path is invalid"))
         require(file.isFile && !Files.isSymbolicLink(file.toPath())) { "Stored item is not a regular file" }
         check(file.delete()) { "Could not delete the stored item" }
+        true
     }
 
     override fun list(toolId: String): List<String> = synchronized(lock) {
