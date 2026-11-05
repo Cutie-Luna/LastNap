@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import me.rerere.common.http.await
@@ -20,8 +21,9 @@ import me.rerere.rikkahub.AppScope
 import me.rerere.rikkahub.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.Locale
 
-private const val API_URL = "https://updates.rikka-ai.com/"
+private const val API_URL = "https://api.github.com/repos/Cutie-Luna/LastNap/releases?per_page=20"
 
 class UpdateChecker(
     private val client: OkHttpClient,
@@ -40,20 +42,54 @@ class UpdateChecker(
         emit(
             UiState.Success(
                 data = try {
-                    val response = client.newCall(
-                        Request.Builder()
-                            .url(API_URL)
-                            .get()
-                            .addHeader(
-                                "User-Agent",
-                                "RikkaHub ${BuildConfig.VERSION_NAME} #${BuildConfig.VERSION_CODE}"
-                            )
-                            .build()
-                    ).await()
-                    if (response.isSuccessful) {
-                        json.decodeFromString<UpdateInfo>(response.body.string())
-                    } else {
-                        throw Exception("Failed to fetch update info")
+                    val request = Request.Builder()
+                        .url(API_URL)
+                        .get()
+                        .addHeader(
+                            "Accept",
+                            "application/vnd.github+json"
+                        )
+                        .addHeader(
+                            "X-GitHub-Api-Version",
+                            "2022-11-28"
+                        )
+                        .addHeader(
+                            "User-Agent",
+                            "LastNap ${BuildConfig.VERSION_NAME} #${BuildConfig.VERSION_CODE}"
+                        )
+                        .build()
+                    client.newCall(request).await().use { response ->
+                        if (!response.isSuccessful) {
+                            throw Exception("LastNap release check failed (HTTP ${response.code})")
+                        }
+                        val releases = json.decodeFromString<List<GitHubRelease>>(response.body.string())
+                        releases.firstNotNullOfOrNull { release ->
+                            val publishedAt = release.publishedAt
+                            val apkAssets = release.assets.filter {
+                                it.name.endsWith(".apk", ignoreCase = true)
+                            }
+                            if (release.draft || release.prerelease || publishedAt.isNullOrBlank() || apkAssets.isEmpty()) {
+                                null
+                            } else {
+                                UpdateInfo(
+                                    version = release.tagName.removePrefix("v"),
+                                    publishedAt = publishedAt,
+                                    changelog = release.body.orEmpty(),
+                                    downloads = apkAssets.map { asset ->
+                                        UpdateDownload(
+                                            name = asset.name,
+                                            url = asset.browserDownloadUrl,
+                                            size = formatFileSize(asset.size)
+                                        )
+                                    }
+                                )
+                            }
+                        } ?: UpdateInfo(
+                            version = BuildConfig.VERSION_NAME,
+                            publishedAt = "",
+                            changelog = "",
+                            downloads = emptyList()
+                        )
                     }
                 } catch (e: Exception) {
                     throw Exception("Failed to fetch update info", e)
@@ -88,6 +124,32 @@ class UpdateChecker(
             context.openUrl(download.url) // 跳转到下载页面
         }
     }
+}
+
+@Serializable
+private data class GitHubRelease(
+    @SerialName("tag_name") val tagName: String,
+    @SerialName("published_at") val publishedAt: String? = null,
+    val body: String? = null,
+    val draft: Boolean = false,
+    val prerelease: Boolean = false,
+    val assets: List<GitHubReleaseAsset> = emptyList()
+)
+
+@Serializable
+private data class GitHubReleaseAsset(
+    val name: String,
+    @SerialName("browser_download_url") val browserDownloadUrl: String,
+    val size: Long
+)
+
+private fun formatFileSize(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kilobytes = bytes / 1024.0
+    if (kilobytes < 1024) return String.format(Locale.ROOT, "%.1f KB", kilobytes)
+    val megabytes = kilobytes / 1024.0
+    if (megabytes < 1024) return String.format(Locale.ROOT, "%.1f MB", megabytes)
+    return String.format(Locale.ROOT, "%.1f GB", megabytes / 1024.0)
 }
 
 @Serializable
