@@ -285,6 +285,9 @@ fun ExtensionBuilderPage(
         )
         val valuesToSave = variableValues.filterKeys { key -> saved.variables.any { it.name == key } }
         scope.launch {
+            withContext(Dispatchers.IO) {
+                secretStore.retainDeclaredSecrets(draftId, saved.secrets.map { it.name }.toSet())
+            }
             settingsStore.update { current ->
                 val next = if (isExistingDraft) {
                     current.customExtensions.map { if (it.id == draftId) saved else it }
@@ -297,9 +300,6 @@ fun ExtensionBuilderPage(
                     current.customToolVariables + (draftId to valuesToSave)
                 }
                 current.copy(customExtensions = next, customToolVariables = nextVariables)
-            }
-            withContext(Dispatchers.IO) {
-                secretStore.retainDeclaredSecrets(draftId, saved.secrets.map { it.name }.toSet())
             }
             clearDraftState()
         }
@@ -1261,10 +1261,10 @@ fun ExtensionBuilderPage(
                 TextButton(
                     onClick = {
                         scope.launch {
-                            settingsStore.update { it.removeCustomExtension(draftId) }
                             withContext(Dispatchers.IO) {
                                 secretStore.deleteToolSecrets(draftId)
                             }
+                            settingsStore.update { it.removeCustomExtension(draftId) }
                             showDeleteConfirmation = false
                             clearDraftState()
                         }
