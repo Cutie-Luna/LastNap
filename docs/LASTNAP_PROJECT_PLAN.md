@@ -287,8 +287,6 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 ### Stage 6 — Add the Tool Creator skill and assistant entry points
 
-<badge color="success">Source + focused CI acceptance complete</badge>
-
 **Goal:** integrate the built-in skill into the existing skill and assistant systems.
 
 - [x] Review the existing Agent Skill loading/enablement rules.
