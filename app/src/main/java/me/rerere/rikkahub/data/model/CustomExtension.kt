@@ -162,7 +162,7 @@ fun normalizeCustomApiHostPattern(
     ) return null
 
     val isIpv4Literal = ascii.matches(Regex("""\d{1,3}(\.\d{1,3}){3}""")) &&
-        ascii.split('.').all { it.toIntOrNull() in 0..255 }
+        ascii.split('.').all { label -> label.toIntOrNull()?.let { it in 0..255 } == true }
     if (isIpv4Literal) return null
 
     val isLocalName = ascii == "localhost" || ascii.endsWith(".localhost") ||
@@ -198,14 +198,20 @@ fun CustomExtension.allowsApiHost(host: String): Boolean {
  * Secret values and ordinary Variable values are intentionally never part of this fingerprint.
  */
 fun CustomExtension.testFingerprint(): String {
+    // Preserve the exact pre-capability fingerprint for legacy tools. Their existing
+    // successful-test hashes remain valid because all new fields default to disabled/empty.
+    val legacyDefinition = "${inputSchema.length}:$inputSchema${implementation.length}:$implementation"
+    if (!apiAccessEnabled && !allowLocalNetwork) {
+        return legacyDefinition.extensionSha256()
+    }
+
     val sortedHosts = allowedApiHosts
         .mapNotNull { normalizeCustomApiHostPattern(it, allowLocalNetwork) }
         .distinct()
         .sorted()
     val hostDefinition = sortedHosts.joinToString("") { "${it.length}:$it" }
     val definition = buildString {
-        append("${inputSchema.length}:$inputSchema")
-        append("${implementation.length}:$implementation")
+        append(legacyDefinition)
         append("|api=").append(apiAccessEnabled)
         append("|local=").append(allowLocalNetwork)
         append("|hosts=").append(hostDefinition)
