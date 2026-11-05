@@ -756,7 +756,7 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 
 ### Branch and repository checkpoint
 
-- Working branch: `lastnap-clean-foundation`. Source/workflow head before this plan update: `7de2a15c3e409ee8a5479e6f6b688183e5901a10`.
+- Working branch: `lastnap-clean-foundation`. Source/workflow head before this plan update: `1d92cb10dce0d01e9c5407fe4c0c99617334c4f3`.
 - Protected branch tips rechecked: `master` remains `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`; historical `feature/extensions-foundation` remains `942c1b49019dbbd55f02606f31b74cc258c14641`. Neither was modified.
 - Complete, non-truncated recursive tree comparison against frozen fork baseline `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`: 1,543 LastNap blobs vs 1,536 baseline blobs; 7 LastNap-only paths; zero baseline paths missing; 58 shared paths differ; 1,478 shared blobs are byte-identical. The 58 comprise the previously reviewed identity/upstream-baseline set, seven Stage 3 existing-file additions/updates, and the release-workflow guard. The three Stage 3 new paths are the custom-tool model and two focused test files.
 - A separate comparison against current upstream `rikkahub/rikkahub` master shows upstream has continued to move (including two newly added upstream-only assets); do not treat those newer upstream changes as omissions from the frozen fork baseline.
@@ -787,7 +787,7 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 ### Release-workflow safety
 
 - `.github/workflows/daily-build.yml` previously scheduled builds twice daily and automatically published a public prerelease after a successful build. This contradicted the project's explicit no-automatic-publication rule.
-- The schedule is removed. Manual `workflow_dispatch` remains, with `publish_prerelease` defaulting to false; the release step runs only when that input is explicitly enabled. Gradle task, signing configuration, and secret references are unchanged.
+- The schedule and obsolete scheduled-build check job are removed. Manual `workflow_dispatch` remains, with `publish_prerelease` defaulting to false; the release step runs only when that input is explicitly enabled. Gradle task, signing configuration, and secret references are unchanged.
 
 ### Verification and remaining gate
 
