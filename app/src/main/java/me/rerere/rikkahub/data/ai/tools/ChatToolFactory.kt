@@ -105,6 +105,7 @@ class ChatToolFactory(
             selectedExtensionIds = assistant.selectedCustomExtensionIds,
             reservedToolNames = tools.mapTo(mutableSetOf()) { it.name },
             httpRuntime = customToolHttpRuntime,
+            variablesByTool = settings.customToolVariables,
             onNameCollision = { name ->
                 Log.w(TAG, "Skipping custom tool with colliding name: $name")
             },
