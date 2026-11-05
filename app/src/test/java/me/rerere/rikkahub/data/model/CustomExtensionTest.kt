@@ -11,7 +11,7 @@ class CustomExtensionTest {
         val extension = CustomExtension(name = "Weather", description = "Returns a forecast")
 
         assertFalseEnabled(extension)
-        assertEquals(ExtensionPermission.ASK_EVERY_TIME, extension.permission)
+        assertEquals(true, extension.needsApproval)
         assertEquals(null, extension.testedDefinitionHash)
         assertEquals(emptySet<CustomExtensionValidationError>(), extension.validationErrors())
     }
@@ -118,10 +118,13 @@ class CustomExtensionTest {
                 tested.copy(inputSchema = """{"type":"object","properties":{"value":{"type":"string"}}}""")
                     .validationErrors()
         )
-        assertTrue(
-            CustomExtensionValidationError.ENABLED_WITH_DISABLED_PERMISSION in
-                tested.copy(permission = ExtensionPermission.DISABLED).validationErrors()
-        )
+    }
+
+    @Test
+    fun `approval preference is independent from validation and enablement`() {
+        val extension = CustomExtension(name = "Lookup", description = "", needsApproval = false)
+        assertEquals(false, extension.needsApproval)
+        assertEquals(emptySet<CustomExtensionValidationError>(), extension.validationErrors())
     }
 
     @Test
