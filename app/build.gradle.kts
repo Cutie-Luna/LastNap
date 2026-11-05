@@ -15,6 +15,10 @@ plugins {
 }
 
 android {
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
+
     namespace = "me.rerere.rikkahub"
     compileSdk {
         version = release(37) {
