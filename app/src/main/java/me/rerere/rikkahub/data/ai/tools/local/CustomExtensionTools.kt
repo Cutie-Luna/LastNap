@@ -108,7 +108,7 @@ internal fun createCustomExtensionTools(
                 val serializedInput = input.toString()
                 val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
                 val code = "const input = JSON.parse($serializedInputLiteral);\n$implementation"
-                val output = if (extension.apiAccessEnabled) {
+                val output = if (extension.apiAccessEnabled || extension.variables.isNotEmpty()) {
                     requireNotNull(httpRuntime).evaluate(
                         extension = extension,
                         code = code,
