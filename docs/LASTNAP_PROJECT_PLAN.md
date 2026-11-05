@@ -418,9 +418,9 @@ At the end of the chat, update this document before presenting the handoff summa
 
 ## 8. Current next action
 
-Stages 0 and 1 are complete; Stage 2 source identity/artwork acceptance is closed on the documented bounded-scan basis in Section 30. Stage 3 persistence and Stage 4 custom-tool runtime/permission integration are complete on the documented source and focused-CI basis in Sections 34–37. The next stage is Stage 5: build the Simple / Advanced Tool Builder UI without changing unrelated RikkaHub screens. Stage 7 integration/regression and Stage 8 APK/package-table/signing/Android 13 device verification remain open; no phone action is needed yet.
+Stages 0–4 are complete on their documented source and focused-CI bases. Stage 5's page-based Builder implementation and focused CI compile/tests are complete on source head 6c34c9559d84927353e9b9b2a0d961e7e79ca9fa (Section 39). The remaining Stage 5 acceptance item is the user's visual review of the page on an installed build; this is deferred until the Stage 8 debug/device verification path can provide a real screen. Do not begin Stage 6 until that UI review is accepted. Stage 7 locale/integration work and Stage 8 full APK/package-table/signing/Android 13 device verification remain open. No phone action is needed right now.
 
-When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experience while preserving Simple and Advanced and all existing functionality. This is a UI presentation change, not permission to simplify away features.
+Stage 5 replaces the cramped editor popup with a dedicated page while preserving Simple and Advanced and all existing functionality. Treat this as a UI presentation change, not permission to simplify away features. The source and focused compile/test gate passed; real-phone visual review remains explicitly open.
 
 **Standing instruction for every future chat and every meaningful checkpoint:** read this entire plan first; inspect the current branch/commit; compare the full recursive file tree against the frozen/current upstream baseline; inspect all changed files and relevant upstream counterparts; update this plan's ledger and handoff with every file change, decision, test result, failure, blocker, and next action. Do not mark work complete based on assumptions. Keep each stage focused and reasonably sized; do not turn every stage into a full-day project. If something cannot be verified, say so and leave it open rather than skipping it.
 
@@ -917,4 +917,45 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - Minimal update to app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionsPage.kt: one Custom Tools entry card.
 - Add only required English base strings in app/src/main/res/values/strings.xml. Translations are reserved for Stage 7.
 - Add focused state/logic tests if pure Builder validation/test-gate logic can be extracted without adding a new ViewModel or broad UI test framework. CI must at least compile the page and rerun the focused model/runtime tests.
-- Acceptance: no popup editor remains; full-screen page is open/readable on phones; both modes and every checklist item remain usable; Review is informational; test-before-enable and schema+code fingerprint rules are enforced; permissions match Stage 4; delete cleans assistant references; no unrelated RikkaHub UI or behavior is changed.
+- Source acceptance: no add/edit popup editor remains; the Builder has a full-page editor; both modes and the parity checklist are retained in source; Review is informational; test-before-enable and schema+code fingerprint rules are enforced; permissions match Stage 4; delete cleans assistant references; no unrelated RikkaHub UI or behavior is intentionally changed. Phone readability/visual acceptance is not claimed until a real installed build is reviewed.
+
+
+## 39. Stage 5 Builder UI implementation and focused verification — 2026-11-05
+
+### Files changed on lastnap-clean-foundation
+
+- Added app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderPage.kt. The old add/edit AlertDialog editor is replaced by a dedicated full-page editor. The page retains a global draft list and its empty state, create/edit, name, description, assistant instructions, input JSON Schema, JavaScript, test input, sandbox test, test result/status, enable checkbox, permission controls, save/update, delete confirmation, and Back/cancel behavior.
+- Simple mode keeps the purpose/instructions fields prominent and places schema, implementation, and sample input under an expandable Build details group. Advanced mode displays those technical sections directly. Both modes edit the same CustomExtension shape and share the same validation/test/enable/save logic.
+- Added a read-only Review state with a separate bottom action area. It summarizes the fields, permission, test status, and enablement disposition; it does not run code, mark tests successful, or enable the tool. The editor uses a single-column scrollable layout and a persistent bottom action area with Back, Run test, and Review.
+- The page runs sample code through the existing evaluateJavascript QuickJS helper, with test input constructed by buildCustomExtensionTestCode using JSON.parse and the same UTF-8 argument-size limit as the runtime. A success marker is stored only for the exact schema+implementation testFingerprint; editing either clears the marker/result and disables the tool. Descriptive text changes do not invalidate the test.
+- Builder enablement consults the complete CustomExtension.validationErrors() model gate. During Stage 5 review, the model's JSON Schema shape validation was aligned with the Stage 4 runtime: a present properties member must be a JSON object, and a present required member must be an array of strings. Added model and Builder state assertions so malformed structures cannot appear ready in the Builder and then be silently rejected by runtime registration.
+- Saving an incomplete draft remains allowed, but it is saved disabled. Enabling requires a current successful schema+code test and no validation errors. The four permission modes are retained with accurate Stage 4 wording: THIS_SESSION is remembered for the current conversation until the app process restarts; the old inaccurate “currently asks each time” description was not reused.
+- Existing-tool deletion uses the existing Settings.removeCustomExtension transformation, removing the saved record and all assistant assignments together.
+- Added app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderState.kt and app/src/test/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderStateTest.kt. The five focused tests cover fingerprint invalidation and stability, enablement validation, safe JSON.parse input construction and __proto__ preservation, object-input requirements, UTF-8 size limits, and valid test-code construction.
+- Updated app/src/main/java/me/rerere/rikkahub/RouteActivity.kt with Screen.ExtensionBuilder and its entry, using the existing default navigation transition behavior. No global transition specifications were changed.
+- Updated app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionsPage.kt with a single Custom Tools card linking to the Builder. Existing Quick Messages, Prompts, Skills, and Workspace entries remain intact. Assistant-specific tool selection UI remains reserved for Stage 6.
+- Updated app/src/main/res/values/strings.xml with the Builder's English UI labels and descriptions, and two Custom Tools hub labels. Other locales remain reserved for Stage 7.
+- The first CI attempt, run 42038293735 (https://github.com/Cutie-Luna/LastNap/actions/runs/42038293735), failed during Android resource merge because the Review introduction contained an unescaped possessive apostrophe. This was corrected to “change whether the tool is enabled”; it was a resource-text issue, not a Kotlin or runtime failure.
+
+### Final focused CI verification
+
+- Final source head: 6c34c9559d84927353e9b9b2a0d961e7e79ca9fa.
+- Successful GitHub Actions run: 42038947611 (https://github.com/Cutie-Luna/LastNap/actions/runs/42038947611). Overall run and sole persistence-tests job both completed with success.
+- The workflow ran :app:testGithubDebugUnitTest with six focused test-class filters: CustomExtensionTest, SettingsNormalizationTest, SettingsFieldsTest, SettingsStoreTest, CustomExtensionToolsTest, and ExtensionBuilderStateTest.
+- Log confirms :app:compileGithubDebugKotlin and :app:testGithubDebugUnitTest completed; Gradle reported BUILD SUCCESSFUL in 2m 20s (228 actionable tasks). The page and app Kotlin sources compiled, and all six selected test classes passed.
+- Web UI build emitted existing non-fatal sourcemap-location warnings; they did not fail the run. CI used the ephemeral dummy Google Services configuration and read-only workflow permissions; no signing secrets, signed APK, release task, publication, or artifact upload was involved.
+
+### Full-tree audit at final Stage 5 source head
+
+- All three recursive trees were non-truncated.
+- Compared with frozen LastNap fork baseline 903e058b9361bff71d0b79f4ef2d8ac23d6597e6: 1,549 LastNap blobs versus 1,536 baseline blobs; 13 LastNap-only paths; zero baseline paths removed; 62 shared paths with different blob hashes; 1,474 shared blobs byte-identical.
+- Compared with live upstream RikkaHub master f958af6a1a4a16dd8c1ac4138662a838b590e6c5: 1,549 LastNap blobs versus 1,538 upstream blobs; 13 LastNap-only paths; 2 upstream-only paths; 63 shared paths with different blob hashes; 1,473 shared blobs byte-identical. The two upstream-only paths remain the unrelated sponsor assets app/src/main/assets/icons/sta1n.png and docs/sponsors/sta1n.png.
+- Protected branch tips were rechecked: LastNap master remains 903e058b9361bff71d0b79f4ef2d8ac23d6597e6; feature/extensions-foundation remains 942c1b49019dbbd55f02606f31b74cc258c14641. Neither branch was modified.
+
+### Stage 5 disposition and handoff
+
+- **Builder source implementation and focused CI compile/test verification: complete.**
+- **Real-phone visual acceptance: open.** CI compiles the page but does not show how the full-page editor feels on the target Android 13 phone. Do not claim phone readability, runtime navigation feel, or visual polish has been verified. The user's review should happen when a build is available through the Stage 8 verification path; no phone action is needed before then.
+- No separate lint task, full assemble task, signed APK build, signature check, install, screenshot, or device test was run.
+- Stage 7 remains responsible for translated strings and integration/regression polish. Stage 8 remains responsible for full build, package/resource table checks, existing-key signing verification, installation, and Android 13 device checks.
+- **Stage 6 is intentionally not started.** It adds the Tool Creator skill and assistant-specific custom-tool assignment/entry points. Start only after the user has reviewed and accepted the Stage 5 Builder presentation.
