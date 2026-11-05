@@ -138,6 +138,32 @@ class CustomToolHttpRuntime(
                         }
                         evaluate<Unit>(FETCH_POLYFILL + "\nvoid 0;")
                     }
+                    if (extension.storageEnabled) {
+                        function("__customToolStorageRead") { args ->
+                            val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
+                            val bytes = storage.readBytes(extension.id, name)
+                            buildJsonObject {
+                                put("found", bytes != null)
+                                if (bytes != null) put("value", bytes.toString(Charsets.UTF_8))
+                            }.toString()
+                        }
+                        function("__customToolStorageWrite") { args ->
+                            val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
+                            val value = args.getOrNull(1) as? String ?: error("Storage text value is required")
+                            storage.writeBytes(extension.id, name, value.toByteArray(Charsets.UTF_8))
+                            true
+                        }
+                        function("__customToolStorageDelete") { args ->
+                            val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
+                            storage.delete(extension.id, name)
+                        }
+                        function("__customToolStorageList") {
+                            buildJsonArray {
+                                storage.list(extension.id).forEach { add(JsonPrimitive(it)) }
+                            }.toString()
+                        }
+                        evaluate<Unit>(STORAGE_POLYFILL + "\nvoid 0;")
+                    }
 
                     val result = evaluate<String?>(
                         """
