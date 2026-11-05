@@ -66,6 +66,7 @@ import me.rerere.hugeicons.stroke.Puzzle
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntime
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStore
+import me.rerere.rikkahub.data.ai.tools.local.InMemoryCustomToolStorage
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.removeCustomExtension
 import me.rerere.rikkahub.data.model.CustomExtension
@@ -116,6 +117,7 @@ fun ExtensionBuilderPage(
     var apiAccessEnabled by rememberSaveable { mutableStateOf(false) }
     var allowedApiHostsText by rememberSaveable { mutableStateOf("") }
     var allowLocalNetwork by rememberSaveable { mutableStateOf(false) }
+    var storageEnabled by rememberSaveable { mutableStateOf(false) }
     var secretDeclarations by remember { mutableStateOf<List<CustomToolValueDeclaration>>(emptyList()) }
     var variableDeclarations by remember { mutableStateOf<List<CustomToolValueDeclaration>>(emptyList()) }
     var variableValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -154,6 +156,7 @@ fun ExtensionBuilderPage(
         apiAccessEnabled = apiAccessEnabled,
         allowedApiHosts = allowedApiHosts,
         allowLocalNetwork = allowLocalNetwork,
+        storageEnabled = storageEnabled,
         secrets = secretDeclarations,
         variables = variableDeclarations,
     )
@@ -221,6 +224,7 @@ fun ExtensionBuilderPage(
         apiAccessEnabled = false
         allowedApiHostsText = ""
         allowLocalNetwork = false
+        storageEnabled = false
         testPassed = null
         testResult = ""
         isReviewing = false
@@ -244,6 +248,7 @@ fun ExtensionBuilderPage(
         apiAccessEnabled = extension.apiAccessEnabled
         allowedApiHostsText = extension.allowedApiHosts.joinToString("\n")
         allowLocalNetwork = extension.allowLocalNetwork
+        storageEnabled = extension.storageEnabled
         secretDeclarations = extension.secrets
         variableDeclarations = extension.variables
         variableValues = settings.customToolVariables[extension.id].orEmpty()
@@ -331,6 +336,7 @@ fun ExtensionBuilderPage(
                     definitionUnderTest,
                     code,
                     variables = variablesUnderTest,
+                    storageOverride = InMemoryCustomToolStorage(),
                 )
                 val payload = Json.parseToJsonElement(output) as? JsonObject
                     ?: error("The sandbox returned an unexpected result")
@@ -340,6 +346,7 @@ fun ExtensionBuilderPage(
                     apiAccessEnabled == apiAccessUnderTest &&
                     allowedApiHosts == allowedHostsUnderTest &&
                     allowLocalNetwork == localNetworkUnderTest &&
+                    storageEnabled == definitionUnderTest.storageEnabled &&
                     variableValues == variablesUnderTest &&
                     savedSecretNames == secretsUnderTest &&
                     declarationsUnderTest == (secretDeclarations to variableDeclarations)
@@ -616,6 +623,11 @@ fun ExtensionBuilderPage(
                         }
                     }
                     item {
+                        ReviewSection(title = stringResource(R.string.extension_builder_page_storage)) {
+                            Text(stringResource(if (storageEnabled) R.string.extension_builder_page_storage_on else R.string.extension_builder_page_storage_off))
+                        }
+                    }
+                    item {
                         ReviewSection(title = stringResource(R.string.extension_builder_page_secrets)) {
                             if (secretDeclarations.isEmpty()) {
                                 Text(stringResource(R.string.extension_builder_page_not_set))
@@ -840,6 +852,34 @@ fun ExtensionBuilderPage(
                                         enabled = !isTesting,
                                     )
                                 }
+                            }
+                        }
+                    }
+                    item {
+                        BuilderSection(title = stringResource(R.string.extension_builder_page_storage)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.extension_builder_page_storage_enable))
+                                    Text(
+                                        stringResource(R.string.extension_builder_page_storage_help),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = storageEnabled,
+                                    onCheckedChange = {
+                                        storageEnabled = it
+                                        testedHash = null
+                                        enabled = false
+                                        testPassed = null
+                                        testResult = ""
+                                    },
+                                    enabled = !isTesting,
+                                )
                             }
                         }
                     }
@@ -1263,6 +1303,7 @@ fun ExtensionBuilderPage(
                         scope.launch {
                             withContext(Dispatchers.IO) {
                                 secretStore.deleteToolSecrets(draftId)
+                                storage.deleteToolStorage(draftId)
                             }
                             settingsStore.update { it.removeCustomExtension(draftId) }
                             showDeleteConfirmation = false
