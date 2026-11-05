@@ -26,6 +26,7 @@ import me.rerere.rikkahub.data.datastore.Settings
 import me.rerere.rikkahub.data.skills.SkillManager
 import me.rerere.rikkahub.data.skills.SkillMetadata
 import me.rerere.rikkahub.data.model.Assistant
+import me.rerere.rikkahub.ui.components.ai.CustomExtensionsContent
 import me.rerere.rikkahub.ui.components.ai.ExtensionEmptyState
 import me.rerere.rikkahub.ui.components.ai.LorebooksContent
 import me.rerere.rikkahub.ui.components.ai.ModeInjectionsContent
@@ -40,7 +41,8 @@ internal enum class ExtensionTab(
     QUICK_MESSAGES(HugeIcons.Zap, R.string.extension_selector_tab_quick_messages),
     MODE_INJECTIONS(HugeIcons.MagicWand01, R.string.extension_selector_tab_mode_injections),
     LOREBOOKS(HugeIcons.Book01, R.string.extension_selector_tab_lorebooks),
-    SKILLS(HugeIcons.Puzzle, R.string.extension_selector_tab_skills);
+    SKILLS(HugeIcons.Puzzle, R.string.extension_selector_tab_skills),
+    CUSTOM_TOOLS(HugeIcons.Puzzle, R.string.extension_selector_tab_custom_tools);
 
     override val label: String
         @Composable get() = stringResource(labelRes)
@@ -56,6 +58,7 @@ fun ExtensionSelector(
     onNavigateToQuickMessages: () -> Unit = {},
     onNavigateToPrompts: () -> Unit = {},
     onNavigateToSkills: () -> Unit = {},
+    onNavigateToToolBuilder: (() -> Unit)? = null,
 ) {
     val skillManager: SkillManager = koinInject()
     var skills by remember { mutableStateOf<List<SkillMetadata>>(emptyList()) }
@@ -180,6 +183,32 @@ fun ExtensionSelector(
                             message = stringResource(R.string.extension_selector_skills_empty),
                             buttonText = stringResource(R.string.extension_selector_go_to_skills),
                             onAction = onNavigateToSkills,
+                            icon = tab.icon,
+                        )
+                    }
+                }
+                ExtensionTab.CUSTOM_TOOLS -> {
+                    if (settings.customExtensions.isNotEmpty()) {
+                        CustomExtensionsContent(
+                            extensions = settings.customExtensions,
+                            selectedIds = assistant.selectedCustomExtensionIds,
+                            onToggle = { id, checked ->
+                                val ids = if (checked) {
+                                    assistant.selectedCustomExtensionIds + id
+                                } else {
+                                    assistant.selectedCustomExtensionIds - id
+                                }
+                                onUpdate(assistant.copy(selectedCustomExtensionIds = ids))
+                            },
+                            onManage = onNavigateToToolBuilder,
+                        )
+                    } else {
+                        ExtensionEmptyState(
+                            message = stringResource(R.string.extension_selector_custom_tools_empty),
+                            buttonText = onNavigateToToolBuilder?.let {
+                                stringResource(R.string.extension_selector_go_to_tool_builder)
+                            },
+                            onAction = onNavigateToToolBuilder,
                             icon = tab.icon,
                         )
                     }
