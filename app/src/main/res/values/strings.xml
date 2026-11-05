@@ -434,7 +434,7 @@
   <string name="extension_builder_page_delete_message">“%1$s” and its private data will be removed, and it will be unassigned from every assistant. Images and other media already delivered to conversations will remain.</string>
   <string name="extension_builder_page_api_access">API access</string>
   <string name="extension_builder_page_api_access_enable">Allow HTTP API requests</string>
-  <string name="extension_builder_page_api_access_help">Off by default. When enabled, JavaScript can call fetch only for the hosts listed below. This does not change the separate tool approval setting.</string>
+  <string name="extension_builder_page_api_access_help">Off by default. When enabled, JavaScript can call fetch only for the hosts listed below. Public hosts require HTTPS; private/local destinations need the separate local-network permission. Requests use the device network and system VPN; app-level proxy settings are not used. This does not change the separate tool approval setting.</string>
   <string name="extension_builder_page_api_access_on">Enabled for the listed hosts</string>
   <string name="extension_builder_page_api_access_off">Disabled</string>
   <string name="extension_builder_page_api_access_allowed_hosts">Allowed hosts</string>
