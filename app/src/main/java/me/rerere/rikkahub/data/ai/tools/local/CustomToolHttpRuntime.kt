@@ -32,6 +32,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
+import java.net.Proxy
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.Base64
@@ -203,11 +204,16 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         var redirects = 0
 
         while (true) {
-            validateUrl(extension, currentUrl)
+            val resolvedAddresses = validateUrl(extension, currentUrl)
+            val requestClient = if (resolvedAddresses.all(::isLocalAddress)) {
+                client.newBuilder().proxy(Proxy.NO_PROXY).build()
+            } else {
+                client
+            }
             val requestBuilder = Request.Builder().url(currentUrl)
             headers.forEach { (name, value) -> requestBuilder.header(name, value) }
             requestBuilder.method(currentMethod, currentBody)
-            val call = client.newCall(requestBuilder.build())
+            val call = requestClient.newCall(requestBuilder.build())
             val cancellation = Job(executionJob)
             cancellation.invokeOnCompletion { cause ->
                 if (cause is CancellationException) call.cancel()
@@ -257,7 +263,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         return url
     }
 
-    private fun validateUrl(extension: CustomExtension, url: HttpUrl) {
+    private fun validateUrl(extension: CustomExtension, url: HttpUrl): List<InetAddress> {
         require(url.host.length <= 253 && extension.allowsApiHost(url.host)) {
             "HTTP request host is not in this tool's allowlist"
         }
@@ -270,6 +276,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                 "Unencrypted HTTP is allowed only for explicitly enabled local-network hosts"
             }
         }
+        return addresses
     }
 
     private fun resolveAndValidate(extension: CustomExtension, host: String): List<InetAddress> {
@@ -447,6 +454,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
             val client = OkHttpClient.Builder()
                 .proxySelector(me.rerere.rikkahub.data.remote.SettingsProxySelector(settingsStore))
                 .proxyAuthenticator(me.rerere.rikkahub.data.remote.SettingsProxyAuthenticator(settingsStore))
+                .also { java.net.Authenticator.setDefault(me.rerere.rikkahub.data.remote.SettingsSocks5Authenticator(settingsStore)) }
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
                 .writeTimeout(20, TimeUnit.SECONDS)
