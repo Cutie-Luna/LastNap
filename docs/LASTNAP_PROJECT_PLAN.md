@@ -737,3 +737,10 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - Stage 3 source files: new `CustomExtension.kt`; `Assistant.kt`; `Settings.kt`; `PreferencesStore.kt`; `SettingsFields.kt`; `SettingsNormalization.kt`; focused tests under `app/src/test/.../data/model` and `.../data/datastore`.
 - Do not touch `ChatToolFactory.kt`, `JavascriptTool.kt`, runtime tool filtering, QuickJS execution, permission enforcement, Tool Builder screen, navigation, skills, or locales in Stage 3. Those belong to Stages 4–7.
 - **Acceptance:** Settings/Assistant round-trip, old JSON defaults, default-empty assistant selection, cleanup/deletion, and validation tests are written. No existing Settings key or backup payload shape is renamed. No custom tool becomes callable.
+
+## 32. Stage 3 test-fingerprint correction — 2026-11-05
+
+- **Review finding before this edit:** the initial model stored `testedImplementationHash` and validated only the JavaScript implementation. However, changing `inputSchema` changes the input contract and can change how the tested implementation is invoked. An enabled tool could therefore retain a passing implementation hash after its schema changed.
+- **Required correction:** bind the successful-test fingerprint to both the exact input-schema text and implementation text. Rename the not-yet-released field to `testedDefinitionHash`, and compute it from an unambiguous length-prefixed concatenation of schema and implementation before SHA-256 hashing.
+- **Scope:** only the new custom-tool model and its focused unit tests. Do not change existing RikkaHub runtime code, tool registration, permissions, backup format, UI, or assistant behavior.
+- **Acceptance:** tests prove the fingerprint changes when either schema or implementation changes; enabled definitions reject a missing/stale fingerprint; existing default-empty/legacy Settings and Assistant deserialization behavior remains intact. This is a pre-release model correction, so no released-data migration is required.
