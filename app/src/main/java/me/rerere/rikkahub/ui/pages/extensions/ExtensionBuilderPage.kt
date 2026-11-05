@@ -423,7 +423,7 @@ fun ExtensionBuilderPage(
                     if (isEditor) {
                         FilledTonalIconButton(
                             onClick = { if (isReviewing) isReviewing = false else leaveEditor() },
-                            enabled = !isTesting,
+                            enabled = !isTesting && !isSavingSecret,
                         ) {
                             Icon(HugeIcons.ArrowLeft01, contentDescription = stringResource(R.string.back))
                         }
@@ -932,7 +932,7 @@ fun ExtensionBuilderPage(
                                                 enabled = false
                                                 testPassed = null
                                             },
-                                            enabled = !isTesting,
+                                            enabled = !isTesting && !isSavingSecret,
                                         ) { Text(stringResource(R.string.extension_builder_page_remove)) }
                                     }
                                     OutlinedTextField(
@@ -948,7 +948,7 @@ fun ExtensionBuilderPage(
                                         label = { Text(stringResource(R.string.extension_builder_page_secret_value)) },
                                         visualTransformation = PasswordVisualTransformation(),
                                         singleLine = true,
-                                        enabled = !isTesting,
+                                        enabled = !isTesting && !isSavingSecret,
                                         supportingText = {
                                             Text(
                                                 stringResource(
@@ -983,7 +983,7 @@ fun ExtensionBuilderPage(
                                                 }
                                             }
                                         },
-                                        enabled = !isTesting && pendingSecretValues[declaration.name].orEmpty().isNotEmpty(),
+                                        enabled = !isTesting && !isSavingSecret && pendingSecretValues[declaration.name].orEmpty().isNotEmpty(),
                                     ) {
                                         Text(stringResource(R.string.extension_builder_page_save_secret))
                                     }
@@ -1027,7 +1027,7 @@ fun ExtensionBuilderPage(
                                         enabled = false
                                     }
                                 },
-                                enabled = !isTesting && secretNameInput.isNotBlank(),
+                                enabled = !isTesting && !isSavingSecret && secretNameInput.isNotBlank(),
                             ) { Text(stringResource(R.string.extension_builder_page_add_secret)) }
                         }
                     }
@@ -1312,7 +1312,7 @@ fun ExtensionBuilderPage(
                             HorizontalDivider()
                             TextButton(
                                 onClick = { showDeleteConfirmation = true },
-                                enabled = !isTesting,
+                                enabled = !isTesting && !isSavingSecret,
                             ) {
                                 Text(
                                     stringResource(R.string.extension_builder_page_delete),
