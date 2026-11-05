@@ -27,6 +27,10 @@ object CustomExtensionLimits {
     const val MAX_INPUT_LENGTH = 64 * 1024
     const val MAX_ALLOWED_API_HOSTS = 20
     const val MAX_API_HOST_PATTERN_LENGTH = 253
+    const val MAX_VALUE_DECLARATIONS = 20
+    const val MAX_VALUE_NAME_LENGTH = 64
+    const val MAX_VALUE_DESCRIPTION_LENGTH = 512
+    const val MAX_SECRET_VALUE_LENGTH = 8 * 1024
 }
 
 /** Validation failures for a saved custom-tool definition. */
@@ -43,8 +47,24 @@ enum class CustomExtensionValidationError {
     TOO_MANY_API_HOSTS,
     INVALID_API_HOST_PATTERN,
     LOCAL_NETWORK_WITHOUT_API_ACCESS,
+    TOO_MANY_SECRETS,
+    TOO_MANY_VARIABLES,
+    INVALID_SECRET_DECLARATION,
+    INVALID_VARIABLE_DECLARATION,
+    DUPLICATE_VALUE_NAME,
     ENABLED_WITHOUT_CURRENT_TEST,
 }
+
+/**
+ * A name-only declaration. Secret/Variable values are stored separately from tool definitions.
+ * Names use an uppercase environment-variable convention so they are easy to reference safely.
+ */
+@Serializable
+data class CustomToolValueDeclaration(
+    val name: String,
+    val description: String = "",
+    val required: Boolean = true,
+)
 
 /**
  * User-authored custom-tool definition.
@@ -70,6 +90,8 @@ data class CustomExtension(
     val apiAccessEnabled: Boolean = false,
     val allowedApiHosts: List<String> = emptyList(),
     val allowLocalNetwork: Boolean = false,
+    val secrets: List<CustomToolValueDeclaration> = emptyList(),
+    val variables: List<CustomToolValueDeclaration> = emptyList(),
 )
 
 /**
@@ -112,10 +134,32 @@ fun CustomExtension.validationErrors(): Set<CustomExtensionValidationError> = bu
         }
     }
 
+    if (secrets.size > CustomExtensionLimits.MAX_VALUE_DECLARATIONS) {
+        add(CustomExtensionValidationError.TOO_MANY_SECRETS)
+    }
+    if (variables.size > CustomExtensionLimits.MAX_VALUE_DECLARATIONS) {
+        add(CustomExtensionValidationError.TOO_MANY_VARIABLES)
+    }
+    if (secrets.any { !it.isValidToolValueDeclaration() }) {
+        add(CustomExtensionValidationError.INVALID_SECRET_DECLARATION)
+    }
+    if (variables.any { !it.isValidToolValueDeclaration() }) {
+        add(CustomExtensionValidationError.INVALID_VARIABLE_DECLARATION)
+    }
+    val valueNames = secrets.map { it.name } + variables.map { it.name }
+    if (valueNames.distinct().size != valueNames.size) {
+        add(CustomExtensionValidationError.DUPLICATE_VALUE_NAME)
+    }
+
     if (enabled && (implementation.isBlank() || testedDefinitionHash != testFingerprint())) {
         add(CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST)
     }
 }
+
+private fun CustomToolValueDeclaration.isValidToolValueDeclaration(): Boolean =
+    name.length <= CustomExtensionLimits.MAX_VALUE_NAME_LENGTH &&
+        name.matches(Regex("[A-Z][A-Z0-9_]{0,63}")) &&
+        description.length <= CustomExtensionLimits.MAX_VALUE_DESCRIPTION_LENGTH
 
 private fun String.isObjectInputSchema(): Boolean = runCatching {
     val schema = Json.parseToJsonElement(this).jsonObject
