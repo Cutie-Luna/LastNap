@@ -221,14 +221,12 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                 cancellation.complete()
             }
 
-            response.use { received ->
-                if (received.code in REDIRECT_CODES) {
-                    val location = received.header("Location")
-                        ?: return responseToJson(received, currentUrl)
+            val responseResult = response.use { received ->
+                if (received.code in REDIRECT_CODES && received.header("Location") != null) {
                     if (redirects >= MAX_REDIRECTS) {
                         throw IllegalStateException("Custom tool HTTP redirect limit exceeded")
                     }
-                    val redirected = currentUrl.resolve(location)
+                    val redirected = currentUrl.resolve(received.header("Location")!!)
                         ?: throw IllegalStateException("Custom tool HTTP redirect URL is invalid")
                     require(sameOrigin(currentUrl, redirected)) {
                         "Custom tool HTTP redirects must remain on the same origin"
@@ -241,10 +239,12 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                         currentBody = null
                     }
                     redirects += 1
-                    return@use
+                    null
+                } else {
+                    responseToJson(received, currentUrl)
                 }
-                return responseToJson(received, currentUrl)
             }
+            if (responseResult != null) return responseResult
         }
     }
 
