@@ -82,14 +82,14 @@ jobs:
             exit 1
           fi
           printf '%s' "$KEY_BASE64" | base64 -d > app/app.key
-          printf '%s\\n' "$SIGNING_CONFIG" > local.properties
+          printf '%s\n' "$SIGNING_CONFIG" > local.properties
           test -s app/app.key
           test -s local.properties
           echo "signed=true" >> "$GITHUB_OUTPUT"
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf '%s\\n' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            printf '%s\n' "$GOOGLE_SERVICES_JSON" > app/google-services.json
           else
-            printf '%s\\n' '{"project_info":{"project_number":"123456789012","project_id":"lastnap-personal-build","storage_bucket":"lastnap-personal-build.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0123456789abcdef","android_client_info":{"package_name":"com.lastnap.app"}},"api_key":[{"current_key":"personal-build-placeholder-not-a-production-key"}],"services":{}}],"configuration_version":"1"}' > app/google-services.json
+            printf '%s\n' '{"project_info":{"project_number":"123456789012","project_id":"lastnap-personal-build","storage_bucket":"lastnap-personal-build.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:0123456789abcdef","android_client_info":{"package_name":"com.lastnap.app"}},"api_key":[{"current_key":"personal-build-placeholder-not-a-production-key"}],"services":{}}],"configuration_version":"1"}' > app/google-services.json
           fi
           test -s app/google-services.json
 
