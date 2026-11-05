@@ -174,7 +174,7 @@ class CustomExtensionToolsTest {
     }
 
     @Test
-    fun invalidRequiredSchemaShapeIsRejected() {
+    fun requiredSchemaMustBeAStringArrayButMayReferenceUnlistedProperties() {
         val missingRequiredProperty = enabledExtension(
             "bad-required",
             schema = """{"type":"object","properties":{"value":{"type":"integer"}},"required":["missing"]}""",
@@ -184,7 +184,7 @@ class CustomExtensionToolsTest {
             schema = """{"type":"object","properties":{},"required":[1]}""",
         )
 
-        assertTrue(create(listOf(missingRequiredProperty)).isEmpty())
+        assertEquals(1, create(listOf(missingRequiredProperty)).size)
         assertTrue(create(listOf(nonStringRequired)).isEmpty())
     }
 
@@ -207,10 +207,20 @@ class CustomExtensionToolsTest {
         val oversized = runCatching {
             tool.execute(buildJsonObject { put("input", largeInput) })
         }
+        val oversizedExtraArgument = runCatching {
+            tool.execute(
+                buildJsonObject {
+                    put("input", buildJsonObject { put("value", 1) })
+                    put("extra", "😀".repeat(17_000))
+                }
+            )
+        }
 
         assertTrue(nonObjectInput.isFailure)
         assertTrue(oversized.isFailure)
+        assertTrue(oversizedExtraArgument.isFailure)
         assertTrue(oversized.exceptionOrNull()?.message.orEmpty().contains("64 KiB"))
+        assertTrue(oversizedExtraArgument.exceptionOrNull()?.message.orEmpty().contains("64 KiB"))
     }
 
     @Test
