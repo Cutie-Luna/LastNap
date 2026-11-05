@@ -198,6 +198,24 @@ class CustomExtensionToolsTest {
     }
 
     @Test
+    fun inputWithProtoKeyRemainsAnOrdinaryJsonProperty() = runBlocking {
+        val tool = create(
+            listOf(
+                enabledExtension(
+                    "proto",
+                    code = "Object.prototype.hasOwnProperty.call(input, '__proto__')",
+                )
+            )
+        ).single()
+        val input = buildJsonObject {
+            put("__proto__", buildJsonObject { put("polluted", true) })
+        }
+        val output = tool.execute(buildJsonObject { put("input", input) })
+
+        assertEquals("""{"result":"true"}""", (output.single() as UIMessagePart.Text).text)
+    }
+
+    @Test
     fun invocationRequiresAnObjectAndEnforcesUtf8ByteLimit() = runBlocking {
         val tool = create(listOf(enabledExtension("bounded"))).single()
         val nonObjectInput = runCatching {
