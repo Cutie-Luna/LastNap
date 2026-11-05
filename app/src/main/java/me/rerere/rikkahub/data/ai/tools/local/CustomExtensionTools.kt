@@ -92,10 +92,12 @@ internal fun createCustomExtensionTools(
                     if (extension.storageEnabled) {
                         appendLine("Private per-tool storage is available through storage.readText, storage.writeText, storage.delete, and storage.list.")
                     }
+                    if (extension.variables.isNotEmpty()) {
+                        appendLine("Non-sensitive configuration values are available as globalThis.variables.NAME.")
+                    }
                     if (extension.apiAccessEnabled) {
                         appendLine("HTTP fetch is enabled only for the tool's configured allowed hosts.")
                         appendLine("Use fetch(url, { method, headers, body }) to make bounded API requests.")
-                        appendLine("Non-sensitive configuration Variables are available as globalThis.variables.NAME.")
                         appendLine("Use {{secret:SECRET_NAME}} only inside an HTTP header value; Secret values are inserted by the native host and are not exposed to JavaScript.")
                     } else {
                         appendLine("Network access is not available to this tool.")
