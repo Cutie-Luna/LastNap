@@ -76,6 +76,12 @@ fun ExtensionsPage() {
                         supportingContent = { Text(stringResource(R.string.extensions_page_agent_skills_desc)) },
                     )
                     item(
+                        onClick = { navController.navigate(Screen.ExtensionBuilder) },
+                        leadingContent = { CardGroupIcon(HugeIcons.Puzzle, containerColor = containerColor, contentColor = contentColor) },
+                        headlineContent = { Text(stringResource(R.string.extensions_page_custom_tools)) },
+                        supportingContent = { Text(stringResource(R.string.extensions_page_custom_tools_desc)) },
+                    )
+                    item(
                         onClick = { navController.navigate(Screen.Workspaces) },
                         leadingContent = { CardGroupIcon(HugeIcons.Folder01, containerColor = containerColor, contentColor = contentColor) },
                         headlineContent = { Text(stringResource(R.string.extensions_page_workspace)) },
