@@ -87,6 +87,16 @@ internal fun createCustomExtensionTools(
                         appendLine(skill.escapeCustomToolXml())
                         appendLine("</custom_tool_instructions>")
                     }
+                    if (extension.secrets.isNotEmpty() || extension.variables.isNotEmpty()) {
+                        appendLine("<custom_tool_values>")
+                        extension.secrets.forEach { value ->
+                            appendLine("Secret ${value.name.escapeCustomToolXml()}: ${value.description.escapeCustomToolXml()} (${if (value.required) "required" else "optional"}; value hidden)")
+                        }
+                        extension.variables.forEach { value ->
+                            appendLine("Variable ${value.name.escapeCustomToolXml()}: ${value.description.escapeCustomToolXml()} (${if (value.required) "required" else "optional"})")
+                        }
+                        appendLine("</custom_tool_values>")
+                    }
                     appendLine("Call this tool with the user's JSON object inside the required input field.")
                     appendLine("The implementation runs in an isolated JavaScript runtime.")
                     if (extension.storageEnabled) {
