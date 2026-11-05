@@ -853,7 +853,7 @@ Stage 5 replaces the cramped editor popup with a dedicated page while preserving
 - Added app/src/main/java/me/rerere/rikkahub/data/ai/tools/local/CustomExtensionTools.kt. It registers only the current assistant's selected, enabled, structurally valid, currently tested definitions; preserves the complete object schema under the required input property; uses provider-safe names bound to the extension ID and schema/code fingerprint; rejects duplicate IDs and name collisions; escapes custom skill text before adding it to the tool system prompt; and runs code only through the existing evaluateJavascript QuickJS helper.
 - Runtime input handling requires a JSON object and applies the 64 KiB limit to the complete argument payload using UTF-8 byte size. It serializes the input as a JSON string and reconstructs it with JSON.parse, so special property names such as __proto__ remain ordinary JSON data. The existing QuickJS time, memory, stack, log, and result limits remain unchanged; no host APIs or capabilities were added.
 - Updated ChatToolFactory.kt to append custom tools after the existing tool set and skip/log collisions rather than shadow existing tools. Updated ChatRequestFactory.kt to pass per-conversation grants into tool construction. Updated ChatService.kt to record a THIS_SESSION grant only after the matching pending call is explicitly approved and its approval-state update succeeds.
-- Permission behavior is implemented as designed: ALWAYS_ALLOW does not prompt; ASK_EVERY_TIME prompts on each new invocation; THIS_SESSION prompts until approved for that conversation/assistant/extension-definition fingerprint, then suppresses later prompts for that same grant; DISABLED is not registered. Grants remain in memory only, survive navigation and ConversationSession idle eviction, and are cleared on conversation deletion, restoration, or ChatService cleanup. They are not persisted or backed up.
+- Historical Stage 4 permission behavior was superseded by Section 40: custom tools now store one `needsApproval` boolean and rely exclusively on the existing generic `Tool.needsApproval` / ChatService approval path. The custom-only session-grant map and four-mode permission policy were removed.
 - Versioned tool names prevent a pending approval for an older schema/code definition from resolving to newly edited code. If schema or implementation changes while approval is pending, the old tool name no longer resolves; if the tool is disabled, removed, or deselected, it is not registered.
 - No changes were made to AgentLoop, the core Tool model, built-in tool implementations, navigation, existing chat screens, or unrelated RikkaHub behavior.
 
@@ -929,7 +929,7 @@ Stage 5 replaces the cramped editor popup with a dedicated page while preserving
 - Added a read-only Review state with a separate bottom action area. It summarizes the fields, permission, test status, and enablement disposition; it does not run code, mark tests successful, or enable the tool. The editor uses a single-column scrollable layout and a persistent bottom action area with Back, Run test, and Review.
 - The page runs sample code through the existing evaluateJavascript QuickJS helper, with test input constructed by buildCustomExtensionTestCode using JSON.parse and the same UTF-8 argument-size limit as the runtime. A success marker is stored only for the exact schema+implementation testFingerprint; editing either clears the marker/result and disables the tool. Descriptive text changes do not invalidate the test.
 - Builder enablement consults the complete CustomExtension.validationErrors() model gate. During Stage 5 review, the model's JSON Schema shape validation was aligned with the Stage 4 runtime: a present properties member must be a JSON object, and a present required member must be an array of strings. Added model and Builder state assertions so malformed structures cannot appear ready in the Builder and then be silently rejected by runtime registration.
-- Saving an incomplete draft remains allowed, but it is saved disabled. Enabling requires a current successful schema+code test and no validation errors. The four permission modes are retained with accurate Stage 4 wording: THIS_SESSION is remembered for the current conversation until the app process restarts; the old inaccurate “currently asks each time” description was not reused.
+- Saving an incomplete draft remains allowed, but it is saved disabled. Enabling requires a current successful schema+code test and no validation errors. The four permission modes described in the initial Stage 5 implementation were superseded by Section 40. The Builder now exposes only the standard “Need approval” switch.
 - Existing-tool deletion uses the existing Settings.removeCustomExtension transformation, removing the saved record and all assistant assignments together.
 - Added app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderState.kt and app/src/test/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderStateTest.kt. The five focused tests cover fingerprint invalidation and stability, enablement validation, safe JSON.parse input construction and __proto__ preservation, object-input requirements, UTF-8 size limits, and valid test-code construction.
 - Updated app/src/main/java/me/rerere/rikkahub/RouteActivity.kt with Screen.ExtensionBuilder and its entry, using the existing default navigation transition behavior. No global transition specifications were changed.
@@ -999,3 +999,43 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - Upstream RikkaHub master rechecked at `f958af6a1a4a16dd8c1ac4138662a838b590e6c5`.
 - Relevant current sources reviewed: CustomExtension model, custom runtime registration, ChatToolFactory, ChatService approval/resumption path, Assistant model, ChatRequestFactory, Builder, SkillManager/BuiltinSkills, and assistant detail view-model. Historical tool-creator skill and assistant Extensions page were inspected as references only.
 - The existing generic approval contract is `Tool.needsApproval`; ChatMessageTools and ChatService already render and handle its approval flow. The custom runtime's extra session-grant mechanism is redundant and is the part to remove.
+
+
+## 41. Stage 4/5 approval and AI-assistance correction — completed and verified (2026-11-05)
+
+### Final behavior
+
+- Replaced `CustomExtension.permission: ExtensionPermission` with `CustomExtension.needsApproval: Boolean = true`. The old enum and its validation branch are removed.
+- Existing settings use `JsonInstant` with `ignoreUnknownKeys = true`. The legacy serialized `permission` field is therefore ignored, and the new default safely requires approval. A focused regression test decodes a legacy `ALWAYS_ALLOW` record and verifies `needsApproval == true`.
+- Runtime custom tools now set the standard `Tool.needsApproval` callback directly from the saved boolean. ON invokes the existing chat approval flow for every call; OFF does not prompt. No custom approval card, conversation grant, or alternate approval path remains.
+- Removed the custom-only session-grant map and resolver from `ChatService`, and removed the grant parameters from `ChatRequestFactory` and `ChatToolFactory`. The existing `ChatService.handleToolApproval`, `ToolApprovalState`, and chat UI approval components remain the only approval implementation.
+- The Builder now shows one Material `Switch` labelled “Need approval”; it is independent from the separate Enable checkbox. New tools default to approval required.
+- Simple and Advanced both display AI-assistance guidance. The AI may draft/refine all fields (including instructions, schema, JavaScript and test input) in either mode. The user places/reviews the generated parts in the Builder and runs the real sandbox test; AI assistance never marks a test successful, saves, enables, assigns, or changes the approval switch.
+- Existing QuickJS sandbox, tool-name fingerprinting, schema validation, argument limits, assistant assignment, and test-before-enable checks remain unchanged.
+
+### Files changed for this correction
+
+- `app/src/main/java/me/rerere/rikkahub/data/model/CustomExtension.kt`: one approval boolean replaces the enum; obsolete permission validation removed.
+- `app/src/main/java/me/rerere/rikkahub/data/ai/tools/local/CustomExtensionTools.kt`: remove grant resolution and use the shared Tool approval callback.
+- `app/src/main/java/me/rerere/rikkahub/data/ai/tools/ChatToolFactory.kt` and `app/src/main/java/me/rerere/rikkahub/data/ai/ChatRequestFactory.kt`: remove custom grant plumbing.
+- `app/src/main/java/me/rerere/rikkahub/service/ChatService.kt`: remove the custom grant map and resolver calls; retain generic approval/resumption unchanged.
+- `app/src/main/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderPage.kt`: replace four radio choices with one standard switch; provide AI guidance in both modes.
+- `app/src/main/res/values/strings.xml`: replace obsolete permission labels with the one-toggle and dual-mode AI guidance copy.
+- `app/src/test/java/me/rerere/rikkahub/data/model/CustomExtensionTest.kt`: cover default approval, independent approval preference, and safe legacy JSON decoding.
+- `app/src/test/java/me/rerere/rikkahub/data/ai/tools/local/CustomExtensionToolsTest.kt`: replace four-mode/session-grant tests with ON/OFF assertions against the shared Tool callback; retain selection, validation, collision, sandbox and input-bound tests.
+- `app/src/test/java/me/rerere/rikkahub/ui/pages/extensions/ExtensionBuilderStateTest.kt`: remove obsolete enum references; retain Builder test-fingerprint, validation and input-safety coverage.
+- This plan: record the approved correction, supersede historical permission descriptions and record verification.
+
+### CI attempts and final result
+
+- Run 42044223234 failed at Android resource merge because the approval-help string contained an unescaped apostrophe. The wording was changed to avoid the resource-compiler issue.
+- Run 42044810216 compiled the app but failed while compiling unit tests because `ExtensionBuilderStateTest` still referenced the removed `ExtensionPermission` enum. The test was updated to the new model.
+- Final run: [GitHub Actions 42045558689](https://github.com/Cutie-Luna/LastNap/actions/runs/42045558689), commit `5af7cafa60830e1a8231d6f9cb7319393bcf5018`. Overall run and `persistence-tests` job succeeded. Logs confirm `:app:compileGithubDebugKotlin`, `:app:testGithubDebugUnitTest`, and `BUILD SUCCESSFUL in 2m 42s`.
+- The six focused classes passed: `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, `SettingsStoreTest`, `CustomExtensionToolsTest`, and `ExtensionBuilderStateTest`.
+- The Web UI emitted the same non-fatal sourcemap-location warnings. No lint, full assemble, signed APK, APK verification, install, or device screenshot was run.
+
+### Stage 4/5 disposition and Stage 6 gate
+
+- **Stage 4/5 source correction and focused CI acceptance: complete.** The user-approved one-toggle approval design and AI assistance in both Builder modes are implemented and the focused compile/tests pass.
+- **Phone visual acceptance remains open** and is still deferred to the Stage 8 build/device path. This is not being represented as device-tested.
+- Stage 6 may now begin. The approved scope is the built-in assistant-scoped Tool Creator skill, assistant-specific Custom Tools selector/tab, and direct Builder entry point, as defined in Section 40. Do not alter the generic approval UI or unrelated RikkaHub screens.
