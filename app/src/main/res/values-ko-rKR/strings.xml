@@ -1219,7 +1219,7 @@ mDNS 주소: .local 호스트네임을 사용하며, IP를 몰라도 같은 네�
   <string name="setting_asr_configure_step_itn">ITN 활성화</string>
   <string name="setting_asr_configure_step_itn_desc">역 텍스트 정규화: 말로 한 숫자를 숫자로 변환합니다(예: 三百 → 300)</string>
   <string name="setting_asr_configure_step_timestamp">타임스탬프 활성화</string>
-  <string name="setting_asr_configure_step_timestamp_desc">단어 단위 타임스탬프를 반환합니다. rikkahub은 현재 이를 사용하지 않으므로 token 절약을 위해 기본적으로 꺼져 있습니다</string>
+  <string name="setting_asr_configure_step_timestamp_desc">단어 단위 타임스탬프를 반환합니다. LastNap은 현재 이를 사용하지 않으므로 token 절약을 위해 기본적으로 꺼져 있습니다</string>
   <string name="setting_asr_configure_step_hotwords">핫워드</string>
   <string name="setting_asr_configure_step_hotwords_desc">고유명사/도메인 용어 인식 정확도를 높이기 위한 쉼표로 구분된 핫워드 목록</string>
   <string name="log_page_record_requests">요청 기록</string>
