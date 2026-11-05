@@ -719,7 +719,7 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 
 - Reuse the limits already exercised by the old feature branch: name 80 chars, description 2,000, skill text 16,000, input schema 16,000, implementation 64,000, and runtime input 64 KiB.
 - Add a pure model-level validator that reports blank ID/name, over-limit fields, malformed JSON, and non-object root schemas. Blank description/skill/implementation remain allowed for an incomplete draft; a blank implementation can never count as tested/executable. Do not delete a user's draft merely because it is currently incomplete; Stage 4 runtime and Stage 5 save/enable actions must consult validation.
-- Preserve the existing SHA-256 helper for `testedImplementationHash`. Stage 4 will separately audit whether the stored test fingerprint must bind both schema and implementation; Stage 3 does not execute code or create test results.
+- The successful-test fingerprint is bound to both the exact input-schema text and implementation text. A schema edit must invalidate the prior result just like a code edit; this is implemented in the Stage 3 model and covered by focused tests.
 
 ### Normalization and deletion
 
