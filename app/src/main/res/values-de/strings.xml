@@ -601,7 +601,7 @@
   <string name="setting_asr_configure_vad_desc">Empfindlichkeit des Server-VAD, üblicherweise 0.3 - 0.8</string>
   <string name="setting_asr_configure_vad_threshold">VAD-Schwelle</string>
   <string name="setting_asr_configure_step_timestamp">Zeitstempel aktivieren</string>
-  <string name="setting_asr_configure_step_timestamp_desc">Gibt Zeitstempel auf Wortebene in Delta-Events zurück. Standardmäßig deaktiviert, um Tokens zu sparen (rikkahub nutzt sie noch nicht)</string>
+  <string name="setting_asr_configure_step_timestamp_desc">Gibt Zeitstempel auf Wortebene in Delta-Events zurück. Standardmäßig deaktiviert, um Tokens zu sparen (LastNap nutzt sie noch nicht)</string>
   <string name="setting_asr_configure_step_hotwords">Hotwords</string>
   <string name="setting_asr_configure_step_hotwords_desc">Kommagetrennte Liste von Hotwords, um die Erkennungsgenauigkeit für Eigennamen / Fachbegriffe zu verbessern</string>
   <string name="setting_asr_page_add_provider">ASR-Anbieter hinzufügen</string>
