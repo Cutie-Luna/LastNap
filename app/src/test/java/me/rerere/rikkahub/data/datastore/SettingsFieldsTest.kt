@@ -83,6 +83,14 @@ class SettingsFieldsTest {
     }
 
     @Test
+    fun `legacy assistant preference json defaults custom tool selection to empty`() {
+        val legacyAssistants = """[{"id":"00000000-0000-0000-0000-000000000020","name":"Legacy"}]"""
+        val preferences = mutablePreferencesOf(SettingsStore.ASSISTANTS to legacyAssistants)
+
+        assertEquals(emptySet<String>(), preferences.toSettings().assistants.single().selectedCustomExtensionIds)
+    }
+
+    @Test
     fun `legacy settings json defaults custom tools and assistant selections to empty`() {
         val legacyJson = """{"assistants":[{"id":"00000000-0000-0000-0000-000000000020","name":"Legacy"}]}"""
 
