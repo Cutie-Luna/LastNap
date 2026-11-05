@@ -124,7 +124,6 @@ class CustomToolHttpRuntime(
         }
         try {
             withTimeoutOrNull(timeoutMillis.milliseconds) {
-                val executionJob = currentCoroutineContext().job
                 val toolClient = baseClient.newBuilder()
                     .followRedirects(false)
                     .followSslRedirects(false)
