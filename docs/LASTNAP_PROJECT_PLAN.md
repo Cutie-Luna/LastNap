@@ -418,7 +418,7 @@ At the end of the chat, update this document before presenting the handoff summa
 
 ## 8. Current next action
 
-Stages 0 and 1 are complete; Stage 2 source identity/artwork acceptance is closed on the documented bounded-scan basis in Section 30. Stage 3's assistant-scoped custom-tool persistence foundation and its four focused unit-test classes passed on GitHub Actions (run 42028485101, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`). The next stage is Stage 4: inspect and design runtime registration, assistant filtering, schema adaptation, and permission enforcement before implementation. APK/package-table and Android 13 device proof remain assigned to Stage 8; they are not claimed complete.
+Stages 0 and 1 are complete; Stage 2 source identity/artwork acceptance is closed on the documented bounded-scan basis in Section 30. Stage 3's assistant-scoped custom-tool persistence foundation and its four focused unit-test classes passed on GitHub Actions (run 42028485101, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`). Stage 4's pre-edit runtime and permission design is recorded in Section 36; its source implementation and runtime regression tests are the current work. APK/package-table and Android 13 device proof remain assigned to Stage 8; they are not claimed complete.
 
 When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experience while preserving Simple and Advanced and all existing functionality. This is a UI presentation change, not permission to simplify away features.
 
@@ -806,3 +806,40 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - First run: [GitHub Actions run 42028485101](https://github.com/Cutie-Luna/LastNap/actions/runs/42028485101), event `push`, branch `lastnap-clean-foundation`, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`, run attempt 1. Overall run and sole `persistence-tests` job both completed successfully.
 - The log confirms all setup steps completed, Gradle compiled the GithubDebug app and unit-test sources, then `:app:testGithubDebugUnitTest` completed with `BUILD SUCCESSFUL` in 4m 43s (228 actionable tasks). The four filters were `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, and `SettingsStoreTest`. The log contains non-fatal existing deprecation/opt-in warnings; no test or compile failure.
 - **Disposition:** Stage 3 acceptance is met and Stage 3 is complete. The focused workflow remains as a reusable non-publishing regression check. This result is not a lint result, full APK build, signing verification, install, or device test.
+
+
+## 36. Stage 4 runtime and permission design — reviewed before source edits (2026-11-05)
+
+### Current runtime path inspected
+
+- ChatToolFactory.createTools assembles built-in, local, conversation, workspace, skill, and MCP tools for the assistant. It currently does not register custom extensions. ChatRequestFactory.createContext builds that tool list once per turn, and createAgent passes the same list to AgentRequest; AgentLoop uses it both to publish schemas and to resolve tool calls.
+- AgentLoop.requestApprovals checks Tool.needsApproval only for new calls whose state is Auto. An approved pending call resumes the same assistant message; remaining pending calls are checked before execution. This means the approval callback must be re-created consistently when ChatService.runTurn rebuilds the request after a user decision.
+- ChatService.handleToolApproval is the correct place to record a session grant after an explicit approval and before runTurn resumes. Denials and AskUser answers must not create grants.
+- JavascriptTool.kt already provides a fresh QuickJS runtime with a 10-second timeout, 64 MiB memory limit, 256 KiB stack limit, bounded logs and a 1 MiB result limit. It exposes no DOM, Node, Android, filesystem or network bindings. Custom tools must reuse this helper and must not add host capabilities.
+- InputSchema.Obj carries a properties map and required list. The historical custom-tool implementation wrapped the user schema under a required input property; retain this shape so the complete user-authored object schema (including root-level JSON Schema keywords) remains nested and is not silently discarded by the narrower internal schema type.
+- The historical UI string explicitly described THIS_SESSION as “Allow this session (currently asks each time)”. The old runtime treated it exactly like ASK_EVERY_TIME; that is unfinished behavior, not a working implementation to copy.
+
+### Chosen Stage 4 behavior
+
+- Register only extensions whose IDs are selected by the current assistant, which are enabled, have no validationErrors(), have a current schema-plus-implementation test fingerprint, and are not DISABLED. A saved definition alone never registers a tool.
+- Use a deterministic provider-safe tool name derived from both the extension ID and its current definition fingerprint. The name therefore changes when the input schema or implementation changes. A pending approval for an older definition then cannot resolve to newly edited code when the request resumes; it safely becomes an unknown-tool result instead of executing a different definition than the one the user saw.
+- Add custom tools after the existing tools. If a generated custom name collides with any built-in/local/workspace/skill/MCP name or another custom name, skip the custom tool and log the collision; never shadow an existing tool or rely on findTool's first-match behavior.
+- Expose the complete input schema as the nested input property and require that property. At invocation, require a JSON object and enforce the existing 64 KiB input limit using UTF-8 byte size before embedding the serialized JSON as the JavaScript input constant.
+- Reuse evaluateJavascript in the same local package. Do not add any JavaScript bindings, network/filesystem access, Android APIs, or alternate execution engine. Preserve the existing bounded runtime and return its structured result as tool output.
+- Permission semantics: ALWAYS_ALLOW does not prompt; ASK_EVERY_TIME prompts for every new invocation; THIS_SESSION prompts until the user approves this extension for the current conversation in the current app process, then suppresses further prompts for the same assistant + extension ID + definition fingerprint; DISABLED excludes the tool entirely. A denied call does not grant session approval. Grants are in-memory only, survive navigation/session-object eviction, and reset on app-process restart or conversation deletion. They are not written to Settings or backups.
+- Store grants in ChatService keyed by conversation ID and pass a snapshot into ChatRequestFactory/ChatToolFactory when building a normal turn. Include assistant ID, extension ID, and definition fingerprint in each grant. Clear grants when a conversation is deleted and when ChatService.cleanup() runs. An assistant change cannot reuse another assistant's grant.
+- On approval, inspect the pending tool call's exact generated name and match it against the currently selected, enabled, valid THIS_SESSION extension. Only an explicit approval of that current definition adds a grant. If the extension was edited, removed, disabled, or deselected while approval was pending, do not grant it; the old versioned tool name will not resolve to the new definition.
+
+### Intended source/test scope
+
+- New app/src/main/java/me/rerere/rikkahub/data/ai/tools/local/CustomExtensionTools.kt for registration, safe name generation, schema wrapping, permission predicates, input validation, and QuickJS execution.
+- Minimal integration in ChatToolFactory.kt, ChatRequestFactory.kt, and ChatService.kt to pass assistant-scoped tools and per-conversation session grants. Do not change AgentLoop, Tool, built-in tool implementations, navigation, or unrelated RikkaHub screens unless a concrete test proves an unavoidable requirement.
+- New focused CustomExtensionToolsTest.kt covering assistant selection, disabled/untested/invalid definitions, all four permission modes, session grants, versioned names, name collisions, schema preservation, JSON-object/UTF-8 input limits, and execution through the existing sandbox. Add the smallest practical integration tests for grant recording/resumption if existing service test seams permit it.
+- Acceptance: only the current assistant's selected, enabled, valid, tested custom tools are offered; stale definitions cannot execute after edits; permissions behave exactly as defined above; the current sandbox remains the only execution environment; existing built-in tool behavior is unchanged.
+
+### Stage 4 risks and verification limits
+
+- THIS_SESSION is explicitly defined here as a conversation-scoped, in-memory grant lasting for the app process, rather than a persisted permission or a short-lived ConversationSession object (which is evicted after an idle timeout). This avoids surprising re-prompts when navigating away and back while still resetting grants after process restart.
+- A model-provided schema is a contract for tool-call generation, not a security boundary. Runtime must still validate the actual JSON object and byte limit. Do not claim full JSON Schema validation unless a complete validator is implemented and tested.
+- Focused unit tests can validate the pure registration/permission/input logic; they do not replace provider-specific schema compatibility or device verification. Keep Stage 7 integration/regression and Stage 8 build/device gates open.
+- No Stage 4 source files have been changed yet. This design is recorded before implementation; next step is to implement only the listed runtime integration and focused tests.
