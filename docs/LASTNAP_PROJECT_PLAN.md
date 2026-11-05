@@ -1215,7 +1215,7 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
    - Give each tool a stable, isolated namespace keyed by its immutable tool ID. A tool must never read or write another tool's data.
    - Provide a small, testable persistence API for structured values and, if needed, tool-owned files. Data survives app restarts; deletion/retention behavior must be documented.
    - Keep secrets in the separate credential store, not ordinary tool storage. Enforce quotas, safe names, and bounded reads/writes.
-   - Determine whether the storage namespace is shared by the same tool across assistants or partitioned per assistant before finalizing the data model; this is an explicit open product decision for the user.
+   - Storage scope is confirmed by the user: one private folder per custom tool, shared by that tool wherever assigned (not one folder per assistant). This is distinct from general App Manager storage. The folder is created lazily on the first write/first stored data, only when storage is enabled; enabling storage alone must not create an empty folder.
 
 4. **Images, files, and other media**
    - Accept API image output as Base64/data URI or binary bytes, decode it natively, validate size/MIME type, and save it into LastNap-managed storage with a safe generated filename.
@@ -1280,7 +1280,7 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 
 ### Open product decision
 
-- **Per-tool storage scope:** should a tool's persistent data be shared wherever that tool is assigned (all assistants), or isolated separately for each assistant using it? This affects the storage namespace and must be settled before Stage C's data model is finalized.
+- **Per-tool storage scope — resolved:** one tool-owned private folder, shared by the same tool across assistants. The folder is created on first write only when the tool's optional storage capability is enabled. No assistant-specific partition.
 
 ### Current checkpoint
 
@@ -1292,3 +1292,44 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - [ ] Verify local Markdown image rendering for managed `file://` URIs and finish checking tool-output persistence.
 - [ ] Confirm the storage-sharing decision above.
 - [ ] Begin Stage A source audit and detailed capability-contract design; no feature implementation has started.
+
+## 48. User clarification — lazy per-tool storage and Markdown video player (2026-11-05)
+
+### Storage scope — confirmed
+
+- The user clarified that storage means a dedicated folder belonging to the custom tool itself, not general App Manager storage and not a separate folder per assistant.
+- Storage remains an optional capability. When enabled, the tool gets its own isolated managed folder.
+- **Lazy creation:** enabling storage does not create a folder. Create it only on the first actual write / first stored data.
+- The folder persists across app restarts and is shared by the same tool wherever that tool is assigned.
+- When disabled, no storage binding is exposed. Tools cannot inspect other tools' folders.
+- The folder must be managed by LastNap; do not expose arbitrary filesystem paths or broad app-manager access to JavaScript.
+- Decide and document behavior when a tool is deleted, storage is disabled, or the tool is re-imported. Prefer explicit user-visible cleanup/retention rules; never silently delete user data merely because storage is toggled off.
+
+### Markdown video support — confirmed scope
+
+- The user wants chat Markdown to render videos in addition to the existing image and GIF support.
+- Extend the existing Markdown renderer with video detection/rendering for supported local media paths and remote video URLs. Define a documented Markdown convention that does not break normal image Markdown or ordinary links. Prefer the natural `![alt](video-path)` extension with MIME/extension detection, or another syntax proven compatible with the existing parser; do not assume standard Markdown itself defines video.
+- The player should be visually clean and borderless: no decorative card/frame, with controls overlaid on the video similar to a modern YouTube-style player.
+- **Never autoplay.** Initial state is paused.
+- Local video: show its actual first frame as the poster/preview before playback, without starting playback.
+- Remote URL: do not fetch/download the video merely to create a preview or render the message. If a poster/thumbnail is already supplied, display it. If no poster is available without network use, show a lightweight neutral placeholder rather than secretly loading the video. The video source itself is not opened until the user explicitly presses Play.
+- Controls: play/pause, seek/progress, elapsed and total time, skip backward/forward (target ±10 seconds), and fullscreen. Controls appear on interaction and fade away during playback after inactivity; tapping the video brings them back. Pausing should leave controls visible. Handle buffering, playback errors, lifecycle/backgrounding, orientation/fullscreen, and accessibility.
+- Avoid a permanent decorative border or boxed card. Preserve natural video aspect ratio and fit the existing chat width.
+- Remote offline caching is optional/stretch, not a blocker for the first implementation. Investigate only for direct progressive-download URLs: if the full file is successfully downloaded while playing, it may be retained for future offline playback with clear storage/retention behavior. Do not promise offline replay for HLS/DASH, signed/expiring URLs, or sources that cannot be fully cached. Never silently consume large amounts of storage or data. If robust caching is too complex, defer it and keep remote playback on-demand.
+- The first-frame requirement for remote videos is satisfied only by an already-provided poster/thumbnail; do not download remote video bytes solely to extract a frame. Local videos should have a generated poster using an appropriate native/media API.
+- Inspect current Media3/ExoPlayer dependencies and existing playback components before adding dependencies. Prefer existing libraries. Do not use a WebView or uncontrolled HTML video element if a native player integrates more safely with Compose and Android lifecycle.
+
+### Updated implementation sequence
+
+- Extend Stage A audit to include Markdown parser capabilities, ZoomableAsyncImage / Coil model handling, local video thumbnail extraction, Media3 dependencies, existing audio/video message-part rendering, and URL loading/lifecycle behavior.
+- Add video Markdown parsing and the native player as a focused chat UI stage, independently testable from the custom-tool HTTP implementation.
+- Then integrate custom-tool returned video media with the same managed-file and Markdown/player pathway, only after the renderer works for ordinary local/remote video sources.
+- Add tests for no autoplay, local first-frame preview, remote URL lazy loading/no pre-play request, poster display, controls/seek/skip, fullscreen, error handling, and lifecycle cleanup.
+- Verify image/GIF rendering and ordinary Markdown links remain unchanged.
+
+### Current status after clarification
+
+- [x] User confirmed one shared private storage folder per tool, created lazily on first write when storage is enabled.
+- [x] User specified chat Markdown video support and player behavior: no autoplay, first-frame preview, no eager remote video download, clean borderless YouTube-like controls with fade/seek/skip.
+- [ ] Inspect actual player dependencies and Markdown parser behavior before selecting the implementation.
+- [ ] Implement video Markdown renderer/player and tests after the architecture audit; no video source code has been changed yet.
