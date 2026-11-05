@@ -227,12 +227,16 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
-    fun disabledStorageCapabilityDoesNotInstallStorageApi() = runBlocking {
+    fun disabledStorageCapabilityDoesNotInstallStorageApiOrDeleteSavedData() = runBlocking {
         val extension = CustomExtension(name = "No storage", description = "", storageEnabled = false)
-        val output = runtime().evaluate(extension, "typeof storage")
+        val storage = MemoryStorage().apply {
+            writeBytes(extension.id, "cache.txt", "retained".toByteArray())
+        }
+        val output = runtime(storage = storage).evaluate(extension, "typeof storage")
         val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
 
         assertEquals("undefined", result)
+        assertEquals("retained", storage.readBytes(extension.id, "cache.txt")!!.decodeToString())
     }
 
     @Test
