@@ -1,7 +1,8 @@
 # LastNap — project plan and permanent handoff
 
 **Plan date:** 2026-11-05  
-**Primary working branch:** `lastnap-clean-foundation`  
+**Primary working branch:** `feature/custom-tool-api-runtime`  
+**Protected baseline branch:** `lastnap-clean-foundation`  
 **Protected branches:** `master`, `feature/extensions-foundation`  
 **Upstream project:** `rikkahub/rikkahub`
 
@@ -32,7 +33,7 @@ Do not treat unrelated code as an opportunity to refactor, modernize, optimize, 
 - `lastnap-clean-foundation` was created from LastNap `master` commit `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`.
 - `master` is protected: do not modify, reset, force-push, or merge into it without the user's explicit permission.
 - `feature/extensions-foundation` is the previous implementation branch. Keep it intact as a historical reference; do not merge it wholesale into the clean branch.
-- All new implementation work belongs on `lastnap-clean-foundation`, unless the user explicitly chooses another branch.
+- `lastnap-clean-foundation` is now the preserved known-good baseline at `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`; do not modify it. The user explicitly chose `feature/custom-tool-api-runtime` for the expanded custom-tool API/runtime work. Future fixes to the baseline must use a separate branch.
 
 ### Full-tree baseline audit completed on 2026-11-05
 
@@ -103,7 +104,7 @@ The agreed new feature is an assistant-aware custom tool system with a built-in 
 - A tool is callable only when selected for the current assistant and passes the existing enable/test/permission requirements.
 - Existing assistants must migrate safely to an empty selection; do not silently expose every custom tool to every assistant.
 - Deleting a custom tool must clean up its assistant references safely.
-- Keep the current runtime sandbox and permission model. Do not invent browser, filesystem, network, Android, or Node capabilities for the tool sandbox.
+- Keep JavaScript isolated in QuickJS, but expose explicitly designed, host-mediated capabilities (HTTP, per-tool storage, and managed media/file operations) through narrow native bindings. Do not grant direct Android, filesystem, Node, browser, or unrestricted process access to JavaScript.
 
 **Simple and Advanced modes**
 - Simple mode lets the user describe a tool in ordinary language and receive help preparing its name, description, input schema, implementation, and example test input.
@@ -258,7 +259,7 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 - Trace the complete current tool-registration path from assistant selection to model request.
 - Filter custom tool definitions by the current assistant's selected IDs.
-- Preserve the current isolated JavaScript sandbox and its real capability limits.
+- Preserve the isolated JavaScript sandbox while extending it through audited native host bridges for the user-approved HTTP, optional per-tool storage, and managed media capabilities.
 - Preserve test-before-enable and explicit permission approval.
 - Reject invalid/oversized schemas and untested or edited-after-test implementations.
 - Ensure tool deletion removes stale assignments.
@@ -1153,3 +1154,132 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - Three `MissingTranslation` errors concern the recently synchronized upstream compression strings: `chat_page_compress_keep_recent`, `chat_page_compress_keep_recent_desc`, and `chat_page_compress_not_enough_messages`, missing in Arabic, Russian, Japanese and Korean. The 80 LastNap Tool Builder keys remain complete in all seven non-English locales.
 - Before further edits, the chosen minimal fix is to add only those three translations to `values-ar`, `values-ru`, `values-ja` and `values-ko-rKR`; add an app lint baseline containing only the 53 reviewed inherited upstream error findings; and configure that baseline in `app/build.gradle.kts`. Do not baseline warnings or missing translations, disable lint, lower severity, or set `abortOnError = false`.
 - Re-run full tests, lint and debug assembly. Only after that job succeeds may the dependent signed ARM64 job run. No publishing or device installation is authorized by this workflow.
+
+
+## 47. Expanded custom-tool API, storage, and media runtime — new branch plan (2026-11-05)
+
+### User decision and branch safety
+
+- The user rejected the previous assumption that custom tools should remain text-only QuickJS scripts without external service access. The intended product is a genuinely extensible assistant tool system capable of calling external APIs and returning useful data/media to the assistant.
+- New working branch: `feature/custom-tool-api-runtime`.
+- Created directly from the preserved `lastnap-clean-foundation` tip `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`. The new branch initially contains exactly that baseline; no source changes have been made yet.
+- Keep `lastnap-clean-foundation`, LastNap `master`, and historical `feature/extensions-foundation` untouched. All work for this expanded capability belongs on the new branch.
+- This section supersedes the earlier Stage 3/4 statement that custom tools must have no network/filesystem/media host capabilities. QuickJS remains isolated; the new capabilities are explicit, narrowly scoped native host bindings, not direct access to Android or the host filesystem.
+
+### Recovered original user requirements
+
+- Custom tools must be able to call real external APIs, not merely assemble prompts or perform offline JavaScript calculations.
+- The original example was a `generate_image` tool accepting arguments such as prompt, size, seed, guidance, and number of outputs (`n`), calling an image-generation API, receiving Base64 image data, letting LastNap decode it, making the resulting image available to the model's vision input, and displaying it in chat using a local file path in Markdown.
+- If an API returns an image URL instead of Base64/binary, URL-based image display must continue to work.
+- The system must support other API-backed use cases too: weather, web research, translation, media/artwork, and user-connected services. These are examples, not a hard-coded list of supported providers.
+- Tools may need persistent storage. Storage must be optional per tool: the tool-creator workflow may request it, and the Builder must let the user enable or disable it.
+- The feature must not be limited to API calls. Preserve support for useful non-API/native capabilities where they are explicitly exposed by LastNap.
+- The AI Tool Creator remains assistant-scoped and opt-in. It must understand the real available capabilities, help users design tools, prepare schemas and JavaScript in both Simple and Advanced Builder modes, and teach the user how to configure features through LastNap's Settings/Builder UI. It must never claim a test succeeded unless LastNap's real test runner reports success.
+- Existing user-approved tool behavior remains: per-tool **Need approval** switch only; ON routes invocation through the existing chat approval mechanism; OFF skips that prompt while remaining subject to runtime safety. Do not add a second approval system, duplicate dialog, or session grants.
+- Keep assistant-specific tool selection, validation, test-before-enable, and explicit user control over save/enable/assignment.
+
+### Architecture evidence already inspected
+
+- `common/src/main/java/me/rerere/common/js/QuickJSFetch.kt` exists in the current baseline and is byte-for-byte identical to upstream RikkaHub commit `f958af6a1a4a16dd8c1ac4138662a838b590e6c5`. It already provides a native OkHttp-backed `fetch()` bridge for QuickJS.
+- That existing bridge is not currently injected by the custom-tool execution path. `CustomExtensionTools.kt` calls `evaluateJavascript(code)`; `JavascriptTool.kt` creates a QuickJS runtime with console bindings but does not inject `QuickJSFetch`.
+- The existing fetch helper is only a starting point, not a complete solution: it performs synchronous HTTP calls, returns a text-only response DTO, omits response headers and binary/streaming response support, and needs a focused security/limits/cancellation review before being exposed to custom tools.
+- `FilesManager` already supports saving managed files from bytes and returns local file URIs. `McpManager` already demonstrates decoding MCP Base64 image content, saving it through `FilesManager.saveUploadFromBytes`, and returning `UIMessagePart.Image`.
+- `UIMessagePart` already has Image, Audio, Video, and Document variants. Chat message rendering already displays image parts with `ZoomableAsyncImage`; text parts are rendered through `MarkdownBlock`. The exact Markdown image loader's handling of absolute local paths and `file://` URIs still requires focused verification.
+- The current custom-tool runtime returns only `UIMessagePart.Text` from the JavaScript evaluator. Media result conversion and model-vision round-tripping are not yet implemented for custom tools.
+- These observations establish viable existing building blocks, not proof that the full feature is already supported. Trace the actual provider/tool-result path before relying on it.
+
+### Target capability contract
+
+1. **HTTP/API bridge**
+   - Provide a documented, stable JavaScript API (at minimum familiar `fetch(url, options)`) implemented by LastNap's native layer, not by direct QuickJS networking.
+   - Support standard request methods (GET, HEAD, POST, PUT, PATCH, DELETE), URL query parameters, headers, JSON/text/binary request bodies, response status/status text/headers, and JSON/text/ArrayBuffer-or-Base64 response access as supported by the bridge design.
+   - Support cancellation, bounded timeouts, redirect policy, response-size limits, and useful errors. A failed HTTP status must remain inspectable; do not silently treat every non-2xx response as a transport exception.
+   - Preserve TLS verification. Do not log secrets or full authorization headers/bodies. Do not silently add API keys to code or prompts.
+   - Review URL validation, local/private-network access, redirect handling, content types, and request size limits. Any policy must still allow legitimate user-configured API endpoints without granting JavaScript arbitrary Android access.
+   - Reuse the existing OkHttp/QuickJS infrastructure where appropriate; do not add a second networking stack without evidence it is necessary.
+
+2. **Credentials and API configuration**
+   - API keys must be supplied by the user through a safe LastNap configuration surface and retrieved by a tool only through a narrow named-secret binding. Never place secret values in generated JavaScript, schemas, prompts, tool descriptions, test fixtures, logs, exported plan text, or Git.
+   - Inspect existing credential storage and Android Keystore-backed options before selecting an implementation. Keep secrets distinct from ordinary tool data storage.
+   - A tool should be able to document which named credentials it expects, with clear setup guidance from the Tool Creator skill and Builder.
+
+3. **Optional isolated per-tool storage**
+   - Add an explicit storage capability declaration/Builder option. Tools that do not request or enable storage receive no storage binding.
+   - Give each tool a stable, isolated namespace keyed by its immutable tool ID. A tool must never read or write another tool's data.
+   - Provide a small, testable persistence API for structured values and, if needed, tool-owned files. Data survives app restarts; deletion/retention behavior must be documented.
+   - Keep secrets in the separate credential store, not ordinary tool storage. Enforce quotas, safe names, and bounded reads/writes.
+   - Determine whether the storage namespace is shared by the same tool across assistants or partitioned per assistant before finalizing the data model; this is an explicit open product decision for the user.
+
+4. **Images, files, and other media**
+   - Accept API image output as Base64/data URI or binary bytes, decode it natively, validate size/MIME type, and save it into LastNap-managed storage with a safe generated filename.
+   - Return media to the assistant as typed `UIMessagePart` values where supported, so the model can actually inspect image content (not merely see a textual path).
+   - Make the same local file reference available for chat display/Markdown, and retain support for ordinary HTTP(S) image URLs. Verify whether the renderer accepts both local absolute paths and `file://` URIs; normalize only through a safe managed-file resolver.
+   - Investigate equivalent audio, video, and document outputs using the existing typed message parts. Do not claim these are complete until the model input and chat renderer both support them.
+   - Avoid passing large Base64 strings through the model context when a typed local media part can be used.
+
+5. **Non-API capabilities and AI assistance**
+   - Keep the QuickJS sandbox and expose only explicit host functions. Native functions may cover managed files/media and per-tool storage; further Android/device capabilities require a separate narrow contract and user-visible rationale.
+   - Keep the Tool Creator skill opt-in per assistant. It must describe only capabilities actually implemented and explain how to configure them in Settings/Builder.
+   - Both Builder modes remain AI-assisted. The AI prepares copy-ready fields/code; the user places, reviews, tests, saves, enables, and assigns the tool.
+   - Keep the current test fingerprint tied to every behavior-affecting capability/configuration field so changing API permissions, storage settings, secrets references, or implementation invalidates a stale test where appropriate.
+
+### Implementation stages on the new branch
+
+**Stage A — Complete architecture and parity audit (no source changes until design is documented)**
+- Re-read the complete plan and verify the new branch starts at the recorded baseline SHA.
+- Inspect all custom-tool, QuickJS, MCP, file-management, message-part, Markdown image, provider multimodal, credential-storage, and dependency-injection paths.
+- Compare relevant files with upstream and the historical feature branch. Treat the old branch as a reference, never merge it wholesale.
+- Produce a capability API contract, data model, secret-storage design, media lifecycle, and test matrix. Identify any provider-specific multimodal limitation before choosing the result format.
+
+**Stage B — Native HTTP bridge for custom tools**
+- Reuse or safely extend `QuickJSFetch` with complete response metadata and bounded text/binary handling.
+- Inject the bridge only into opted-in custom-tool runtimes; do not silently grant network access to the generic JavaScript utility or unrelated scripts.
+- Add request/response DTOs and deterministic fake-server tests for methods, headers, bodies, status codes, content types, errors, cancellation, timeout, and size limits.
+
+**Stage C — Optional per-tool storage and named credentials**
+- Add storage configuration to the persisted custom-tool definition and Builder.
+- Implement isolated persistent per-tool data operations with quota and migration tests.
+- Add a separate secure named-secret mechanism only after confirming the repository's existing secure-storage primitives and dependency-injection lifecycle.
+- Test isolation across two tools and persistence across runtime recreation/app restart.
+
+**Stage D — Managed media results and chat/vision handoff**
+- Add bounded binary/Base64 response handling and safe MIME-aware managed-file creation.
+- Convert custom-tool media results into typed message parts; verify the same image reaches the assistant's next model request and is displayed in the chat.
+- Verify Markdown `![](file://...)` and the requested local-path form, plus ordinary URL images, without breaking existing Markdown, attachments, or image generation.
+- Extend to audio/video/document parts only where both model input and UI rendering support them.
+
+**Stage E — Builder and tool-creator updates**
+- Add the optional storage switch/request flow and clear API/credential setup guidance without removing any existing Builder controls.
+- Update Simple and Advanced AI assistance, preview/review, validation, test fingerprinting, and Tool Creator instructions to match the implemented APIs.
+- Preserve the one Need approval switch and existing chat approval path exactly.
+- Update supported locales for every new user-visible string.
+
+**Stage F — End-to-end tests and verification**
+- Test a no-network tool, GET JSON, POST JSON, headers/auth, non-2xx handling, timeout/cancellation, size limits, persistent storage, storage isolation, Base64 image save, URL image display, local image display, and model vision round-trip.
+- Verify Need approval ON and OFF, assistant selection, enable/test fingerprint, tool deletion, and legacy settings migration.
+- Run focused tests, full unit tests, lint, debug APK, signed ARM64 release APK and signature/package/resource checks. Device behavior remains a separate user test.
+- Update this plan with every changed file, exact commits, CI runs, test outcomes, blockers, and next action.
+
+### Acceptance criteria
+
+- A custom tool can call a real HTTP API from its JavaScript implementation through LastNap's native bridge and return useful structured data to its assistant.
+- A tool can use optional isolated persistent storage when enabled, and cannot access another tool's storage.
+- A `generate_image`-style tool can submit prompt/settings, receive Base64 or binary image data, save it locally, return a typed image for model vision, and make it displayable in chat with a local Markdown path; a URL-returning API also works.
+- API keys are managed separately from code and ordinary storage.
+- Non-API custom tools continue to work.
+- The existing assistant-scoped selection, Tool Creator skill, Simple/Advanced Builder assistance, test-before-enable rule, and single Need approval switch all continue to work.
+- Existing RikkaHub networking, chat, image-generation, attachment, Markdown, and MCP behavior remains intact.
+- No claim of complete implementation or device acceptance until the relevant automated and user-device checks pass.
+
+### Open product decision
+
+- **Per-tool storage scope:** should a tool's persistent data be shared wherever that tool is assigned (all assistants), or isolated separately for each assistant using it? This affects the storage namespace and must be settled before Stage C's data model is finalized.
+
+### Current checkpoint
+
+- [x] Created `feature/custom-tool-api-runtime` from `lastnap-clean-foundation` at `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`.
+- [x] Confirmed the current branch remains the preserved baseline; no source edits have been made on the new branch.
+- [x] Located the existing upstream QuickJS HTTP bridge and the MCP Base64-to-local-image path.
+- [ ] Finish tracing the bridge's existing call sites and the full model-vision/Markdown local-image pipeline.
+- [ ] Confirm the storage-sharing decision above.
+- [ ] Begin Stage A source audit and detailed capability-contract design; no feature implementation has started.
