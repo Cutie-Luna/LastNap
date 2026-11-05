@@ -89,6 +89,9 @@ internal fun createCustomExtensionTools(
                     }
                     appendLine("Call this tool with the user's JSON object inside the required input field.")
                     appendLine("The implementation runs in an isolated JavaScript runtime.")
+                    if (extension.storageEnabled) {
+                        appendLine("Private per-tool storage is available through storage.readText, storage.writeText, storage.delete, and storage.list.")
+                    }
                     if (extension.apiAccessEnabled) {
                         appendLine("HTTP fetch is enabled only for the tool's configured allowed hosts.")
                         appendLine("Use fetch(url, { method, headers, body }) to make bounded API requests.")
