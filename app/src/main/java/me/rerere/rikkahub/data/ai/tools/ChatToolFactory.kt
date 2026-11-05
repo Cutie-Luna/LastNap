@@ -47,7 +47,7 @@ class ChatToolFactory(
     private val skillManager: SkillManager,
     private val workspaceRepository: WorkspaceRepository,
 ) {
-    suspend fun createTools(
+    internal suspend fun createTools(
         settings: Settings,
         assistant: Assistant,
         model: Model,
