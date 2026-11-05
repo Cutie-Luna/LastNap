@@ -654,13 +654,10 @@ class CustomToolHttpRuntime(
 
     companion object {
         fun create(
-            settingsStore: me.rerere.rikkahub.data.datastore.SettingsStore,
             secretStore: CustomToolSecretStore,
             storage: CustomToolStorage,
         ): CustomToolHttpRuntime {
             val client = OkHttpClient.Builder()
-                .proxySelector(me.rerere.rikkahub.data.remote.SettingsProxySelector(settingsStore))
-                .proxyAuthenticator(me.rerere.rikkahub.data.remote.SettingsProxyAuthenticator(settingsStore))
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
                 .writeTimeout(20, TimeUnit.SECONDS)
