@@ -48,6 +48,22 @@ class CustomToolStorageTest {
     }
 
     @Test
+    fun reconciliationRemovesOnlyStorageForMissingToolIds() {
+        val (parent, storage) = newStorage()
+        try {
+            storage.writeBytes("tool-a", "data.txt", "first".toByteArray())
+            storage.writeBytes("tool-b", "data.txt", "second".toByteArray())
+
+            assertEquals(1, storage.reconcile(setOf("tool-b")))
+
+            assertNull(storage.readBytes("tool-a", "data.txt"))
+            assertEquals("second", storage.readBytes("tool-b", "data.txt")!!.decodeToString())
+        } finally {
+            parent.deleteRecursively()
+        }
+    }
+
+    @Test
     fun unsafeNamesAndOversizedFilesAreRejected() {
         val (parent, storage) = newStorage()
         try {
