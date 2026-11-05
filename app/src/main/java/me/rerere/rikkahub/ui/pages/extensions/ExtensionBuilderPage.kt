@@ -103,9 +103,11 @@ fun ExtensionBuilderPage(
     LaunchedEffect(settings.init, isEditor, settings.customExtensions) {
         if (!settings.init && !isEditor) {
             withContext(Dispatchers.IO) {
-                val validToolIds = settings.customExtensions.mapTo(mutableSetOf()) { it.id }
-                secretStore.reconcile(validToolIds)
-                storage.reconcile(validToolIds)
+                val validSecretsByTool = settings.customExtensions.associate { extension ->
+                    extension.id to extension.secrets.mapTo(mutableSetOf()) { it.name }
+                }
+                secretStore.reconcile(validSecretsByTool)
+                storage.reconcile(validSecretsByTool.keys)
             }
         }
     }
