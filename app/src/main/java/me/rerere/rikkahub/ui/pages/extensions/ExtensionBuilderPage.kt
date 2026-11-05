@@ -1302,6 +1302,7 @@ fun ExtensionBuilderPage(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        httpRuntime.revokeTool(draftId)
                         scope.launch {
                             withContext(Dispatchers.IO) {
                                 secretStore.deleteToolSecrets(draftId)
