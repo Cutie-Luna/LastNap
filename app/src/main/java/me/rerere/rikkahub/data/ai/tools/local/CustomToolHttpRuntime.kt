@@ -46,7 +46,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 class CustomToolHttpRuntime(
     private val baseClient: OkHttpClient,
-    private val secretStore: CustomToolSecretStore,
+    private val secretStore: CustomToolSecretProvider,
 ) {
 
     suspend fun evaluate(
@@ -104,6 +104,9 @@ class CustomToolHttpRuntime(
                     .followRedirects(false)
                     .followSslRedirects(false)
                     .retryOnConnectionFailure(false)
+                    // DNS validation must apply to the destination host itself, not a remote
+                    // proxy resolver that could resolve the same hostname differently.
+                    .proxy(Proxy.NO_PROXY)
                     .dns(safeDns(extension))
                     .build()
 
@@ -218,7 +221,7 @@ class CustomToolHttpRuntime(
             "GET and HEAD requests cannot include a body"
         }
 
-        val contentType = headers.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
+        val contentType = rawHeaders.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
         var currentBody = when {
             currentMethod in setOf("POST", "PUT", "PATCH") || requestBytes.isNotEmpty() ->
                 requestBytes.toRequestBody(contentType?.toMediaTypeOrNull())
@@ -231,16 +234,11 @@ class CustomToolHttpRuntime(
         var redirects = 0
 
         while (true) {
-            val resolvedAddresses = validateUrl(extension, currentUrl)
-            val requestClient = if (resolvedAddresses.all(::isLocalAddress)) {
-                client.newBuilder().proxy(Proxy.NO_PROXY).build()
-            } else {
-                client
-            }
+            validateUrl(extension, currentUrl)
             val requestBuilder = Request.Builder().url(currentUrl)
             headers.forEach { (name, value) -> requestBuilder.header(name, value) }
             requestBuilder.method(currentMethod, currentBody)
-            val call = requestClient.newCall(requestBuilder.build())
+            val call = client.newCall(requestBuilder.build())
             val cancellation = Job(executionJob)
             cancellation.invokeOnCompletion { cause ->
                 if (cause is CancellationException) call.cancel()
@@ -292,7 +290,7 @@ class CustomToolHttpRuntime(
 
     private fun validateUrl(extension: CustomExtension, url: HttpUrl): List<InetAddress> {
         // Mixed public/private DNS answers create an ambiguous target and can bypass
-        // destination checks when a configured proxy performs remote DNS resolution.
+        // destination checks when DNS resolution is performed inconsistently.
         require(url.host.length <= 253 && extension.allowsApiHost(url.host)) {
             "HTTP request host is not in this tool's allowlist"
         }
