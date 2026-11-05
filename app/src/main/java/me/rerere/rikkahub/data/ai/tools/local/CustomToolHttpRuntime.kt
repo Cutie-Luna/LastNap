@@ -167,7 +167,8 @@ class CustomToolHttpRuntime(
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
                             storage.delete(extension.id, name)
                         }
-                        function("__customToolStorageList") {
+                        function("__customToolStorageList") { _ ->
+                            requireStorageOperation()
                             buildJsonArray {
                                 storage.list(extension.id).forEach { add(JsonPrimitive(it)) }
                             }.toString()
