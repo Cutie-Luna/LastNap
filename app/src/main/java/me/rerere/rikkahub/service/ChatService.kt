@@ -46,8 +46,6 @@ import me.rerere.rikkahub.data.ai.TranslationHandler
 import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.prompts.buildCompressPrompt
 import me.rerere.rikkahub.data.ai.tools.InvalidMcpServerNamesException
-import me.rerere.rikkahub.data.ai.tools.local.CustomExtensionSessionGrant
-import me.rerere.rikkahub.data.ai.tools.local.findApprovedCustomExtensionSessionGrant
 import me.rerere.rikkahub.data.ai.tools.shouldUseExternalWebSearch
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.getCurrentAssistant
@@ -86,7 +84,6 @@ import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.uuid.Uuid
 
 private const val TAG = "ChatService"
@@ -183,20 +180,8 @@ class ChatService(
     private val _generationDoneFlow = MutableSharedFlow<Uuid>()
     val generationDoneFlow: SharedFlow<Uuid> = _generationDoneFlow.asSharedFlow()
 
-    // Grants are per conversation and live only for this app process. Keep them outside
-    // ConversationSession because that lightweight state object is evicted after idle time.
-    private val customExtensionSessionGrants =
-        ConcurrentHashMap<Uuid, MutableSet<CustomExtensionSessionGrant>>()
-
-    private fun sessionApprovedCustomExtensions(conversationId: Uuid): Set<CustomExtensionSessionGrant> =
-        customExtensionSessionGrants[conversationId]?.toSet().orEmpty()
-
     fun cleanup() = runCatching {
-        try {
-            sessionManager.cleanup()
-        } finally {
-            customExtensionSessionGrants.clear()
-        }
+        sessionManager.cleanup()
     }
 
     private fun onSessionGenerationFinished(session: ConversationSession, cause: Throwable?) {
@@ -561,21 +546,6 @@ class ChatService(
                 try {
                     afterPreviousGeneration(previousJob) {
                         ensureInitialized(session)
-                        var approvedCustomExtensionGrant: CustomExtensionSessionGrant? = null
-                        if (approved && answer == null) {
-                            val settings = settingsStore.awaitLoaded()
-                            val assistant = settings.getStoredAssistantOf(session.state.value)
-                            val pendingToolName = session.state.value.currentMessages
-                                .flatMap { it.getTools() }
-                                .firstOrNull { it.toolCallId == toolCallId && it.isPending }
-                                ?.toolName
-                            approvedCustomExtensionGrant = findApprovedCustomExtensionSessionGrant(
-                                extensions = settings.customExtensions,
-                                selectedExtensionIds = assistant.selectedCustomExtensionIds,
-                                assistantId = assistant.id,
-                                toolName = pendingToolName,
-                            )
-                        }
                         val newApprovalState = when {
                             answer != null -> ToolApprovalState.Answered(answer)
                             approved -> ToolApprovalState.Approved
@@ -584,11 +554,6 @@ class ChatService(
 
                         val updated = session.tryUpdate { it.withToolApproval(toolCallId, newApprovalState) }
                             ?: return@afterPreviousGeneration
-                        approvedCustomExtensionGrant?.let { grant ->
-                            customExtensionSessionGrants
-                                .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet<CustomExtensionSessionGrant>() }
-                                .add(grant)
-                        }
                         session.flush()
 
                         // Only continue generation when all pending tools are handled
@@ -654,7 +619,6 @@ class ChatService(
             val turn = requestFactory.createContext(
                 settings = settings,
                 conversation = conversation,
-                sessionApprovedCustomExtensions = sessionApprovedCustomExtensions(conversationId),
             )
             senderName = if (turn.assistant.useAssistantAvatar) {
                 turn.assistant.name.ifEmpty { context.getString(R.string.assistant_page_default_assistant) }
@@ -1133,7 +1097,6 @@ class ChatService(
             // 数据库那份不知道只在内存里出现过的附件
             previous?.let { filesManager.deleteChatFiles(it.files) }
         }
-        customExtensionSessionGrants.remove(conversationId)
         sessionManager.removeIfIdle(session)
     }
 
@@ -1143,7 +1106,6 @@ class ChatService(
         session.replace(conversation, existsInDatabase = true) {
             conversationStore.write(previous = null, current = conversation)
         }
-        customExtensionSessionGrants.remove(conversation.id)
         sessionManager.removeIfIdle(session)
     }
 
