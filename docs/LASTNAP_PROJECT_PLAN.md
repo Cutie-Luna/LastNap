@@ -1071,3 +1071,12 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - **Stage 6 source implementation and focused CI acceptance: complete.**
 - **No action is required from the user now.** The Tool Creator skill must be explicitly enabled for the desired assistant when a suitable build is available; no assistant has been silently opted in.
 - Stage 7 remains next for locale completeness and integration polish. Stage 8 remains responsible for full build, lint, full tests, APK/signature checks, and phone review. Do not claim the Builder's phone layout or runtime navigation has been device-verified.
+
+## 43. Stage 7 locale audit and implementation plan — 2026-11-05 (pre-edit)
+
+- Starting source head: `2f39c5922a9522edc4bc0bfa213e1a603cbfe9e9`; current branch and full recursive tree were rechecked against upstream before Stage 7.
+- The English base resource contains 80 LastNap custom-tool / Tool Builder string keys that are not yet present in any of the seven other supported app locales (`values-ar`, `values-de`, `values-ja`, `values-ko-rKR`, `values-ru`, `values-zh-rTW`, `values-zh`). This includes Builder labels, help, validation/test/enablement states, approval-switch text, Custom Tools assistant selection/status text, and the global Extensions card.
+- The historical `feature/extensions-foundation` branch has translations for some older variants, but several are semantically stale (the older UI described a future AI feature, used four permission choices, and called tools generic extensions). Do not copy those stale values wholesale. Preserve the translated wording only where it still accurately matches current LastNap behavior; update all product-facing text to the current Custom Tools / Tool Creator / single Need approval model.
+- Planned changes: only the seven app-module locale `strings.xml` files. Add every missing base key, retain the English base resource unchanged, preserve unrelated translations and ordering, and keep formatting placeholders such as `%1$s` intact. Do not edit OAuth/Search/Web UI locales in this pass because they have no corresponding new Stage 7 keys.
+- After locale edits, compare all 80 added keys against the base resource in all seven locales, verify duplicate-free resource names and matching format placeholders, then review LastNap shortcut/manifest action IDs and settings backup inclusion for the custom-tool and assistant-selection fields.
+- No source edits are to be made until this scope has been documented. Do not combine unrelated identity or UI redesign work into Stage 7.
