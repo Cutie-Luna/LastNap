@@ -9,21 +9,17 @@ import kotlinx.serialization.json.put
 import me.rerere.ai.core.InputSchema
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.model.CustomExtension
-import me.rerere.rikkahub.data.model.ExtensionPermission
 import me.rerere.rikkahub.data.model.testFingerprint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.uuid.Uuid
 
 class CustomExtensionToolsTest {
-    private val assistantId = Uuid.random()
-
     private fun enabledExtension(
         id: String,
-        permission: ExtensionPermission = ExtensionPermission.ALWAYS_ALLOW,
+        needsApproval: Boolean = true,
         schema: String = """{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}""",
         code: String = "input.value * 2",
     ): CustomExtension {
@@ -33,7 +29,7 @@ class CustomExtensionToolsTest {
             description = "A tested custom tool",
             inputSchema = schema,
             implementation = code,
-            permission = permission,
+            needsApproval = needsApproval,
             enabled = true,
         )
         return draft.copy(testedDefinitionHash = draft.testFingerprint())
@@ -42,14 +38,11 @@ class CustomExtensionToolsTest {
     private fun create(
         extensions: List<CustomExtension>,
         selected: Set<String> = extensions.mapTo(mutableSetOf()) { it.id },
-        grants: Set<CustomExtensionSessionGrant> = emptySet(),
         reserved: Set<String> = emptySet(),
         onCollision: (String) -> Unit = {},
     ) = createCustomExtensionTools(
         extensions = extensions,
         selectedExtensionIds = selected,
-        assistantId = assistantId,
-        sessionApprovedExtensions = grants,
         reservedToolNames = reserved,
         onNameCollision = onCollision,
     )
@@ -83,65 +76,12 @@ class CustomExtensionToolsTest {
     }
 
     @Test
-    fun allPermissionModesHaveDistinctRuntimeBehavior() {
-        val always = create(listOf(enabledExtension("always", ExtensionPermission.ALWAYS_ALLOW))).single()
-        val ask = create(listOf(enabledExtension("ask", ExtensionPermission.ASK_EVERY_TIME))).single()
-        val sessionExtension = enabledExtension("session", ExtensionPermission.THIS_SESSION)
-        val session = create(listOf(sessionExtension)).single()
-        val sessionGrant = sessionExtension.sessionGrant(assistantId)
-        val sessionApproved = create(listOf(sessionExtension), grants = setOf(sessionGrant)).single()
-        val wrongAssistantGrant = sessionExtension.sessionGrant(Uuid.random())
-        val wrongAssistant = create(listOf(sessionExtension), grants = setOf(wrongAssistantGrant)).single()
-        val disabled = create(
-            listOf(enabledExtension("disabled", ExtensionPermission.DISABLED)),
-        )
+    fun approvalSwitchControlsTheExistingToolApprovalContract() {
+        val approvalRequired = create(listOf(enabledExtension("approval-on", needsApproval = true))).single()
+        val noApprovalRequired = create(listOf(enabledExtension("approval-off", needsApproval = false))).single()
 
-        assertFalse(always.needsApproval(JsonNull))
-        assertTrue(ask.needsApproval(JsonNull))
-        assertTrue(session.needsApproval(JsonNull))
-        assertFalse(sessionApproved.needsApproval(JsonNull))
-        assertTrue(wrongAssistant.needsApproval(JsonNull))
-        assertTrue(disabled.isEmpty())
-    }
-
-    @Test
-    fun sessionGrantRequiresTheExactCurrentlySelectedThisSessionDefinition() {
-        val extension = enabledExtension("grant", ExtensionPermission.THIS_SESSION)
-        val name = customExtensionToolName(extension)
-        val grant = findApprovedCustomExtensionSessionGrant(
-            extensions = listOf(extension),
-            selectedExtensionIds = setOf(extension.id),
-            assistantId = assistantId,
-            toolName = name,
-        )
-        val edited = extension.copy(implementation = "input.value + 1").let {
-            it.copy(testedDefinitionHash = it.testFingerprint())
-        }
-        val staleNameGrant = findApprovedCustomExtensionSessionGrant(
-            extensions = listOf(edited),
-            selectedExtensionIds = setOf(edited.id),
-            assistantId = assistantId,
-            toolName = name,
-        )
-        val unselectedGrant = findApprovedCustomExtensionSessionGrant(
-            extensions = listOf(extension),
-            selectedExtensionIds = emptySet(),
-            assistantId = assistantId,
-            toolName = name,
-        )
-        val askEveryTime = extension.copy(permission = ExtensionPermission.ASK_EVERY_TIME)
-
-        assertEquals(extension.sessionGrant(assistantId), grant)
-        assertTrue(staleNameGrant == null)
-        assertTrue(unselectedGrant == null)
-        assertTrue(
-            findApprovedCustomExtensionSessionGrant(
-                extensions = listOf(askEveryTime),
-                selectedExtensionIds = setOf(extension.id),
-                assistantId = assistantId,
-                toolName = name,
-            ) == null
-        )
+        assertTrue(approvalRequired.needsApproval(JsonNull))
+        assertFalse(noApprovalRequired.needsApproval(JsonNull))
     }
 
     @Test
