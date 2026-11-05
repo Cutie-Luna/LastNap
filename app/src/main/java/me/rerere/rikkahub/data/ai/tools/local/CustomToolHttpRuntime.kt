@@ -211,6 +211,24 @@ class CustomToolHttpRuntime(
                             executionStorage.writeBytes(extension.id, name, value.toByteArray(Charsets.UTF_8))
                             true
                         }
+                        function("__customToolStorageReadBase64") { args ->
+                            requireStorageOperation()
+                            val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
+                            val bytes = executionStorage.readBytes(extension.id, name)
+                            buildJsonObject {
+                                put("found", bytes != null)
+                                if (bytes != null) put("value", Base64.getEncoder().encodeToString(bytes))
+                            }.toString()
+                        }
+                        function("__customToolStorageWriteBase64") { args ->
+                            requireStorageOperation()
+                            val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
+                            val value = args.getOrNull(1) as? String ?: error("Storage binary value is required")
+                            val bytes = runCatching { Base64.getDecoder().decode(value) }
+                                .getOrElse { throw IllegalArgumentException("Storage binary value is invalid Base64") }
+                            executionStorage.writeBytes(extension.id, name, bytes)
+                            true
+                        }
                         function("__customToolStorageDelete") { args ->
                             requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
