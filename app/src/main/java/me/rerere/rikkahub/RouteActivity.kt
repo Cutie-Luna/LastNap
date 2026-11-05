@@ -147,8 +147,8 @@ import org.koin.compose.koinInject
 import kotlin.uuid.Uuid
 
 private const val TAG = "RouteActivity"
-private const val ACTION_TRANSLATE = "me.rerere.rikkahub.action.TRANSLATE"
-private const val ACTION_MEDIA_CREATION = "me.rerere.rikkahub.action.MEDIA_CREATION"
+private const val ACTION_TRANSLATE = "com.lastnap.app.action.TRANSLATE"
+private const val ACTION_MEDIA_CREATION = "com.lastnap.app.action.MEDIA_CREATION"
 private const val EXTRA_CONVERSATION_ID = "conversationId"
 
 /** 打开指定会话的聊天页 */
