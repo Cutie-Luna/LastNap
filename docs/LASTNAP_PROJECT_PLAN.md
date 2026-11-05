@@ -188,6 +188,8 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 ### Stage 1 — Refresh and freeze the upstream baseline
 
+<badge color="success">Completed 2026-11-05</badge>
+
 **Goal:** make the clean branch match the chosen current RikkaHub upstream baseline before adding LastNap code.
 
 - Recheck the current upstream default-branch commit; upstream can move between chats.
@@ -198,7 +200,7 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 - Confirm original navigation transitions, shared-element animation code, and baseline app startup behavior match upstream.
 - Do not port feature code during this stage.
 
-**Acceptance:** complete tree comparison is clean against the chosen upstream commit, except for documented intentional differences; baseline SHAs are written here.
+**Acceptance:** complete tree comparison is clean against the chosen upstream commit, except for the documented LastNap project plan; baseline SHAs are written here. This acceptance was met on 2026-11-05.
 
 ### Stage 2 — Apply LastNap identity and artwork only
 
@@ -245,19 +247,23 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 **Acceptance:** each assistant receives exactly its selected, valid, enabled, permission-approved custom tools; all other assistants receive none.
 
-### Stage 5 — Add the Simple and Advanced Tool Builder UI
+### Stage 5 — Redesign the Simple and Advanced Tool Builder UI
 
-**Goal:** add the two entry modes without replacing or damaging the existing editor.
+**Goal:** keep both existing modes and all functionality, but replace the cramped add-tool popup with a spacious, guided page and an optional review/preview step. This stage is a presentation/layout redesign, not a tool-system rewrite.
 
 - Review the existing Extension Builder implementation from the previous branch before porting it.
-- Keep Advanced mode faithful to the existing technical editor and its behavior.
+- First inventory every current popup field, action, validation message, test control, permission control, and save/enable behavior; make a parity checklist before layout edits.
+- Prototype the dedicated full-screen/page-like flow described in the Tool Builder presentation section above.
+- Keep Advanced mode faithful to the existing technical editor and its behavior, but organize fields into spacious sections.
 - Add Simple mode as a guided natural-language route to the same fields and saved tool format.
+- Add a Preview / Review page or panel that summarizes the configured tool without executing or enabling it.
+- Keep the mobile layout single-column, comfortably sized, and scrollable; consider a side preview only on larger screens if it helps.
 - Both modes must share validation, sandbox, permission, and test-before-enable logic.
 - Keep saving, enabling, assigning, and granting permissions under explicit user control.
 - Add targeted UI/state tests where the current architecture supports them.
 - Verify empty, invalid, oversized, loading, failed-test, stale-test, and successful-test states.
 
-**Acceptance:** Simple and Advanced modes produce the same underlying tool record and neither mode bypasses safety gates.
+**Acceptance:** Simple and Advanced modes produce the same underlying tool record and neither mode bypasses safety gates. Every existing field/action remains reachable; the new page feels open and readable on a phone; preview is informational only.
 
 ### Stage 6 — Add the Tool Creator skill and assistant entry points
 
@@ -384,4 +390,23 @@ At the end of the chat, update this document before presenting the handoff summa
 
 ## 8. Current next action
 
-Stage 0 is complete. The plan is committed on `lastnap-clean-foundation`; the verified diff from its starting commit is one added documentation file only. Do not begin app code changes in the same stage. The next chat should begin Stage 1: refresh and freeze the upstream baseline.
+Stage 0 and Stage 1 are complete. The clean branch now matches upstream RikkaHub at frozen commit `e85c1d901d30fa32d3c21a423432d940d77acddb`, except for this project plan. The next stage is Stage 2: apply LastNap identity and artwork only. Do not start the Tool Builder UI redesign before the identity/artwork baseline is isolated and verified.
+
+When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experience while preserving Simple and Advanced and all existing functionality. This is a UI presentation change, not permission to simplify away features.
+
+**Standing instruction for every future chat and every meaningful checkpoint:** read this entire plan first; inspect the current branch/commit; compare the full recursive file tree against the frozen/current upstream baseline; inspect all changed files and relevant upstream counterparts; update this plan's ledger and handoff with every file change, decision, test result, failure, blocker, and next action. Do not mark work complete based on assumptions. Keep each stage focused and reasonably sized; do not turn every stage into a full-day project. If something cannot be verified, say so and leave it open rather than skipping it.
+
+
+## 9. Session handoff — 2026-11-05 (Stage 1)
+
+- **Objective:** clarify the future Tool Builder UI redesign and continue from the clean foundation into upstream baseline synchronization.
+- **Branch:** `lastnap-clean-foundation`.
+- **Starting commit:** `58545d1aca7dbacb78f5d731178e716006217267`.
+- **Ending source commit before this plan update:** `c6d8164333a4a40fa0a4229ff172cb23d930c560`.
+- **Upstream baseline:** `rikkahub/rikkahub` master commit `e85c1d901d30fa32d3c21a423432d940d77acddb`; tree `4551b659557a56ade035d97fce62bec18a4199d4`.
+- **Repository audit:** full recursive tree compared. Before synchronization there was exactly one source mismatch, `CompressContextDialog.kt`, plus the project plan path. After synchronization there are no source/resource mismatches; only the plan document is LastNap-specific.
+- **Files changed:** `app/src/main/java/me/rerere/rikkahub/ui/components/ai/CompressContextDialog.kt` was synced to the latest upstream version. The change adds direct numeric keyboard entry for the recent-message count while retaining increment/decrement controls. This restores baseline parity; it is not a LastNap feature or redesign.
+- **Plan changes:** added the user's Tool Builder UI request and design acceptance criteria; expanded Stage 5 to specify a roomy full-screen page, mode switch, grouped fields, preview/review step, mobile-first layout, and strict preservation of all current actions and safeguards. Marked Stage 1 complete and set Stage 2 as next.
+- **Tests/checks:** GitHub tree comparison confirms no remaining code/resource mismatch against upstream. No Android build was run because this stage only synchronized a file directly from upstream; build verification remains part of Stage 8.
+- **Unverified:** no UI prototype or app build exists yet for the Tool Builder redesign. Do not imply that the popup has already changed.
+- **Next chat:** Stage 2 only—identity and artwork audit/port. Begin by reading this whole plan and checking the full repository tree and upstream HEAD again.
