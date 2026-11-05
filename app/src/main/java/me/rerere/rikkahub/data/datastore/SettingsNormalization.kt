@@ -52,10 +52,18 @@ internal fun Settings.withoutInvalidReferences(): Settings {
         .filter { it.id.isNotBlank() }
         .distinctBy { it.id }
     val validCustomExtensionIds = customExtensions.map { it.id }.toSet()
+    val customToolVariables = settings.customToolVariables
+        .filterKeys { it in validCustomExtensionIds }
+        .mapValues { (toolId, values) ->
+            val allowedNames = customExtensions.first { it.id == toolId }.variables.map { it.name }.toSet()
+            values.filterKeys { it in allowedNames }
+        }
+        .filterValues { it.isNotEmpty() }
     val validModelIds by lazy { settings.providers.flatMap { it.models }.mapTo(HashSet()) { it.id } }
     val asrProviders = settings.asrProviders.distinctBy { it.id }
     return settings.copy(
         customExtensions = customExtensions,
+        customToolVariables = customToolVariables,
         providers = settings.providers.distinctBy { it.id }.map { provider ->
             provider.copyProvider(models = provider.models.distinctBy { model -> model.id })
         },
@@ -101,6 +109,7 @@ internal fun Settings.withoutInvalidReferences(): Settings {
  */
 internal fun Settings.removeCustomExtension(id: String): Settings = copy(
     customExtensions = customExtensions.filterNot { it.id == id },
+    customToolVariables = customToolVariables - id,
     assistants = assistants.map { assistant ->
         assistant.copy(selectedCustomExtensionIds = assistant.selectedCustomExtensionIds - id)
     },
