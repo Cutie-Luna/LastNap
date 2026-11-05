@@ -599,3 +599,10 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - Remaining work: the complete content-level scan of every tracked text blob is still not proven exhaustive. Targeted frozen-upstream searches and focused content review identified and corrected all user-facing product-brand omissions found, and the full tree/blob comparison verifies there are no unreviewed source-path modifications beyond the listed 39. Some old names are intentionally retained for provider identity, upstream attribution, internal WebView/localStorage identifiers, legacy QR/test fixtures, old rikkahub.local host compatibility, storage/Keystore/remote prefixes, document IDs, and internal service actions. Stage 2 remains open until the full tracked-text scan can be completed reliably.
 - Verification status: all README files were fetched again and checked for their LastNap title, cat icon path, release page, and clearly labelled upstream links. No build/test/Gradle/JavaScript validation was run. The no-build/no-device status in Section 17 still applies.
 - Next action: continue the complete legacy-string and text-blob audit; do not begin Stage 3 until Stage 2 is fully closed. Build, APK and Android 13 device verification remain Stage 8.
+
+
+## 22. Additional exported-chat branding audit — 2026-11-05
+
+- The launcher-resource search found that `app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ConversationExport.kt` bypasses the adaptive launcher icon and directly loads `R.mipmap.ic_launcher_foreground` for the logo embedded in exported conversation images. That direct resource remains the original upstream foreground artwork, so the exported image would still show the old bunny even though the app launcher uses the LastNap cat.
+- The same export header visibly hard-codes `rikka-ai.com` next to the timestamp.
+- **Planned minimal correction before editing:** use the existing `R.drawable.appicon` in the export image and change only the adjacent watermark from `rikka-ai.com` to `LastNap`. Preserve export layout, image dimensions, timestamp, chat data, and all other behavior. Keep the upstream website link in the About page as attribution.
