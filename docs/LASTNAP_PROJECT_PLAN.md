@@ -302,16 +302,18 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 ### Stage 7 — Locales, shortcuts, and integration polish
 
+<badge color="success">Source review and focused CI complete</badge>
+
 **Goal:** finish only the user-visible resource and integration work required by the implemented feature.
 
-- Port only the required new strings to the supported locale files.
-- Check every resource key exists in the base locale and supported translations; do not rewrite unrelated translations.
-- Verify launcher shortcut actions, manifest filters, and route constants together.
-- Verify the app label, launcher icon, round icon, monochrome icon, notification small icon, and app links.
-- Confirm settings backup/restore behavior includes the new persisted fields if applicable.
-- Record each resource or existing-screen file touched and its exact reason.
+- [x] Add the required Custom Tools and Tool Builder strings to all seven supported non-English app locales.
+- [x] Verify every one of the 80 new English base keys is present in every supported locale, with no duplicate keys or format-placeholder mismatches.
+- [x] Verify launcher shortcut actions, manifest filters, and RouteActivity constants agree.
+- [x] Verify app label and adaptive launcher foreground/background/monochrome wiring, round-icon manifest reference, and notification small-icon references.
+- [x] Confirm settings backup/restore includes custom-tool definitions and assistant-specific tool assignments.
+- [x] Record the only seven locale files changed and why.
 
-**Acceptance:** feature labels are complete, shortcuts resolve, backup/restore remains safe, and no unrelated UI has been altered.
+**Acceptance:** source-level locale and integration checks passed; the translation change compiled and passed the focused CI tests. Packaged resource-table and on-device icon/runtime checks remain Stage 8 verification items.
 
 ### Stage 8 — Full verification and release readiness
 
@@ -391,6 +393,8 @@ Update this table at the end of every chat. Add rows rather than erasing previou
 | 2026-11-05 — Stage 2 identity follow-up (network/MCP defaults, OpenRouter test, lowercase locale text) | `lastnap-clean-foundation`, source head `51fbe308ba51b56f6d1ff65134d7d383ad2161e8` | Modified `app/src/main/java/me/rerere/rikkahub/di/DataSourceModule.kt`, `app/src/main/java/me/rerere/rikkahub/ui/pages/setting/SettingPreferencesNetworkPage.kt`, `app/src/main/java/me/rerere/rikkahub/data/ai/mcp/McpOAuthCoordinator.kt`, `mediagen/src/test/java/me/rerere/mediagen/provider/providers/openrouter/OpenRouterMediaGenerationProviderTest.kt`, and all eight app locale `strings.xml` files | Changed the default network User-Agent and its settings placeholder to `LastNap-Android/<version>`; changed only the blank-name MCP dynamic-registration client name to `LastNap`; updated the OpenRouter media test to expect `X-Title: LastNap`; changed the ASR timestamp help-string app-name token from lowercase `rikkahub` to `LastNap` in eight translations. Existing saved custom User-Agent values, explicitly named MCP servers, upstream MCP client metadata URL, provider resource IDs, and other translations remain unchanged. | Re-fetched all 12 files and verified exact values. Case-insensitive scan: eight app locales now retain only the intentional `rikkahub_provider_description` resource key; all eight OAuth and all 16 Search/UI locale strings contain zero `rikkahub` references. Test expectation matches production OpenRouter header. No build/tests executed. |
 | 2026-11-04 to 2026-11-05 — previous implementation | `feature/extensions-foundation`, audit head `942c1b49019dbbd55f02606f31b74cc258c14641` | 66 changed paths relative to old fork master; detailed GitHub compare remains available | Prior identity, custom-tool work, UI integration, assets, workflow, locale and compatibility changes; must be selectively reviewed before porting | Earlier CI runs passed as listed; latest release run still needed recheck; no measured device performance result |
 
+| 2026-11-05 — Stage 7 Custom Tools / Tool Builder localization | `lastnap-clean-foundation`, commit `65de876e5d4cc9d2f49facc2075ff0f1485d3066` | Modified only `app/src/main/res/values-ar/strings.xml`, `values-de/strings.xml`, `values-ja/strings.xml`, `values-ko-rKR/strings.xml`, `values-ru/strings.xml`, `values-zh-rTW/strings.xml`, and `values-zh/strings.xml` | Added the 80 new English-base Custom Tools, assistant selector, and Builder strings to each supported locale. Reused historical wording only where it matched current behavior; updated stale UI wording for the current Tool Creator, Simple/Advanced AI help, and single Need approval switch. English base strings and all unrelated locale strings were left unchanged. | Verified all 80 keys in all seven locales, no missing/duplicate keys, identical format placeholders, and no raw XML ampersands in the added translations. Shortcut/manifest/RouteActivity action IDs agree; adaptive icon uses appicon, black background and noticon monochrome; active notification builders use noticon. Settings backup always serializes `settings.json`, including `customExtensions` and assistants with `selectedCustomExtensionIds`; existing SettingsFieldsTest exercises the round trip and legacy defaults. CI run [42057972085](https://github.com/Cutie-Luna/LastNap/actions/runs/42057972085) passed resource merge, resource processing, Kotlin compile and the eight focused test classes; `BUILD SUCCESSFUL in 4m 6s`. No full lint/suite/APK/signature/device test was run. |
+
 ### Per-chat handoff template
 
 Every new chat must append a filled handoff using this structure:
@@ -416,15 +420,49 @@ At the start of the next chat:
 
 At the end of the chat, update this document before presenting the handoff summary. Never leave important decisions, reasons, or failed attempts only in conversation history.
 
+
+## 44. Stage 7 localization and integration polish — source review and focused CI complete (2026-11-05)
+
+### Locale implementation
+
+- Final source commit: `65de876e5d4cc9d2f49facc2075ff0f1485d3066` on `lastnap-clean-foundation`.
+- Changed exactly seven app locale resource files: `values-ar`, `values-de`, `values-ja`, `values-ko-rKR`, `values-ru`, `values-zh-rTW`, and `values-zh`, each in its `strings.xml`.
+- Added all 80 current English-base keys for Custom Tools, Tool Builder, assistant-specific selection, test/enablement states, approval-switch copy, and global Extensions navigation.
+- Older translations were reused only where the semantics still matched. Obsolete language about AI assistance being a future feature, four permission choices, or generic extension records was replaced with copy matching the current Tool Creator workflow and single **Need approval** switch.
+- Post-commit validation fetched all seven files again. Each locale contains 80/80 keys; no missing keys or duplicate resource names; all format-placeholder signatures match the English base. The added translation values have no raw XML ampersands. Two pre-existing `&amp;amp;` values in Arabic/Korean strings were compared against upstream and are identical upstream values; they were not changed as unrelated work.
+- No English base resource, OAuth/Search/Web UI locale, or non-locale source file was changed in the translation commit.
+
+### Integration and persistence review
+
+- Shortcut and intent consistency reviewed across `AndroidManifest.xml`, `res/xml/shortcuts.xml`, and `RouteActivity.kt`: the `lastnap://shortcut` camera route and the `com.lastnap.app.action.TRANSLATE` / `com.lastnap.app.action.MEDIA_CREATION` actions match. The shortcut handler's camera/share behavior remains unchanged.
+- Adaptive launcher configuration reviewed: `ic_launcher.xml` uses the existing cat `appicon` foreground, solid-black `#000000` background, and `noticon` monochrome layer. The manifest uses the adaptive resource for both launcher and round icons. This is source-level wiring only; packaged resource resolution still requires Stage 8.
+- Notification small-icon references reviewed: the shared notification default and all four foreground-service notification builders use the separate `noticon` resource.
+- Settings backup/restore review: `BackupManager.createBackup` always writes a complete `settings.json` alongside optional database/attachment entries. Its serialized `Settings` object contains `customExtensions` and the `assistants` list; `Assistant.selectedCustomExtensionIds` is serialized as part of each assistant. Restore migrates/decodes the complete Settings payload and applies it through `SettingsStore.restoreBeforeInitialization` before Koin and data consumers start. No backup-format change was required.
+- Existing `SettingsFieldsTest` sample contains a custom-tool record and an assistant selection, and its preferences round-trip test plus legacy-default tests cover persistence behavior. The same test class passed in the Stage 7 CI run.
+
+### Focused verification
+
+- CI run: [GitHub Actions run 42057972085](https://github.com/Cutie-Luna/LastNap/actions/runs/42057972085), branch `lastnap-clean-foundation`, head `65de876e5d4cc9d2f49facc2075ff0f1485d3066`.
+- The `persistence-tests` job and “Run focused custom-tool model and runtime tests” step both completed successfully.
+- Logs confirm `:app:mergeGithubDebugResources`, `:app:processGithubDebugResources`, `:app:compileGithubDebugKotlin`, and `:app:testGithubDebugUnitTest`; Gradle reported `BUILD SUCCESSFUL in 4m 6s`.
+- Eight focused test classes ran: `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, `SettingsStoreTest`, `CustomExtensionToolsTest`, `ExtensionBuilderStateTest`, `BuiltinSkillsTest`, and `SkillsToolsTest`.
+- This was not the full unit-test suite, lint, a complete debug/release APK build, signing verification, installation, or a device test. Do not infer packaged icon/resource selection or phone layout from this CI result.
+
+### Stage 7 disposition and next stage
+
+- **Stage 7 source implementation, resource validation, integration review, and focused CI acceptance: complete.**
+- **Stage 8 is next:** run the full relevant test suite and lint, assemble the debug APK, produce the optimized ARM64 signed release APK using the user's existing signing configuration without exposing secrets, inspect package/version/ABI/manifest/resource-table metadata, and verify the APK signature. Then present the build for the user's Android 13 device review. Keep installation/device claims separate from CI.
+
+
 ## 8. Current next action
 
-Stages 0–4 are complete on their documented source and focused-CI bases. Stage 5's page-based Builder implementation and focused CI compile/tests are complete on source head 6c34c9559d84927353e9b9b2a0d961e7e79ca9fa (Section 39). The remaining Stage 5 acceptance item is the user's visual review of the page on an installed build; this is deferred until the Stage 8 debug/device verification path can provide a real screen. Do not begin Stage 6 until that UI review is accepted. Stage 7 locale/integration work and Stage 8 full APK/package-table/signing/Android 13 device verification remain open. No phone action is needed right now.
+Stages 0–7 are complete at their documented source-review and focused-CI acceptance levels. Stage 7 finished on `65de876e5d4cc9d2f49facc2075ff0f1485d3066`; the locale strings, shortcuts, manifest/RouteActivity action consistency, icon references, and settings backup inclusion have been reviewed and the focused resource/compile/test workflow passed (Section 44).
 
-Stage 5 replaces the cramped editor popup with a dedicated page while preserving Simple and Advanced and all existing functionality. Treat this as a UI presentation change, not permission to simplify away features. The source and focused compile/test gate passed; real-phone visual review remains explicitly open.
+**Next: Stage 8 — full verification and release readiness.** Run the full unit-test suite and Android lint, assemble the debug APK, assemble the optimized signed ARM64 release APK using the user's already-held signing configuration, and verify package ID `com.lastnap.app`, versionName/versionCode, ABI, manifest, packaged launcher/round/monochrome/notification resources, and APK signature with `apksigner`. Never expose or commit signing material. Do not publish a release. After a real build is available and inspected, ask the user to perform the Android 13 install/update and visual/runtime checks; no phone action is needed before that build exists.
+
+The clean branch has passed focused CI only so far. No full test suite, lint, complete debug APK build, signed release APK, package/resource-table inspection, signature verification, installation, or device check has yet been completed on this branch. Keep each of those checks explicitly open until directly verified.
 
 **Standing instruction for every future chat and every meaningful checkpoint:** read this entire plan first; inspect the current branch/commit; compare the full recursive file tree against the frozen/current upstream baseline; inspect all changed files and relevant upstream counterparts; update this plan's ledger and handoff with every file change, decision, test result, failure, blocker, and next action. Do not mark work complete based on assumptions. Keep each stage focused and reasonably sized; do not turn every stage into a full-day project. If something cannot be verified, say so and leave it open rather than skipping it.
-
-
 ## 9. Session handoff — 2026-11-05 (Stage 1)
 
 - **Objective:** clarify the future Tool Builder UI redesign and continue from the clean foundation into upstream baseline synchronization.
