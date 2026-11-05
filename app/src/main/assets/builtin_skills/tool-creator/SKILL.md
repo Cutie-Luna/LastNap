@@ -67,10 +67,15 @@ The user chooses the switch. Do not silently turn it off, and do not describe an
 ## Runtime and safety limits
 
 - Treat tool input as untrusted data. Validate its shape and size.
-- The current runtime is an isolated QuickJS sandbox. It does not provide Android, filesystem, network, browser, DOM or Node.js APIs.
-- Do not assume shell, MCP, workspace, app storage, local files or external services are available inside custom-tool JavaScript.
-- Never ask the user to paste passwords, API keys or other secrets into chat or tool source.
-- Do not attempt to bypass sandbox restrictions, approval prompts, implementation/schema test fingerprints, execution timeouts, memory limits or input-size limits.
+- The runtime is an isolated QuickJS sandbox. It does not provide Android, arbitrary filesystem access, browser, DOM, Node.js or shell APIs.
+- Network access is OFF by default. When the user explicitly enables **API access**, JavaScript receives a bounded synchronous `fetch(url, options)` bridge. The tool must also have an explicit hostname allowlist. Public hosts require HTTPS; private/local destinations require the separate local-network permission. Redirects are restricted to the same origin. Do not suggest bypassing these rules or probing hosts outside the allowlist.
+- API-enabled tests can make real requests to the configured hosts. Explain what the test request will send when that matters.
+- **Secrets:** the user declares named Secrets in the Builder and enters values there. Never ask for values in chat or source code. Use a declared Secret only in an HTTP header value with the exact reference form `{{secret:NAME}}`. The native host inserts it at request time; JavaScript and the assistant never receive the plaintext value. Secret values are encrypted locally with Android Keystore and are excluded from backups and exports. Do not put Secret references in URLs or request bodies; those locations are not supported.
+- **Variables:** non-sensitive configuration values are available as `globalThis.variables.NAME`. They are stored with app settings and may be included in settings backups. Never describe Variables as secret storage.
+- **Private tool storage:** only when the user enables it, JavaScript receives `storage.readText(name)`, `storage.writeText(name, value)`, `storage.readBase64(name)`, `storage.writeBase64(name, value)`, `storage.delete(name)` and `storage.list()`. Names are single safe filenames, not paths. Storage is isolated by immutable tool ID, shared by assistants using that same tool, limited to 100 files / 1 MiB per file / 10 MiB total, and excluded from backups. Disabling storage hides access but preserves data; deleting the tool removes its private storage and Secrets.
+- Media already committed to a conversation belongs to that conversation, not the producing tool. Deleting or disabling a tool must not remove media from existing chats. Do not promise image/video display from an API response until the typed media handoff is available.
+- Do not assume MCP, workspace files, arbitrary app storage, or other external services are available inside custom-tool JavaScript.
+- Do not attempt to bypass sandbox restrictions, approval prompts, implementation/schema test fingerprints, execution timeouts, memory limits, request limits, storage quotas or input-size limits.
 - If a request requires an unavailable capability, explain that before drafting code and suggest a design that fits the available runtime.
 
 ## Troubleshooting
