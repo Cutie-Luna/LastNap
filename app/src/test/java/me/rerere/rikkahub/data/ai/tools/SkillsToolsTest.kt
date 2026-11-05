@@ -7,6 +7,7 @@ import me.rerere.ai.provider.Model
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.skills.SkillMetadata
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -15,6 +16,35 @@ import org.junit.rules.TemporaryFolder
 class SkillsToolsTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
+
+    @Test
+    fun `skills are not exposed unless explicitly enabled`() {
+        val creatorDir = tempFolder.newFolder("tool-creator")
+        creatorDir.resolve("SKILL.md").writeText("---\\nname: tool-creator\\ndescription: Create tools\\n---\\nInstructions")
+        val otherDir = tempFolder.newFolder("other")
+        otherDir.resolve("SKILL.md").writeText("---\\nname: other\\ndescription: Other skill\\n---\\nOther")
+
+        assertTrue(
+            createSkillTools(
+                enabledSkills = emptySet(),
+                allSkills = listOf(
+                    SkillMetadata("tool-creator", "Create tools", creatorDir),
+                    SkillMetadata("other", "Other skill", otherDir),
+                ),
+            ).isEmpty()
+        )
+        val selectedTool = createSkillTools(
+            enabledSkills = setOf("tool-creator"),
+            allSkills = listOf(
+                SkillMetadata("tool-creator", "Create tools", creatorDir),
+                SkillMetadata("other", "Other skill", otherDir),
+            ),
+        ).single()
+        val prompt = selectedTool.systemPrompt(Model(), emptyList())
+
+        assertTrue(prompt.contains("<name>tool-creator</name>"))
+        assertFalse(prompt.contains("<name>other</name>"))
+    }
 
     @Test
     fun `use_skill reads metadata directory when display name differs`() = runBlocking {
