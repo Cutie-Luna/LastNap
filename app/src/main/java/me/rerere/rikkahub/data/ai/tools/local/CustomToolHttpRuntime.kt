@@ -44,11 +44,15 @@ import kotlin.time.Duration.Companion.milliseconds
  * Dedicated, policy-enforced HTTP bridge for custom tools. It deliberately does not use
  * SearchService's shared client, which has application request logging interceptors.
  */
-class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
+class CustomToolHttpRuntime(
+    private val baseClient: OkHttpClient,
+    private val secretStore: CustomToolSecretStore,
+) {
 
     suspend fun evaluate(
         extension: CustomExtension,
         code: String,
+        variables: Map<String, String> = emptyMap(),
         timeoutMillis: Long = DEFAULT_EXECUTION_TIMEOUT_MS,
     ): String = withContext(Dispatchers.Default) {
         require(code.length <= CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH) {
@@ -59,7 +63,24 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                 "Custom tool API permissions or definition are invalid"
             }
         }
-
+        val missingSecrets = secretStore.missingRequiredSecrets(extension)
+        require(missingSecrets.isEmpty()) {
+            "Missing required Secrets: ${missingSecrets.joinToString(", ")}"
+        }
+        val declaredVariableNames = extension.variables.map { it.name }.toSet()
+        val safeVariables = variables.filterKeys { it in declaredVariableNames }
+        val missingVariables = extension.variables
+            .filter { it.required && safeVariables[it.name].isNullOrBlank() }
+            .map { it.name }
+        require(missingVariables.isEmpty()) {
+            "Missing required Variables: ${missingVariables.joinToString(", ")}"
+        }
+        require(safeVariables.values.all { it.length <= CustomExtensionLimits.MAX_SECRET_VALUE_LENGTH }) {
+            "A custom tool Variable exceeds the 8 KiB limit"
+        }
+        val variablesJson = kotlinx.serialization.json.JsonObject(
+            safeVariables.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
+        ).toString()
         val logs = StringBuilder()
         var logsTruncated = false
         fun appendLog(line: String) {
@@ -138,6 +159,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                                     log(line);
                                 };
                             }
+                            globalThis.variables = Object.freeze(JSON.parse(${JsonPrimitive(variablesJson)}));
                             const result = (0, eval)(${JsonPrimitive(code)});
                             if (result == null) return null;
                             const type = typeof result;
@@ -182,7 +204,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         require(url.length <= MAX_URL_LENGTH) { "HTTP request URL exceeds the size limit" }
         var currentMethod = method.uppercase(Locale.ROOT)
         require(currentMethod in ALLOWED_METHODS) { "HTTP method is not supported" }
-        val headers = parseRequestHeaders(headersJson)
+        val rawHeaders = parseRequestHeaders(headersJson)
         val requestBytes = when (bodyEncoding) {
             "text" -> body?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
             "base64" -> runCatching { Base64.getDecoder().decode(body.orEmpty()) }
@@ -201,6 +223,9 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
             else -> null
         }
         var currentUrl = parseAndValidateUrl(extension, url)
+        val resolvedHeaders = resolveSecretHeaders(extension, rawHeaders)
+        val secretsUsed = resolvedHeaders.second
+        val headers = resolvedHeaders.first
         var redirects = 0
 
         while (true) {
@@ -247,7 +272,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                     redirects += 1
                     null
                 } else {
-                    responseToJson(received, currentUrl)
+                    responseToJson(received, currentUrl, secretsUsed)
                 }
             }
             if (responseResult != null) return responseResult
@@ -335,7 +360,11 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         return result
     }
 
-    private fun responseToJson(response: okhttp3.Response, url: HttpUrl): String {
+    private fun responseToJson(
+        response: okhttp3.Response,
+        url: HttpUrl,
+        secretsUsed: List<String>,
+    ): String {
         val responseBody = response.body
         val mediaType = responseBody?.contentType()
         val expectedLength = responseBody?.contentLength() ?: 0L
@@ -368,9 +397,17 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         }
 
         val charset: Charset = mediaType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        val responseText = if (isText) redactSecrets(bytes.toString(charset), secretsUsed) else ""
+        if (!isText && secretsUsed.any { secret ->
+                secret.toByteArray(Charsets.UTF_8).let { needle -> needle.isNotEmpty() && bytes.containsBytes(needle) }
+            }
+        ) {
+            throw IllegalStateException("The API response contained a configured Secret and was blocked")
+        }
         val headerObject = buildJsonObject {
             response.headers.names().forEach { name ->
-                put(name.lowercase(Locale.ROOT), response.headers.values(name).joinToString(", "))
+                val values = response.headers.values(name).map { redactSecrets(it, secretsUsed) }
+                put(name.lowercase(Locale.ROOT), values.joinToString(", "))
             }
         }
         return buildJsonObject {
@@ -380,9 +417,54 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
             put("url", url.newBuilder().query(null).fragment(null).build().toString())
             put("headers", headerObject)
             put("isText", isText)
-            put("body", if (isText) bytes.toString(charset) else "")
+            put("body", responseText)
             put("bodyBase64", Base64.getEncoder().encodeToString(bytes))
         }.toString()
+    }
+
+    private fun resolveSecretHeaders(
+        extension: CustomExtension,
+        headers: Map<String, String>,
+    ): Pair<Map<String, String>, List<String>> {
+        val declaredSecrets = extension.secrets.map { it.name }.toSet()
+        val usedSecrets = linkedSetOf<String>()
+        val resolved = headers.mapValues { (_, value) ->
+            SECRET_REFERENCE_PATTERN.replace(value) { match ->
+                val name = match.groupValues[1]
+                require(name in declaredSecrets) {
+                    "HTTP request references an undeclared Secret: $name"
+                }
+                val secret = secretStore.getSecret(extension.id, name)
+                    ?: throw IllegalStateException("Secret '$name' has not been configured")
+                usedSecrets += secret
+                secret
+            }.also { result ->
+                require(!result.contains("{{secret:")) {
+                    "HTTP request contains an invalid Secret reference"
+                }
+            }
+        }
+        return resolved to usedSecrets.toList()
+    }
+
+    private fun redactSecrets(value: String, secrets: List<String>): String =
+        secrets.filter { it.isNotEmpty() }.fold(value) { text, secret ->
+            text.replace(secret, REDACTED_SECRET, ignoreCase = false)
+        }
+
+    private fun ByteArray.containsBytes(needle: ByteArray): Boolean {
+        if (needle.isEmpty() || needle.size > size) return false
+        for (start in 0..(size - needle.size)) {
+            var match = true
+            for (offset in needle.indices) {
+                if (this[start + offset] != needle[offset]) {
+                    match = false
+                    break
+                }
+            }
+            if (match) return true
+        }
+        return false
     }
 
     private fun sameOrigin(first: HttpUrl, second: HttpUrl): Boolean =
@@ -456,7 +538,10 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
     }
 
     companion object {
-        fun create(settingsStore: me.rerere.rikkahub.data.datastore.SettingsStore): CustomToolHttpRuntime {
+        fun create(
+            settingsStore: me.rerere.rikkahub.data.datastore.SettingsStore,
+            secretStore: CustomToolSecretStore,
+        ): CustomToolHttpRuntime {
             val client = OkHttpClient.Builder()
                 .proxySelector(me.rerere.rikkahub.data.remote.SettingsProxySelector(settingsStore))
                 .proxyAuthenticator(me.rerere.rikkahub.data.remote.SettingsProxyAuthenticator(settingsStore))
@@ -469,7 +554,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                 .retryOnConnectionFailure(false)
                 // Deliberately no request, body, or header logging interceptors.
                 .build()
-            return CustomToolHttpRuntime(client)
+            return CustomToolHttpRuntime(client, secretStore)
         }
 
         private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L
@@ -486,6 +571,8 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
         private const val MAX_BINARY_RESPONSE_BYTES = 8 * 1024 * 1024
         private const val MAX_REDIRECTS = 5
         private const val MAX_REQUESTS_PER_EXECUTION = 20
+        private const val REDACTED_SECRET = "[REDACTED]"
+        private val SECRET_REFERENCE_PATTERN = Regex("""\\{\\{secret:([A-Z][A-Z0-9_]{0,63})}}""")
         private val ALLOWED_METHODS = setOf("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         private val BLOCKED_REQUEST_HEADERS = setOf(
