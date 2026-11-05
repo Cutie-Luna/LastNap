@@ -795,3 +795,10 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Tests have been written but not executed.** The available GitHub connection exposes no workflow-dispatch action, the repository has no dedicated unit-test workflow, and the existing manual daily workflow performs a signed release APK build rather than a focused test run. No local checkout/runtime is available here. Do not report these tests as passing; Stage 3 remains open until the focused unit tests (and relevant compile check) are actually run.
 - No Gradle build, lint, APK build, signature check, install, or phone verification was run. No phone action is needed for the current source-only work.
 - **Next action:** establish a focused, non-publishing way to run the Stage 3 unit tests and compile checks; inspect results and fix any failures. Only after Stage 3 passes should implementation begin for Stage 4 runtime registration/permission enforcement.
+
+## 35. Focused Stage 3 test-runner plan — 2026-11-05
+
+- The Stage 3 regression tests are present but the available GitHub connection cannot dispatch the existing manual workflow, and that workflow is a signed APK build rather than a unit-test job.
+- To execute only the changed persistence/model coverage without touching signing secrets or publishing, add a small branch-scoped GitHub Actions workflow that runs the four focused app unit-test classes on pushes to `lastnap-clean-foundation`.
+- The workflow will set up the same JDK 21 / Node 22 / pnpm 11 toolchain required by the app's Web module, generate a CI-only dummy Google Services file for the debug package, and run `testGithubDebugUnitTest` with filters for the custom-tool model, normalization, settings-field, and SettingsStore tests.
+- It must use read-only repository permissions, no signing secrets, no release tasks, and no artifact publication. The workflow file's initial push will trigger the first run. Keep it as a reusable focused regression check if it behaves as intended.
