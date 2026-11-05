@@ -264,6 +264,8 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
     }
 
     private fun validateUrl(extension: CustomExtension, url: HttpUrl): List<InetAddress> {
+        // Mixed public/private DNS answers create an ambiguous target and can bypass
+        // destination checks when a configured proxy performs remote DNS resolution.
         require(url.host.length <= 253 && extension.allowsApiHost(url.host)) {
             "HTTP request host is not in this tool's allowlist"
         }
@@ -271,6 +273,10 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
             "Only HTTP and HTTPS request URLs are supported"
         }
         val addresses = resolveAndValidate(extension, url.host)
+        val localAddressCount = addresses.count(::isLocalAddress)
+        require(localAddressCount == 0 || localAddressCount == addresses.size) {
+            "HTTP request host resolves to mixed local and public addresses"
+        }
         if (url.scheme == "http") {
             require(extension.allowLocalNetwork && addresses.all(::isLocalAddress)) {
                 "Unencrypted HTTP is allowed only for explicitly enabled local-network hosts"
@@ -454,7 +460,6 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
             val client = OkHttpClient.Builder()
                 .proxySelector(me.rerere.rikkahub.data.remote.SettingsProxySelector(settingsStore))
                 .proxyAuthenticator(me.rerere.rikkahub.data.remote.SettingsProxyAuthenticator(settingsStore))
-                .also { java.net.Authenticator.setDefault(me.rerere.rikkahub.data.remote.SettingsSocks5Authenticator(settingsStore)) }
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
                 .writeTimeout(20, TimeUnit.SECONDS)
