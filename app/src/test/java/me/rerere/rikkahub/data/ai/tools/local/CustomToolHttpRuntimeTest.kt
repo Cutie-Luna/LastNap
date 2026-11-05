@@ -240,6 +240,17 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun deletedToolCannotStartAnotherExecution() = runBlocking {
+        val extension = CustomExtension(name = "Deleted tool", description = "")
+        val runtime = runtime()
+        runtime.revokeTool(extension.id)
+
+        val error = runCatching { runtime.evaluate(extension, "1") }.exceptionOrNull()
+
+        assertTrue(error is java.util.concurrent.CancellationException)
+    }
+
+    @Test
     fun disabledApiCapabilityDoesNotInstallFetch() = runBlocking {
         val extension = localExtension().copy(
             apiAccessEnabled = false,
