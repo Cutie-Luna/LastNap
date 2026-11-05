@@ -192,8 +192,11 @@ class ChatService(
         customExtensionSessionGrants[conversationId]?.toSet().orEmpty()
 
     fun cleanup() = runCatching {
-        customExtensionSessionGrants.clear()
-        sessionManager.cleanup()
+        try {
+            sessionManager.cleanup()
+        } finally {
+            customExtensionSessionGrants.clear()
+        }
     }
 
     private fun onSessionGenerationFinished(session: ConversationSession, cause: Throwable?) {
@@ -558,6 +561,7 @@ class ChatService(
                 try {
                     afterPreviousGeneration(previousJob) {
                         ensureInitialized(session)
+                        var approvedCustomExtensionGrant: CustomExtensionSessionGrant? = null
                         if (approved && answer == null) {
                             val settings = settingsStore.awaitLoaded()
                             val assistant = settings.getStoredAssistantOf(session.state.value)
@@ -565,17 +569,12 @@ class ChatService(
                                 .flatMap { it.getTools() }
                                 .firstOrNull { it.toolCallId == toolCallId && it.isPending }
                                 ?.toolName
-                            val grant = findApprovedCustomExtensionSessionGrant(
+                            approvedCustomExtensionGrant = findApprovedCustomExtensionSessionGrant(
                                 extensions = settings.customExtensions,
                                 selectedExtensionIds = assistant.selectedCustomExtensionIds,
                                 assistantId = assistant.id,
                                 toolName = pendingToolName,
                             )
-                            if (grant != null) {
-                                customExtensionSessionGrants
-                                    .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet() }
-                                    .add(grant)
-                            }
                         }
                         val newApprovalState = when {
                             answer != null -> ToolApprovalState.Answered(answer)
@@ -585,6 +584,11 @@ class ChatService(
 
                         val updated = session.tryUpdate { it.withToolApproval(toolCallId, newApprovalState) }
                             ?: return@afterPreviousGeneration
+                        approvedCustomExtensionGrant?.let { grant ->
+                            customExtensionSessionGrants
+                                .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet() }
+                                .add(grant)
+                        }
                         session.flush()
 
                         // Only continue generation when all pending tools are handled
