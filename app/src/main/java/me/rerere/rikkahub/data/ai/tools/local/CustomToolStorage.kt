@@ -166,12 +166,15 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         val directory = toolDirectory(toolId)
         if (!directory.exists()) return@synchronized
         requireOwnedDirectory(toolId, directory)
-        directory.listFiles().orEmpty().forEach { file ->
+        val entries = directory.listFiles().orEmpty()
+        entries.filterNot { it.name == OWNER_FILE }.forEach { file ->
             require(file.canonicalFile.parentFile == directory.canonicalFile &&
                 !Files.isSymbolicLink(file.toPath()) && file.isFile
             ) { "Tool storage contains an unsafe item" }
             check(file.delete()) { "Could not remove private tool storage item" }
         }
+        val marker = File(directory, OWNER_FILE)
+        if (marker.exists()) check(marker.delete()) { "Could not remove tool storage ownership metadata" }
         check(directory.delete()) { "Could not remove private tool storage directory" }
     }
 
