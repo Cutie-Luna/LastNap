@@ -586,7 +586,7 @@ class ChatService(
                             ?: return@afterPreviousGeneration
                         approvedCustomExtensionGrant?.let { grant ->
                             customExtensionSessionGrants
-                                .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet() }
+                                .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet<CustomExtensionSessionGrant>() }
                                 .add(grant)
                         }
                         session.flush()
