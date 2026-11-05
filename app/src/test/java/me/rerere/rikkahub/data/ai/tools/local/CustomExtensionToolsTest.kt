@@ -105,6 +105,46 @@ class CustomExtensionToolsTest {
     }
 
     @Test
+    fun sessionGrantRequiresTheExactCurrentlySelectedThisSessionDefinition() {
+        val extension = enabledExtension("grant", ExtensionPermission.THIS_SESSION)
+        val name = customExtensionToolName(extension)
+        val grant = findApprovedCustomExtensionSessionGrant(
+            extensions = listOf(extension),
+            selectedExtensionIds = setOf(extension.id),
+            assistantId = assistantId,
+            toolName = name,
+        )
+        val edited = extension.copy(implementation = "input.value + 1").let {
+            it.copy(testedDefinitionHash = it.testFingerprint())
+        }
+        val staleNameGrant = findApprovedCustomExtensionSessionGrant(
+            extensions = listOf(edited),
+            selectedExtensionIds = setOf(edited.id),
+            assistantId = assistantId,
+            toolName = name,
+        )
+        val unselectedGrant = findApprovedCustomExtensionSessionGrant(
+            extensions = listOf(extension),
+            selectedExtensionIds = emptySet(),
+            assistantId = assistantId,
+            toolName = name,
+        )
+        val askEveryTime = extension.copy(permission = ExtensionPermission.ASK_EVERY_TIME)
+
+        assertEquals(extension.sessionGrant(assistantId), grant)
+        assertTrue(staleNameGrant == null)
+        assertTrue(unselectedGrant == null)
+        assertTrue(
+            findApprovedCustomExtensionSessionGrant(
+                extensions = listOf(askEveryTime),
+                selectedExtensionIds = setOf(extension.id),
+                assistantId = assistantId,
+                toolName = name,
+            ) == null
+        )
+    }
+
+    @Test
     fun providerToolNameIsSafeAndChangesWhenSchemaOrCodeChanges() {
         val original = enabledExtension("stable-id")
         val changedCode = original.copy(implementation = "input.value + 100")
