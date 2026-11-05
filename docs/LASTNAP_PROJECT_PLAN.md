@@ -1437,3 +1437,35 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - [ ] Decide native credential injection contract and how to prevent secrets from entering JavaScript logs/results or diagnostic logs.
 - [ ] Decide per-tool storage quota, filename rules, file-size limits, deletion on tool removal, and retention when storage is disabled or a tool is re-imported.
 - [ ] Finish HTTP URL/redirect/private-network policy and binary-body limits without blocking legitimate user-configured APIs.
+
+## 52. User clarification — named environment variables and strict change scope (2026-11-05)
+
+### Credential UX: GitHub Actions / Cloudflare-style names
+
+The user clarified that credentials should work like named environment variables / repository secrets in GitHub Actions or Cloudflare:
+
+- A tool/AI-generated tool declares the names it requires, for example `AUTH_KEY`, `OPENWEATHER_API_KEY`, or `SERVICE_TOKEN`.
+- The AI Tool Creator tells the user exactly which names must be created and where to add their values.
+- The user enters each sensitive value once in a dedicated secret manager/settings UI under that exact name. The tool code and exported tool definition contain only the name/reference, never the value.
+- Distinguish **Secrets** (sensitive values; encrypted, local-only, excluded from every backup/export) from ordinary **Variables** (non-sensitive configuration such as `API_URL`).
+- The Builder should clearly list required secret/variable names, descriptions, and whether each is required or optional. Missing required values must be detected before enabling/testing or surfaced as a clear configuration error.
+- Advanced-mode code and Simple-mode generated code should use the same documented named-reference convention.
+- Prefer native HTTP bridge substitution/injection at request construction time so the secret value is not readable by JavaScript, tool output, AI prompts, diagnostics, or logs. The exact safe reference syntax/API remains part of the implementation contract; do not expose a generic plaintext `getSecret()` function.
+- AI assistance explains required names and setup steps but never asks the user to paste secret values into chat or code. It must not receive secret values.
+
+### Strict scope boundary — explicit user instruction
+
+- Make changes **only** to the custom Tool Builder and the directly required custom-tool runtime, credential, storage, tests, and documentation paths.
+- Do not touch unrelated app features, screens, navigation, general settings behavior, shared UI styling, unrelated dependencies, unrelated performance issues, or existing unrelated tool integrations.
+- Do not refactor or rewrite existing systems just because they are nearby. Reuse existing primitives behind narrow adapters; preserve existing behavior.
+- In particular, preserve the existing workspace SSH SecretCipher behavior and Custom JS search fetch behavior. Add custom-tool capabilities behind explicit opt-in, with regression tests.
+- Keep changes minimal and focused. Before every edit, inspect the target and its direct call sites. Review the diff to ensure every changed file is necessary for this feature.
+- Never claim the app is safe or unbroken merely because code compiles. Run focused tests and build checks, report exactly what was and was not verified, and do not modify the protected baseline branch.
+- User explicitly prioritizes not breaking the app over rushing. If a proposed implementation requires unrelated changes or risks unrelated behavior, stop and find a narrower design instead.
+
+### Updated status
+
+- [x] Confirmed named environment-variable / secret-manager UX and AI-guided setup.
+- [x] Recorded strict no-unrelated-changes boundary.
+- [ ] Stage A contract still needs to settle exact name/reference syntax, secret and variable CRUD UI, missing-value validation, per-tool declarations, and safe native request-time injection.
+- [ ] No source changes have been made on this branch; all progress so far is project-plan documentation only.
