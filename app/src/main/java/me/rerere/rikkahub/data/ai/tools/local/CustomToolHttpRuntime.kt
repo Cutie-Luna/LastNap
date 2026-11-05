@@ -71,6 +71,7 @@ class CustomToolHttpRuntime(
         storageOverride: CustomToolStorageProvider? = null,
         timeoutMillis: Long = DEFAULT_EXECUTION_TIMEOUT_MS,
     ): String = withContext(Dispatchers.Default) {
+        if (extension.id in revokedToolIds) throw CancellationException("Custom tool was deleted")
         require(code.length <= CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH) {
             "Custom tool implementation exceeds the size limit"
         }
