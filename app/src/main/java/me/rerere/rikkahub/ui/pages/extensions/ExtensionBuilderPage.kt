@@ -66,6 +66,7 @@ import me.rerere.hugeicons.stroke.Puzzle
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntime
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStore
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolStorage
 import me.rerere.rikkahub.data.ai.tools.local.InMemoryCustomToolStorage
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.removeCustomExtension
