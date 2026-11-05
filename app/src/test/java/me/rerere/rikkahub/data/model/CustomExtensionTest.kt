@@ -82,7 +82,7 @@ class CustomExtensionTest {
             implementation = code,
             enabled = true,
         )
-        val tested = untested.copy(testedImplementationHash = code.extensionSha256())
+        val tested = untested.copy(testedDefinitionHash = untested.testFingerprint())
 
         assertTrue(CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST in untested.validationErrors())
         assertEquals(emptySet<CustomExtensionValidationError>(), tested.validationErrors())
