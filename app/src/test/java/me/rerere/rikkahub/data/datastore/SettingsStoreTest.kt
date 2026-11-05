@@ -19,6 +19,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import me.rerere.rikkahub.data.model.CustomExtension
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -169,6 +170,35 @@ class SettingsStoreTest {
         val stored = reopened()
         assertEquals("custom", stored.titlePrompt)
         assertEquals(assistantId, stored.assistantId)
+    }
+
+    @Test
+    fun `custom tools and assistant assignments survive datastore reopen`() = runBlocking {
+        val store = open().store
+        val extension = CustomExtension(
+            id = "tool-persisted",
+            name = "Persisted tool",
+            description = "Stored with Settings",
+        )
+        val assistantId = DEFAULT_ASSISTANT_ID
+
+        store.update { current ->
+            current.copy(
+                customExtensions = listOf(extension),
+                assistants = current.assistants.map { assistant ->
+                    if (assistant.id == assistantId) {
+                        assistant.copy(selectedCustomExtensionIds = setOf(extension.id))
+                    } else assistant
+                },
+            )
+        }
+
+        val restored = reopened()
+        assertEquals(listOf(extension), restored.customExtensions)
+        assertEquals(
+            setOf(extension.id),
+            restored.assistants.single { it.id == assistantId }.selectedCustomExtensionIds,
+        )
     }
 
     @Test
