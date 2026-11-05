@@ -1,5 +1,6 @@
 package me.rerere.rikkahub.data.model
 
+import kotlinx.serialization.decodeFromString
 import me.rerere.rikkahub.utils.JsonInstant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
