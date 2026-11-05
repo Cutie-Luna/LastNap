@@ -96,7 +96,7 @@ class ChatRequestFactory(
     )
 
     /** 解析本轮的助手、模型、记忆和工具；MCP 服务名不合法时抛出 InvalidMcpServerNamesException */
-    suspend fun createContext(
+    internal suspend fun createContext(
         settings: Settings,
         conversation: Conversation,
         sessionApprovedCustomExtensions: Set<CustomExtensionSessionGrant> = emptySet(),
