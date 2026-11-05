@@ -279,8 +279,10 @@ class CustomExtensionTest {
         )
         val anotherHost = api.copy(allowedApiHosts = listOf("other.example.com"))
         val localNetwork = api.copy(allowLocalNetwork = true)
+        val storage = base.copy(storageEnabled = true)
 
         assertNotEquals(base.testFingerprint(), api.testFingerprint())
+        assertNotEquals(base.testFingerprint(), storage.testFingerprint())
         assertNotEquals(api.testFingerprint(), anotherHost.testFingerprint())
         assertNotEquals(api.testFingerprint(), localNetwork.testFingerprint())
     }
