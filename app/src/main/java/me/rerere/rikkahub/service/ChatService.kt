@@ -47,8 +47,7 @@ import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.prompts.buildCompressPrompt
 import me.rerere.rikkahub.data.ai.tools.InvalidMcpServerNamesException
 import me.rerere.rikkahub.data.ai.tools.local.CustomExtensionSessionGrant
-import me.rerere.rikkahub.data.ai.tools.local.customExtensionToolName
-import me.rerere.rikkahub.data.ai.tools.local.sessionGrant
+import me.rerere.rikkahub.data.ai.tools.local.findApprovedCustomExtensionSessionGrant
 import me.rerere.rikkahub.data.ai.tools.shouldUseExternalWebSearch
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.getCurrentAssistant
@@ -57,7 +56,6 @@ import me.rerere.rikkahub.data.event.AppEventBus
 import me.rerere.rikkahub.data.files.FilesManager
 import me.rerere.rikkahub.data.model.Assistant
 import me.rerere.rikkahub.data.model.Conversation
-import me.rerere.rikkahub.data.model.ExtensionPermission
 import me.rerere.rikkahub.data.model.bindConfig
 import me.rerere.rikkahub.data.model.cancelInterruptedTools
 import me.rerere.rikkahub.data.model.deleteMessage
@@ -79,7 +77,6 @@ import me.rerere.rikkahub.data.model.withToolApproval
 import me.rerere.rikkahub.data.model.withTranslation
 import me.rerere.rikkahub.data.model.withoutConversationFields
 import me.rerere.rikkahub.data.model.withoutUnresumableToolCalls
-import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.data.repository.ConversationRepository
 import me.rerere.rikkahub.data.repository.FolderRepository
 import me.rerere.rikkahub.web.BadRequestException
@@ -568,17 +565,16 @@ class ChatService(
                                 .flatMap { it.getTools() }
                                 .firstOrNull { it.toolCallId == toolCallId && it.isPending }
                                 ?.toolName
-                            val approvedExtension = settings.customExtensions.firstOrNull { extension ->
-                                extension.permission == ExtensionPermission.THIS_SESSION &&
-                                    extension.id in assistant.selectedCustomExtensionIds &&
-                                    extension.enabled &&
-                                    extension.validationErrors().isEmpty() &&
-                                    customExtensionToolName(extension) == pendingToolName
-                            }
-                            if (approvedExtension != null) {
+                            val grant = findApprovedCustomExtensionSessionGrant(
+                                extensions = settings.customExtensions,
+                                selectedExtensionIds = assistant.selectedCustomExtensionIds,
+                                assistantId = assistant.id,
+                                toolName = pendingToolName,
+                            )
+                            if (grant != null) {
                                 customExtensionSessionGrants
                                     .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet() }
-                                    .add(approvedExtension.sessionGrant(assistant.id))
+                                    .add(grant)
                             }
                         }
                         val newApprovalState = when {
