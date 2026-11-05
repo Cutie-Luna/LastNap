@@ -1863,4 +1863,7 @@
     <string name="extension_builder_page_delete_message">«%1$s» будет удалён и также отвязан от всех ассистентов.</string>
     <string name="extensions_page_custom_tools">Пользовательские инструменты</string>
     <string name="extensions_page_custom_tools_desc">Создавайте, тестируйте и управляйте повторно используемыми инструментами ассистентов</string>
+  <string name="chat_page_compress_keep_recent">Сохранить последние сообщения</string>
+  <string name="chat_page_compress_keep_recent_desc">Эти сообщения не сжимаются и остаются после сводки. Значение 0 сжимает всё и лучше использует кэш промпта; если диалог слишком длинный для сжатия, оставьте больше сообщений.</string>
+  <string name="chat_page_compress_not_enough_messages">Недостаточно сообщений для сжатия. Уменьшите количество сохраняемых сообщений.</string>
 </resources>
