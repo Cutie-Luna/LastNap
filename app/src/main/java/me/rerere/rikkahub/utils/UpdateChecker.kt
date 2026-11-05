@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Environment
 import android.widget.Toast
 import androidx.core.net.toUri
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,7 +22,6 @@ import me.rerere.rikkahub.AppScope
 import me.rerere.rikkahub.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.util.Locale
 
 private const val API_URL = "https://api.github.com/repos/Cutie-Luna/LastNap/releases?per_page=20"
 
