@@ -44,16 +44,16 @@ class SkillsToolsTest {
             createSkillTools(
                 enabledSkills = emptySet(),
                 allSkills = listOf(
-                    SkillMetadata("tool-creator", "Create tools", creatorDir),
-                    SkillMetadata("other", "Other skill", otherDir),
+                    SkillMetadata(name = "tool-creator", description = "Create tools", skillDir = creatorDir),
+                    SkillMetadata(name = "other", description = "Other skill", skillDir = otherDir),
                 ),
             ).isEmpty()
         )
         val selectedTool = createSkillTools(
             enabledSkills = setOf("tool-creator"),
             allSkills = listOf(
-                SkillMetadata("tool-creator", "Create tools", creatorDir),
-                SkillMetadata("other", "Other skill", otherDir),
+                SkillMetadata(name = "tool-creator", description = "Create tools", skillDir = creatorDir),
+                SkillMetadata(name = "other", description = "Other skill", skillDir = otherDir),
             ),
         ).single()
         val prompt = selectedTool.systemPrompt(Model(), emptyList())
