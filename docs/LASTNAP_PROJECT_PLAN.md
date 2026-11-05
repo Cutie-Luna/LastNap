@@ -1418,3 +1418,22 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - [x] Confirmed existing Android Keystore AES-GCM primitive and managed-file save primitives.
 - [ ] Stage A architecture audit and capability contract are not complete.
 - [ ] No source implementation or video-player work has started on this branch.
+
+## 51. Stage A credential and managed-storage audit — additional findings (2026-11-05)
+
+- Traced the existing `SecretCipher` call site in `WorkspaceRepository.kt`. SSH passwords, private keys and passphrases are encrypted with `SecretCipher.encrypt` before being serialized into `SshWorkspaceSettings`; decryption happens only when building the SSH connection config. The persisted model stores ciphertext, not plaintext. The existing error explicitly asks the user to re-enter credentials after restoring to a device without the original Android Keystore key.
+- The Android Keystore key alias is `rikkahub_secret_cipher`, AES-256-GCM, non-exportable. Keep this existing alias and SSH behavior unchanged. Any custom-tool secret store must not break or repurpose workspace SSH credentials.
+- Android backup configuration has `allowBackup=true`; `backup_rules.xml` currently includes the upload files folder, while `data_extraction_rules.xml` has only commented examples. Separately, the app's explicit manual backup serializes Settings and database content. Workspace SSH ciphertext is already present in its database backup and becomes unusable on another device; this existing pattern is not sufficient for the user's stricter custom API-secret rule that secrets must not appear in exports.
+- **Preferred design direction for custom API credentials (still subject to tests):** store named secrets separately from Settings and the app database, under app-private `noBackupFilesDir`, encrypted with the existing Android Keystore AES-GCM primitive. Do not include secret values or ciphertext in Settings JSON, database rows, manual backups, tool exports, AI prompts, JavaScript source, schemas, test fixtures, logs, or tool results. After uninstall/device restore, the user re-enters secrets. Verify platform backup behavior and atomic persistence before implementation.
+- Builder should reference only stable secret names/IDs. The native host should inject configured credentials into HTTP requests without returning plaintext values to JavaScript wherever the API contract permits; avoid a general-purpose `getSecret()` that makes it easy for tool code to log or return a secret. The exact supported placement (for example, request header and optional prefix) remains a Stage A contract decision.
+- `FilesManager` writes managed content under a folder supplied by its caller and records it in `ManagedFileEntity`; the folder is created during the write. Its generic public methods are too broad to expose to custom JavaScript. A dedicated tool-storage service should accept a validated immutable tool ID and safe relative filename only, enforce per-tool and global quotas, and never accept arbitrary absolute paths or folder strings.
+- Storage remains separate from secrets: tool-owned data may use managed per-tool storage and documented deletion/retention behavior; API credentials stay in the separate no-backup secret store.
+- No source changes were made. The only changes on this branch remain project-plan documentation commits.
+
+### Remaining Stage A decisions
+
+- [ ] Verify `noBackupFilesDir` and Android Keystore behavior across app restart, app-data clear, uninstall/reinstall, device transfer and manual backup/restore.
+- [ ] Decide named-secret lifecycle and Builder flow: create/update/delete a named credential, reference it from a tool, and warn when a referenced credential is missing. Keep secret values masked and never echo them back after save.
+- [ ] Decide native credential injection contract and how to prevent secrets from entering JavaScript logs/results or diagnostic logs.
+- [ ] Decide per-tool storage quota, filename rules, file-size limits, deletion on tool removal, and retention when storage is disabled or a tool is re-imported.
+- [ ] Finish HTTP URL/redirect/private-network policy and binary-body limits without blocking legitimate user-configured APIs.
