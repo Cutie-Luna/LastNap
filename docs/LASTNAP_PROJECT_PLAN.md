@@ -287,18 +287,20 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 ### Stage 6 — Add the Tool Creator skill and assistant entry points
 
+<badge color="success">Source + focused CI acceptance complete</badge>
+
 **Goal:** integrate the built-in skill into the existing skill and assistant systems.
 
-- Review the existing Agent Skill loading/enablement rules.
-- Add `tool-creator` alongside `skill-creator`.
-- Keep it disabled until explicitly enabled for the relevant assistant.
-- Ensure its instructions are not injected globally.
-- Add or restore the assistant-specific custom-tool selection UI.
-- Add a direct Tool Builder entry point only within the relevant assistant's custom-tools area.
-- Verify assistants without the skill/tools do not receive their instructions or callable definitions.
-- Ensure roleplay/general assistants remain unaffected unless the user assigns the feature.
+- [x] Review the existing Agent Skill loading/enablement rules.
+- [x] Add `tool-creator` alongside `skill-creator`.
+- [x] Keep it disabled until explicitly enabled for the relevant assistant.
+- [x] Ensure its instructions are not injected globally.
+- [x] Add the assistant-specific custom-tool selection UI.
+- [x] Add a direct Tool Builder entry point within the assistant's Custom Tools area.
+- [x] Verify assistants without the skill/tools do not receive their instructions or callable definitions.
+- [x] Keep roleplay/general assistants unaffected unless the user assigns the feature.
 
-**Acceptance:** the feature is opt-in and assistant-scoped end to end; unrelated assistant experiences remain unchanged.
+**Acceptance:** source review and focused CI verify that the feature is opt-in and assistant-scoped end to end. Device-level presentation and full-app integration remain Stage 8 verification items; translated strings remain Stage 7.
 
 ### Stage 7 — Locales, shortcuts, and integration polish
 
@@ -1039,3 +1041,35 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - **Stage 4/5 source correction and focused CI acceptance: complete.** The user-approved one-toggle approval design and AI assistance in both Builder modes are implemented and the focused compile/tests pass.
 - **Phone visual acceptance remains open** and is still deferred to the Stage 8 build/device path. This is not being represented as device-tested.
 - Stage 6 may now begin. The approved scope is the built-in assistant-scoped Tool Creator skill, assistant-specific Custom Tools selector/tab, and direct Builder entry point, as defined in Section 40. Do not alter the generic approval UI or unrelated RikkaHub screens.
+
+
+## 42. Stage 6 Tool Creator skill and assistant integration — source review and focused CI complete (2026-11-05)
+
+### Source review on `lastnap-clean-foundation`
+
+- Source head verified before this plan update: `9c3245da52fa0754dbc1d26fb75097b9cd2d48f4`.
+- Added `app/src/main/assets/builtin_skills/tool-creator/SKILL.md`. The skill is explicit about opt-in behavior, supplies copy-ready content for every Builder field, and gives guidance for both Simple and Advanced modes. It leaves placement/review, sandbox testing, saving, enabling, assignment, and the Need approval choice under the user's control. It does not claim tests passed or invent sandbox APIs. Its approval guidance uses the single Need approval switch and the existing shared chat approval mechanism.
+- `SkillManager.listSkills()` merges user and built-in skills, and `AssistantDetailVM` loads that list for the assistant's Extensions page. The Tool Creator skill is therefore discoverable through the existing skill selector without global prompt injection.
+- `ChatToolFactory.createTools()` creates skill tools only when the current assistant's `enabledSkills` is non-empty; `createSkillTools()` further filters the available list to those exact enabled names. Its system prompt lists only those selected skills. The default `Assistant.enabledSkills` is empty.
+- Added the Custom Tools tab to `AssistantExtensionsPage.kt`, backed by the existing `selectedCustomExtensionIds` field. It lets the user select only tools that are enabled and pass current model validation, and its manage/empty-state actions navigate directly to `Screen.ExtensionBuilder`.
+- `CustomExtensionsContent` disables unready tools and never toggles them into the assistant selection. `createCustomExtensionTools()` independently enforces assistant ID selection, enabled state, validation, and current test fingerprint at runtime; UI selection is not treated as a security boundary.
+- `RouteActivity.kt` registers `Screen.ExtensionBuilder`; the global Extensions hub retains its Custom Tools entry. Existing assistant extension tabs and the global entry remain available.
+- Updated `ExtensionSelector.kt` with a Custom Tools tab for the reusable selector component. The dedicated assistant Extensions page is the verified active entry point for selection and Builder navigation.
+- Updated English base strings for the new tab, statuses, Builder guidance and empty states. Other locale files remain Stage 7 work.
+- No custom approval dialog, duplicate grant/session mechanism, global skill injection, automatic test success, auto-enable, or automatic assistant assignment was introduced.
+
+### Focused test coverage and CI result
+
+- `BuiltinSkillsTest` verifies the Tool Creator asset exists, built-in skill assets have valid metadata, local skills override built-ins by name, and new assistants have no enabled skills by default.
+- `SkillsToolsTest` verifies no skill tool is exposed when no skill is enabled and that enabling Tool Creator exposes only that skill's instructions.
+- `CustomExtensionToolsTest` verifies only selected, enabled, valid, currently tested definitions become callable, including the assistant-selection exclusion case and shared Need approval callback.
+- Existing `ExtensionBuilderStateTest` continues to verify the test-before-enable fingerprint and safe test-input construction.
+- Final focused CI run: [GitHub Actions run 42052942804](https://github.com/Cutie-Luna/LastNap/actions/runs/42052942804), branch `lastnap-clean-foundation`, source head `9c3245da52fa0754dbc1d26fb75097b9cd2d48f4`. The `persistence-tests` job and its “Run focused custom-tool model and runtime tests” step completed successfully.
+- The log confirms `:app:compileGithubDebugKotlin`, `:app:testGithubDebugUnitTest`, and `BUILD SUCCESSFUL in 2m 58s`. Eight focused test classes ran: `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, `SettingsStoreTest`, `CustomExtensionToolsTest`, `ExtensionBuilderStateTest`, `BuiltinSkillsTest`, and `SkillsToolsTest`.
+- This is focused compile/unit-test verification only. It is not a full test suite, lint, complete APK build, signed release, install, or device/visual test.
+
+### Stage 6 disposition and next work
+
+- **Stage 6 source implementation and focused CI acceptance: complete.**
+- **No action is required from the user now.** The Tool Creator skill must be explicitly enabled for the desired assistant when a suitable build is available; no assistant has been silently opted in.
+- Stage 7 remains next for locale completeness and integration polish. Stage 8 remains responsible for full build, lint, full tests, APK/signature checks, and phone review. Do not claim the Builder's phone layout or runtime navigation has been device-verified.
