@@ -51,6 +51,18 @@ class CustomToolHttpRuntime(
     private val secretStore: CustomToolSecretProvider,
     private val storage: CustomToolStorageProvider,
 ) {
+    private val activeExecutions = ConcurrentHashMap<String, MutableSet<Job>>()
+    private val revokedToolIds = ConcurrentHashMap.newKeySet<String>()
+
+    /** Permanently invalidates this immutable tool ID and cancels any work already running. */
+    fun revokeTool(toolId: String) {
+        require(toolId.isNotBlank())
+        revokedToolIds.add(toolId)
+        activeExecutions[toolId]?.toList()?.forEach { job ->
+            job.cancel(CancellationException("Custom tool was deleted"))
+        }
+    }
+
 
     suspend fun evaluate(
         extension: CustomExtension,
