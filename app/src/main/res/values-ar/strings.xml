@@ -735,7 +735,7 @@
   <string name="setting_asr_configure_step_sample_rate_desc">معدل أخذ العينات لتسجيل PCM بوحدة Hz، يُوصى بـ 16000 لـ ASR</string>
   <string name="setting_asr_configure_step_segment_desc">تفريغ تلقائي للصوت المخزن مؤقتًا كل N ثانية أثناء التسجيل. تعطّل القيمة 0 التقسيم التلقائي (طلب واحد عند الإيقاف)</string>
   <string name="setting_asr_configure_step_timestamp">تفعيل الطوابع الزمنية</string>
-  <string name="setting_asr_configure_step_timestamp_desc">إرجاع طوابع زمنية على مستوى الكلمة في أحداث delta. معطّل افتراضيًا لتوفير الـ Token (لا يستهلكها rikkahub حتى الآن)</string>
+  <string name="setting_asr_configure_step_timestamp_desc">إرجاع طوابع زمنية على مستوى الكلمة في أحداث delta. معطّل افتراضيًا لتوفير الـ Token (لا يستهلكها LastNap حتى الآن)</string>
   <string name="setting_asr_configure_vad_desc">حساسية VAD للخادم، عادةً من 0.3 إلى 0.8</string>
   <string name="setting_asr_configure_vad_threshold">عتبة VAD</string>
   <string name="setting_asr_configure_volcengine_api_key_desc">مفتاح API لـ Volcengine (X-Api-Key)</string>
