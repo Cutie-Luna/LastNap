@@ -705,6 +705,13 @@ globalThis.storage = Object.freeze({
     writeText(name, value) {
         return __customToolStorageWrite(String(name), String(value));
     },
+    readBase64(name) {
+        const result = JSON.parse(__customToolStorageReadBase64(String(name)));
+        return result.found ? result.value : null;
+    },
+    writeBase64(name, value) {
+        return __customToolStorageWriteBase64(String(name), String(value));
+    },
     delete(name) {
         return __customToolStorageDelete(String(name));
     },
