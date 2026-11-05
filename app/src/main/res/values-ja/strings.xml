@@ -1863,4 +1863,7 @@ mDNSアドレス: .localホスト名を使用し、IPを知らなくても同じ
     <string name="extension_builder_page_delete_message">「%1$s」を削除し、すべてのアシスタントから割り当てを解除します。</string>
     <string name="extensions_page_custom_tools">カスタムツール</string>
     <string name="extensions_page_custom_tools_desc">アシスタント用の再利用可能なツールを作成、テスト、管理します</string>
+  <string name="chat_page_compress_keep_recent">最近のメッセージを保持</string>
+  <string name="chat_page_compress_keep_recent_desc">これらのメッセージは圧縮されず、要約の後にも残ります。0 にするとすべてを圧縮し、プロンプトキャッシュを最も効率よく再利用できます。会話が長すぎて圧縮できない場合は、保持するメッセージ数を増やしてください。</string>
+  <string name="chat_page_compress_not_enough_messages">圧縮するメッセージが足りません。保持するメッセージ数を減らしてください。</string>
 </resources>
