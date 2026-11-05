@@ -53,7 +53,7 @@ data class CustomExtension(
     val implementation: String = "",
     val permission: ExtensionPermission = ExtensionPermission.ASK_EVERY_TIME,
     val enabled: Boolean = false,
-    val testedImplementationHash: String? = null,
+    val testedDefinitionHash: String? = null,
 )
 
 /** Permission policy for the later runtime approval gate. */
@@ -91,7 +91,7 @@ fun CustomExtension.validationErrors(): Set<CustomExtensionValidationError> = bu
     if (implementation.length > CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH) {
         add(CustomExtensionValidationError.IMPLEMENTATION_TOO_LONG)
     }
-    if (enabled && (implementation.isBlank() || testedImplementationHash != implementation.extensionSha256())) {
+    if (enabled && (implementation.isBlank() || testedDefinitionHash != testFingerprint())) {
         add(CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST)
     }
     if (enabled && permission == ExtensionPermission.DISABLED) {
@@ -108,6 +108,13 @@ private fun String.isObjectInputSchema(): Boolean = runCatching {
  *
  * The Builder must invalidate this value whenever either implementation or schema changes.
  */
+fun CustomExtension.testFingerprint(): String {
+    // Length prefixes make the two-part input unambiguous even if either value contains separators.
+    val definition = "${inputSchema.length}:$inputSchema${implementation.length}:$implementation"
+    return definition.extensionSha256()
+}
+
+/** SHA-256 for the exact schema/implementation definition being tested. */
 fun String.extensionSha256(): String {
     val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray(Charsets.UTF_8))
     return digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
