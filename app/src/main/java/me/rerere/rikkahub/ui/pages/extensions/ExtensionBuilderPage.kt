@@ -922,7 +922,13 @@ fun ExtensionBuilderPage(
                                     }
                                     OutlinedTextField(
                                         value = pendingSecretValues[declaration.name].orEmpty(),
-                                        onValueChange = { pendingSecretValues[declaration.name] = it },
+                                        onValueChange = {
+                                            pendingSecretValues[declaration.name] = it
+                                            testedHash = null
+                                            enabled = false
+                                            testPassed = null
+                                            testResult = ""
+                                        },
                                         modifier = Modifier.fillMaxWidth(),
                                         label = { Text(stringResource(R.string.extension_builder_page_secret_value)) },
                                         visualTransformation = PasswordVisualTransformation(),
