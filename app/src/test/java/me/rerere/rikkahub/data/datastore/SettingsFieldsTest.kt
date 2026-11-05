@@ -77,6 +77,7 @@ class SettingsFieldsTest {
         assertEquals(null, settings.selectedASRProviderId)
         assertEquals(null, settings.memoryModelId)
         assertEquals(emptyList<CustomExtension>(), settings.customExtensions)
+        assertEquals(emptyMap<String, Map<String, String>>(), settings.customToolVariables)
         assertEquals(emptySet<String>(), settings.assistants.first().selectedCustomExtensionIds)
         assertEquals(true, settings.dynamicColor)
         assertEquals(8080, settings.webServerPort)
@@ -97,6 +98,7 @@ class SettingsFieldsTest {
         val settings = JsonInstant.decodeFromString<Settings>(legacyJson)
 
         assertEquals(emptyList<CustomExtension>(), settings.customExtensions)
+        assertEquals(emptyMap<String, Map<String, String>>(), settings.customToolVariables)
         assertEquals(emptySet<String>(), settings.assistants.single().selectedCustomExtensionIds)
     }
 
@@ -168,6 +170,7 @@ private val SAMPLE = Settings(
             implementation = "input.value",
         )
     ),
+    customToolVariables = mapOf("tool-1" to mapOf("API_BASE" to "https://api.example.com")),
     assistantTags = listOf(Tag(id = id(7), name = "tag")),
     searchServices = listOf(
         SearchServiceOptions.BingLocalOptions(id = id(21)),
@@ -226,6 +229,7 @@ private val STORED_KEYS = setOf(
     "assistants",
     "assistant_tags",
     "custom_extensions",
+    "custom_tool_variables",
     "search_services",
     "search_common",
     "search_selected",
