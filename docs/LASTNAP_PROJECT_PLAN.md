@@ -447,6 +447,7 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - The manifest and static shortcut XML both contain the old scheme/action identifiers. The previous branch's RouteActivity contains the matching LastNap action constants; only those two constants will be ported, not its unrelated route additions or custom-tool feature code.
 - Keep the five density-specific legacy `ic_launcher.png` resources in place for now. The app's minSdk is 26 and Android 26+ selects the `mipmap-anydpi-v26` adaptive resource. Removing fallbacks is unnecessary for this stage and would add risk without improving the target Android 13 device. Their selection will be checked in packaged resources when a build is available.
 - Keep the existing upstream source namespace, class names, internal theme resource names, providers, services, and unrelated RikkaHub behavior untouched.
+- A follow-up scan of every supported strings.xml found two additional user-facing product-name references per locale: the share-app description and the web-server description. Stage 2 will change those visible brand mentions to LastNap and point the share text to the LastNap repository; this does not rename internal source namespaces or upstream attribution.
 
 ### Stage 2 checkpoint list
 
