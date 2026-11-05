@@ -85,6 +85,8 @@ data class Settings(
     val backupReminderConfig: BackupReminderConfig = BackupReminderConfig(),
     val sponsorAlertDismissedAt: Int = 0,
     val customExtensions: List<CustomExtension> = emptyList(),
+    /** Non-secret values, keyed by immutable tool ID and declared name. Included in Settings backups. */
+    val customToolVariables: Map<String, Map<String, String>> = emptyMap(),
 ) {
     companion object {
         // 构造一个用于初始化的settings, 但它不能用于保存，防止使用初始值存储
