@@ -60,7 +60,7 @@ import me.rerere.hugeicons.stroke.Add01
 import me.rerere.hugeicons.stroke.ArrowLeft01
 import me.rerere.hugeicons.stroke.Puzzle
 import me.rerere.rikkahub.R
-import me.rerere.rikkahub.data.ai.tools.local.evaluateJavascript
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntime
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.removeCustomExtension
 import me.rerere.rikkahub.data.model.CustomExtension
@@ -81,6 +81,7 @@ private enum class BuilderMode { SIMPLE, ADVANCED }
 @Composable
 fun ExtensionBuilderPage(
     settingsStore: SettingsStore = koinInject(),
+    httpRuntime: CustomToolHttpRuntime = koinInject(),
 ) {
     val settings by settingsStore.settingsFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -105,6 +106,17 @@ fun ExtensionBuilderPage(
     var testedHash by rememberSaveable { mutableStateOf<String?>(null) }
     var enabled by rememberSaveable { mutableStateOf(false) }
     var needsApproval by rememberSaveable { mutableStateOf(true) }
+    var apiAccessEnabled by rememberSaveable { mutableStateOf(false) }
+    var allowedApiHostsText by rememberSaveable { mutableStateOf("") }
+    var allowLocalNetwork by rememberSaveable { mutableStateOf(false) }
+    val allowedApiHosts = remember(allowedApiHostsText) {
+        allowedApiHostsText.lineSequence()
+            .flatMap { it.split(',').asSequence() }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .toList()
+    }
 
     var isTesting by remember { mutableStateOf(false) }
     var testPassed by remember { mutableStateOf<Boolean?>(null) }
@@ -121,6 +133,9 @@ fun ExtensionBuilderPage(
         needsApproval = needsApproval,
         enabled = false,
         testedDefinitionHash = testedHash,
+        apiAccessEnabled = apiAccessEnabled,
+        allowedApiHosts = allowedApiHosts,
+        allowLocalNetwork = allowLocalNetwork,
     )
     val validationErrors = draft.validationErrors()
     val schemaIsValid = validationErrors.none {
@@ -128,11 +143,17 @@ fun ExtensionBuilderPage(
             it == CustomExtensionValidationError.INVALID_INPUT_SCHEMA
     }
     val implementationIsWithinLimit = implementation.length <= CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH
+    val apiPolicyIsValid = validationErrors.none {
+        it == CustomExtensionValidationError.API_HOSTS_REQUIRED ||
+            it == CustomExtensionValidationError.TOO_MANY_API_HOSTS ||
+            it == CustomExtensionValidationError.INVALID_API_HOST_PATTERN ||
+            it == CustomExtensionValidationError.LOCAL_NETWORK_WITHOUT_API_ACCESS
+    }
     val inputError = remember(testInput) {
         runCatching { buildCustomExtensionTestCode(testInput, "0") }.exceptionOrNull()?.message
     }
     val canTest = !isTesting && implementation.isNotBlank() &&
-        implementationIsWithinLimit && schemaIsValid && inputError == null
+        implementationIsWithinLimit && schemaIsValid && apiPolicyIsValid && inputError == null
     val canEnable = draft.canBeEnabledFromBuilder()
     val hasCurrentTest = draft.hasCurrentBuilderTest()
 
@@ -159,6 +180,9 @@ fun ExtensionBuilderPage(
         testedHash = null
         enabled = false
         needsApproval = true
+        apiAccessEnabled = false
+        allowedApiHostsText = ""
+        allowLocalNetwork = false
         testPassed = null
         testResult = ""
         isReviewing = false
@@ -179,6 +203,9 @@ fun ExtensionBuilderPage(
         testedHash = extension.testedDefinitionHash
         enabled = extension.enabled && extension.copy(enabled = true).validationErrors().isEmpty()
         needsApproval = extension.needsApproval
+        apiAccessEnabled = extension.apiAccessEnabled
+        allowedApiHostsText = extension.allowedApiHosts.joinToString("\n")
+        allowLocalNetwork = extension.allowLocalNetwork
         testPassed = null
         testResult = ""
         isReviewing = false
@@ -214,7 +241,11 @@ fun ExtensionBuilderPage(
         val schemaUnderTest = inputSchema
         val implementationUnderTest = implementation
         val inputUnderTest = testInput
-        val fingerprintUnderTest = draft.testFingerprint()
+        val apiAccessUnderTest = apiAccessEnabled
+        val allowedHostsUnderTest = allowedApiHosts
+        val localNetworkUnderTest = allowLocalNetwork
+        val definitionUnderTest = draft.copy(enabled = false)
+        val fingerprintUnderTest = definitionUnderTest.testFingerprint()
         isTesting = true
         testedHash = null
         enabled = false
@@ -224,11 +255,16 @@ fun ExtensionBuilderPage(
         scope.launch {
             try {
                 val code = buildCustomExtensionTestCode(inputUnderTest, implementationUnderTest)
-                val output = evaluateJavascript(code)
+                val output = httpRuntime.evaluate(definitionUnderTest, code)
                 val payload = Json.parseToJsonElement(output) as? JsonObject
                     ?: error("The sandbox returned an unexpected result")
                 val error = payload["error"]
-                if (inputSchema == schemaUnderTest && implementation == implementationUnderTest) {
+                if (inputSchema == schemaUnderTest &&
+                    implementation == implementationUnderTest &&
+                    apiAccessEnabled == apiAccessUnderTest &&
+                    allowedApiHosts == allowedHostsUnderTest &&
+                    allowLocalNetwork == localNetworkUnderTest
+                ) {
                     if (error == null) {
                         testedHash = fingerprintUnderTest
                         testPassed = true
@@ -491,6 +527,16 @@ fun ExtensionBuilderPage(
                         }
                     }
                     item {
+                        ReviewSection(title = stringResource(R.string.extension_builder_page_api_access)) {
+                            Text(stringResource(if (apiAccessEnabled) R.string.extension_builder_page_api_access_on else R.string.extension_builder_page_api_access_off))
+                            if (apiAccessEnabled) {
+                                Text(stringResource(R.string.extension_builder_page_api_access_allowed_hosts))
+                                ReviewCode(allowedApiHosts.joinToString("\n"))
+                                Text(stringResource(if (allowLocalNetwork) R.string.extension_builder_page_local_network_on else R.string.extension_builder_page_local_network_off))
+                            }
+                        }
+                    }
+                    item {
                         ReviewSection(title = stringResource(R.string.extension_builder_page_permission)) {
                             Text(stringResource(if (needsApproval) R.string.extension_builder_page_approval_on else R.string.extension_builder_page_approval_off))
                         }
@@ -612,6 +658,82 @@ fun ExtensionBuilderPage(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
+                        }
+                    }
+                    item {
+                        BuilderSection(title = stringResource(R.string.extension_builder_page_api_access)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.extension_builder_page_api_access_enable))
+                                    Text(
+                                        stringResource(R.string.extension_builder_page_api_access_help),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = apiAccessEnabled,
+                                    onCheckedChange = {
+                                        apiAccessEnabled = it
+                                        testedHash = null
+                                        enabled = false
+                                        testPassed = null
+                                        testResult = ""
+                                        if (!it) allowLocalNetwork = false
+                                    },
+                                    enabled = !isTesting,
+                                )
+                            }
+                            if (apiAccessEnabled) {
+                                OutlinedTextField(
+                                    value = allowedApiHostsText,
+                                    onValueChange = {
+                                        allowedApiHostsText = it
+                                        testedHash = null
+                                        enabled = false
+                                        testPassed = null
+                                        testResult = ""
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text(stringResource(R.string.extension_builder_page_api_allowed_hosts)) },
+                                    minLines = 3,
+                                    supportingText = {
+                                        Text(
+                                            stringResource(R.string.extension_builder_page_api_allowed_hosts_help),
+                                            color = if (apiPolicyIsValid) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    isError = !apiPolicyIsValid,
+                                    enabled = !isTesting,
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(stringResource(R.string.extension_builder_page_local_network))
+                                        Text(
+                                            stringResource(R.string.extension_builder_page_local_network_help),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = allowLocalNetwork,
+                                        onCheckedChange = {
+                                            allowLocalNetwork = it
+                                            testedHash = null
+                                            enabled = false
+                                            testPassed = null
+                                            testResult = ""
+                                        },
+                                        enabled = !isTesting,
+                                    )
+                                }
+                            }
                         }
                     }
                     if (builderMode == BuilderMode.SIMPLE) {
