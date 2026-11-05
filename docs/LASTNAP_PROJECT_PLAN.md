@@ -430,3 +430,30 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Tests/checks:** GitHub tree comparison confirms no remaining code/resource mismatch against upstream. No Android build was run because this stage only synchronized a file directly from upstream; build verification remains part of Stage 8.
 - **Unverified:** no UI prototype or app build exists yet for the Tool Builder redesign. Do not imply that the popup has already changed.
 - **Next chat:** Stage 2 only—identity and artwork audit/port. Begin by reading this whole plan and checking the full repository tree and upstream HEAD again.
+
+## 10. Stage 2 execution notes — 2026-11-05 (identity/artwork only)
+
+### Pre-edit audit and decisions
+
+- Re-read this complete plan (432 lines), verified working branch `lastnap-clean-foundation` at `bd385d9f74a38d6eb1e61b1daae7aa3bb96f72bb`, and compared the full recursive tree with frozen upstream `e85c1d901d30fa32d3c21a423432d940d77acddb`. Result: 1,536 upstream blobs match exactly; the only additional path is this plan.
+- Reviewed the previous implementation branch at `942c1b49019dbbd55f02606f31b74cc258c14641` as a source reference only; it remains untouched and will not be merged.
+- Current clean baseline uses `applicationId = "me.rerere.rikkahub"`, versionName `3.1.1`, versionCode `194`. The prior installed LastNap was 3.1.2/code 195; the planned next compatible personal build is 3.1.3/code 196. Stage 2 will use `com.lastnap.app`, 3.1.3, and 196, while leaving Kotlin `namespace = "me.rerere.rikkahub"` unchanged.
+- The existing `FileProvider`, documents-provider, and AndroidX startup authorities use `${applicationId}` placeholders, so they will resolve to the new application ID without hard-coded authority edits.
+- No `google-services.json` file exists in the clean branch tree; there is no checked-in Firebase package file to modify. Confirm any external Firebase configuration during release verification if needed.
+- Base English `app_name` is currently RikkaHub. The seven localized resource files also still say RikkaHub. The previous branch changed only the English value; this stage will set the app-name resource to LastNap in all eight supported string files, without copying the previous branch's unrelated added translations.
+- The previous branch added the exact user cat art as `app/src/main/res/drawable-nodpi/appicon.png` and separate notification artwork as `noticon.png`. The latter is already referenced by the old branch's NotificationUtil. Both binary files will be copied byte-for-byte.
+- Important defect found in the previous icon wiring: its adaptive launcher XML still points to the upstream RikkaHub bunny foreground and monochrome resources, even though the LastNap cat artwork exists. Stage 2 will explicitly wire `appicon` as the adaptive foreground, `noticon` as the monochrome layer and notification small icon, and use the existing pure-black shape background. No artwork will be redrawn, recolored, cropped, or regenerated.
+- The app's About page obtains its visual logo from `R.mipmap.ic_launcher`, so correcting the adaptive launcher resource also corrects that in-app logo. Its visible title is hard-coded as RikkaHub; Stage 2 will change that title to LastNap and point the GitHub/license entries to the LastNap repository.
+- The manifest and static shortcut XML both contain the old scheme/action identifiers. The previous branch's RouteActivity contains the matching LastNap action constants; only those two constants will be ported, not its unrelated route additions or custom-tool feature code.
+- Keep the five density-specific legacy `ic_launcher.png` resources in place for now. The app's minSdk is 26 and Android 26+ selects the `mipmap-anydpi-v26` adaptive resource. Removing fallbacks is unnecessary for this stage and would add risk without improving the target Android 13 device. Their selection will be checked in packaged resources when a build is available.
+- Keep the existing upstream source namespace, class names, internal theme resource names, providers, services, and unrelated RikkaHub behavior untouched.
+
+### Stage 2 checkpoint list
+
+- [x] Read full plan and verify branch/HEAD.
+- [x] Re-compare complete LastNap and frozen-upstream recursive trees.
+- [x] Audit current and previous-branch identity/build/manifest/shortcut/icon resources.
+- [x] Inspect the exact cat launcher and notification artwork; identify the incorrect adaptive-icon foreground mapping.
+- [ ] Apply only the identity, app-name, About-page, shortcut, notification, and launcher-resource changes listed above.
+- [ ] Search changed identity paths and compare each modified source file with upstream to confirm there are no unrelated edits.
+- [ ] Verify the resulting complete tree and resource references; record any build/device checks not available as unverified rather than claiming success.
