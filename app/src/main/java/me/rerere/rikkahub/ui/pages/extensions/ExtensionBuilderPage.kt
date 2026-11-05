@@ -196,7 +196,7 @@ fun ExtensionBuilderPage(
     val inputError = remember(testInput) {
         runCatching { buildCustomExtensionTestCode(testInput, "0") }.exceptionOrNull()?.message
     }
-    val canTest = !isTesting && implementation.isNotBlank() &&
+    val canTest = !isTesting && !isSavingSecret && implementation.isNotBlank() &&
         implementationIsWithinLimit && schemaIsValid && apiPolicyIsValid && inputError == null &&
         pendingSecretValues.values.none { it.isNotEmpty() }
     val missingRequiredSecrets = if (apiAccessEnabled) {
@@ -205,7 +205,7 @@ fun ExtensionBuilderPage(
     val missingRequiredVariables = variableDeclarations.filter {
         it.required && variableValues[it.name].isNullOrBlank()
     }
-    val canEnable = draft.canBeEnabledFromBuilder() &&
+    val canEnable = !isSavingSecret && draft.canBeEnabledFromBuilder() &&
         missingRequiredSecrets.isEmpty() && missingRequiredVariables.isEmpty() &&
         pendingSecretValues.values.none { it.isNotEmpty() }
     val hasCurrentTest = draft.hasCurrentBuilderTest()
@@ -305,6 +305,7 @@ fun ExtensionBuilderPage(
     }
 
     fun saveDraft() {
+        if (isSavingSecret) return
         val saved = draft.copy(
             name = name.trim(),
             description = description.trim(),
@@ -395,7 +396,7 @@ fun ExtensionBuilderPage(
         }
     }
 
-    BackHandler(enabled = isEditor) {
+    BackHandler(enabled = isEditor && !isSavingSecret) {
         if (isTesting) {
             // Do not leave while the sandbox test is still resolving its result.
         } else if (isReviewing) {
