@@ -39,6 +39,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,12 +47,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -61,11 +65,13 @@ import me.rerere.hugeicons.stroke.ArrowLeft01
 import me.rerere.hugeicons.stroke.Puzzle
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntime
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStore
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.removeCustomExtension
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.CustomExtensionLimits
 import me.rerere.rikkahub.data.model.CustomExtensionValidationError
+import me.rerere.rikkahub.data.model.CustomToolValueDeclaration
 import me.rerere.rikkahub.data.model.testFingerprint
 import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.ui.components.nav.BackButton
@@ -82,6 +88,7 @@ private enum class BuilderMode { SIMPLE, ADVANCED }
 fun ExtensionBuilderPage(
     settingsStore: SettingsStore = koinInject(),
     httpRuntime: CustomToolHttpRuntime = koinInject(),
+    secretStore: CustomToolSecretStore = koinInject(),
 ) {
     val settings by settingsStore.settingsFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -109,6 +116,17 @@ fun ExtensionBuilderPage(
     var apiAccessEnabled by rememberSaveable { mutableStateOf(false) }
     var allowedApiHostsText by rememberSaveable { mutableStateOf("") }
     var allowLocalNetwork by rememberSaveable { mutableStateOf(false) }
+    var secretDeclarations by remember { mutableStateOf<List<CustomToolValueDeclaration>>(emptyList()) }
+    var variableDeclarations by remember { mutableStateOf<List<CustomToolValueDeclaration>>(emptyList()) }
+    var variableValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    val pendingSecretValues = remember { mutableStateMapOf<String, String>() }
+    var savedSecretNames by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var secretNameInput by rememberSaveable { mutableStateOf("") }
+    var secretDescriptionInput by rememberSaveable { mutableStateOf("") }
+    var secretRequiredInput by rememberSaveable { mutableStateOf(true) }
+    var variableNameInput by rememberSaveable { mutableStateOf("") }
+    var variableDescriptionInput by rememberSaveable { mutableStateOf("") }
+    var variableRequiredInput by rememberSaveable { mutableStateOf(true) }
     val allowedApiHosts = remember(allowedApiHostsText) {
         allowedApiHostsText.lineSequence()
             .flatMap { it.split(',').asSequence() }
@@ -136,6 +154,8 @@ fun ExtensionBuilderPage(
         apiAccessEnabled = apiAccessEnabled,
         allowedApiHosts = allowedApiHosts,
         allowLocalNetwork = allowLocalNetwork,
+        secrets = secretDeclarations,
+        variables = variableDeclarations,
     )
     val validationErrors = draft.validationErrors()
     val schemaIsValid = validationErrors.none {
@@ -154,7 +174,14 @@ fun ExtensionBuilderPage(
     }
     val canTest = !isTesting && implementation.isNotBlank() &&
         implementationIsWithinLimit && schemaIsValid && apiPolicyIsValid && inputError == null
-    val canEnable = draft.canBeEnabledFromBuilder()
+    val missingRequiredSecrets = if (apiAccessEnabled) {
+        secretDeclarations.filter { it.required && it.name !in savedSecretNames }
+    } else emptyList()
+    val missingRequiredVariables = variableDeclarations.filter {
+        it.required && variableValues[it.name].isNullOrBlank()
+    }
+    val canEnable = draft.canBeEnabledFromBuilder() &&
+        missingRequiredSecrets.isEmpty() && missingRequiredVariables.isEmpty()
     val hasCurrentTest = draft.hasCurrentBuilderTest()
 
     fun clearDraftState() {
@@ -168,6 +195,17 @@ fun ExtensionBuilderPage(
 
     fun startNewDraft() {
         draftId = Uuid.random().toString()
+        secretDeclarations = emptyList()
+        variableDeclarations = emptyList()
+        variableValues = emptyMap()
+        pendingSecretValues.clear()
+        savedSecretNames = emptySet()
+        secretNameInput = ""
+        secretDescriptionInput = ""
+        secretRequiredInput = true
+        variableNameInput = ""
+        variableDescriptionInput = ""
+        variableRequiredInput = true
         isExistingDraft = false
         builderModeName = BuilderMode.SIMPLE.name
         showBuildDetails = false
@@ -206,6 +244,19 @@ fun ExtensionBuilderPage(
         apiAccessEnabled = extension.apiAccessEnabled
         allowedApiHostsText = extension.allowedApiHosts.joinToString("\n")
         allowLocalNetwork = extension.allowLocalNetwork
+        secretDeclarations = extension.secrets
+        variableDeclarations = extension.variables
+        variableValues = settings.customToolVariables[extension.id].orEmpty()
+        pendingSecretValues.clear()
+        savedSecretNames = extension.secrets.filter { declaration ->
+            runCatching { secretStore.hasSecret(extension.id, declaration.name) }.getOrDefault(false)
+        }.map { it.name }.toSet()
+        secretNameInput = ""
+        secretDescriptionInput = ""
+        secretRequiredInput = true
+        variableNameInput = ""
+        variableDescriptionInput = ""
+        variableRequiredInput = true
         testPassed = null
         testResult = ""
         isReviewing = false
@@ -223,6 +274,13 @@ fun ExtensionBuilderPage(
             enabled = enabled && canEnable,
             testedDefinitionHash = testedHash.takeIf { hasCurrentTest },
         )
+        val valuesToSave = variableValues.filterKeys { key -> saved.variables.any { it.name == key } }
+        val removedSecretNames = settings.customExtensions
+            .firstOrNull { it.id == draftId }
+            ?.secrets
+            .orEmpty()
+            .map { it.name }
+            .filterNot { name -> saved.secrets.any { it.name == name } }
         scope.launch {
             settingsStore.update { current ->
                 val next = if (isExistingDraft) {
@@ -230,7 +288,15 @@ fun ExtensionBuilderPage(
                 } else {
                     current.customExtensions + saved
                 }
-                current.copy(customExtensions = next)
+                val nextVariables = if (valuesToSave.isEmpty()) {
+                    current.customToolVariables - draftId
+                } else {
+                    current.customToolVariables + (draftId to valuesToSave)
+                }
+                current.copy(customExtensions = next, customToolVariables = nextVariables)
+            }
+            withContext(Dispatchers.IO) {
+                removedSecretNames.forEach { name -> secretStore.deleteSecret(draftId, name) }
             }
             clearDraftState()
         }
@@ -245,6 +311,9 @@ fun ExtensionBuilderPage(
         val allowedHostsUnderTest = allowedApiHosts
         val localNetworkUnderTest = allowLocalNetwork
         val definitionUnderTest = draft.copy(enabled = false)
+        val variablesUnderTest = variableValues
+        val secretsUnderTest = savedSecretNames
+        val declarationsUnderTest = secretDeclarations to variableDeclarations
         val fingerprintUnderTest = definitionUnderTest.testFingerprint()
         isTesting = true
         testedHash = null
@@ -255,7 +324,11 @@ fun ExtensionBuilderPage(
         scope.launch {
             try {
                 val code = buildCustomExtensionTestCode(inputUnderTest, implementationUnderTest)
-                val output = httpRuntime.evaluate(definitionUnderTest, code)
+                val output = httpRuntime.evaluate(
+                    definitionUnderTest,
+                    code,
+                    variables = variablesUnderTest,
+                )
                 val payload = Json.parseToJsonElement(output) as? JsonObject
                     ?: error("The sandbox returned an unexpected result")
                 val error = payload["error"]
@@ -263,7 +336,10 @@ fun ExtensionBuilderPage(
                     implementation == implementationUnderTest &&
                     apiAccessEnabled == apiAccessUnderTest &&
                     allowedApiHosts == allowedHostsUnderTest &&
-                    allowLocalNetwork == localNetworkUnderTest
+                    allowLocalNetwork == localNetworkUnderTest &&
+                    variableValues == variablesUnderTest &&
+                    savedSecretNames == secretsUnderTest &&
+                    declarationsUnderTest == (secretDeclarations to variableDeclarations)
                 ) {
                     if (error == null) {
                         testedHash = fingerprintUnderTest
