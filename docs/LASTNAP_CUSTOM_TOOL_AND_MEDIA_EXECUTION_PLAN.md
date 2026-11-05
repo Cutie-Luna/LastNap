@@ -68,9 +68,9 @@ Freeze and document these contracts:
 8. Explicit opt-in enforcement at runtime, not just in the Builder UI.
 9. Per-tool storage API, safe relative names, quotas, size limits, lazy directory creation, and cross-tool isolation.
 10. Retention and deletion behavior for tool removal, storage disablement, tool re-import, and app backup/restore.
-13. Explicit ownership for Secrets/Variables: tool-scoped values are removed with their owning tool; any future cross-tool shared value requires explicit sharing/ownership records and must not be deleted while another owner still references it.
 11. Test fingerprint inputs: all executable code/schema/capability declarations that affect execution, but never secret values.
 12. Regression matrix proving Custom JS search and SSH credential flows remain unchanged.
+13. Explicit ownership for Secrets/Variables: tool-scoped values are removed with their owning tool; any future cross-tool shared value requires explicit sharing/ownership records and must not be deleted while another owner still references it.
 
 ### Media ownership and lifecycle contract
 
@@ -80,7 +80,7 @@ This contract is separate from tool-owned storage and is mandatory for every sup
 - Store generated chat media through a conversation-owned managed-media path/record, not inside the tool's private storage directory. Tool storage is temporary/private working data; chat media is durable user-visible output.
 - Associate each media reference with its owning conversation and message. Deleting one conversation removes its messages and all media references/assets owned only by that conversation. It must not affect any other conversation, even if another message references the same underlying bytes.
 - If physical blobs can be shared/deduplicated, use explicit ownership/reference records and delete a blob only after its final live reference is removed. Otherwise use independently owned copies. Never infer ownership from filename, tool ID, URL, or matching content.
-- Message deletion, regeneration, editing, truncation, and conversation deletion must clean up only media no longer referenced by any surviving message. Cleanup must be idempotent and safe after crashes.
+- Persisted message deletion, regeneration, or editing that removes media references, and conversation deletion, must clean up only media no longer referenced by any surviving message. Model context-window truncation or summarization must never delete media still attached to a persisted message. Cleanup must be idempotent and safe after crashes.
 - Tool deletion must never cascade into conversation messages, media references, or conversation-owned media files.
 - Treat media publication as an atomic boundary: a result is either committed to its target message with durable media ownership, or remains temporary and is cleaned up. No half-published message, dangling reference, or permanent orphan is acceptable.
 - If a tool is deleted while executing, block new invocations and cancel/invalidate in-flight work. Any output already atomically committed to a conversation remains; uncommitted temporary output is discarded. A late callback must not resurrect a deleted tool or publish an unowned file.
