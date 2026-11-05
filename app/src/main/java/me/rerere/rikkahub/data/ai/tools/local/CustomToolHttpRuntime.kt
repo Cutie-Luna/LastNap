@@ -614,6 +614,23 @@ class CustomToolHttpRuntime(
             "host", "content-length", "transfer-encoding", "connection",
             "proxy-authorization", "proxy-connection", "keep-alive", "upgrade", "te", "trailer",
         )
+        private const val STORAGE_POLYFILL = """
+globalThis.storage = Object.freeze({
+    readText(name) {
+        const result = JSON.parse(__customToolStorageRead(String(name)));
+        return result.found ? result.value : null;
+    },
+    writeText(name, value) {
+        return __customToolStorageWrite(String(name), String(value));
+    },
+    delete(name) {
+        return __customToolStorageDelete(String(name));
+    },
+    list() {
+        return JSON.parse(__customToolStorageList());
+    }
+});
+"""
         private const val FETCH_POLYFILL = """
 globalThis.fetch = function(url, options) {
     options = options || {};
