@@ -80,6 +80,7 @@ class InMemoryCustomToolStorage : CustomToolStorageProvider {
  * conversation media: chat outputs survive tool deletion, while this private working data does not.
  */
 class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
+    private val lock = Any()
 
     override fun readBytes(toolId: String, name: String): ByteArray? = synchronized(lock) {
         val file = fileFor(toolId, name) ?: return@synchronized null
