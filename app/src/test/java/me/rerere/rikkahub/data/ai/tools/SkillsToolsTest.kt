@@ -20,9 +20,25 @@ class SkillsToolsTest {
     @Test
     fun `skills are not exposed unless explicitly enabled`() {
         val creatorDir = tempFolder.newFolder("tool-creator")
-        creatorDir.resolve("SKILL.md").writeText("---\\nname: tool-creator\\ndescription: Create tools\\n---\\nInstructions")
+        creatorDir.resolve("SKILL.md").writeText(
+            """
+                ---
+                name: tool-creator
+                description: Create tools
+                ---
+                Instructions
+            """.trimIndent()
+        )
         val otherDir = tempFolder.newFolder("other")
-        otherDir.resolve("SKILL.md").writeText("---\\nname: other\\ndescription: Other skill\\n---\\nOther")
+        otherDir.resolve("SKILL.md").writeText(
+            """
+                ---
+                name: other
+                description: Other skill
+                ---
+                Other
+            """.trimIndent()
+        )
 
         assertTrue(
             createSkillTools(
