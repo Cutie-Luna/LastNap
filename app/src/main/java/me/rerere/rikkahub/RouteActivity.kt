@@ -334,21 +334,24 @@ class RouteActivity : ComponentActivity() {
                         // 同一帧内连续两次返回时 NavDisplay 的返回状态还没更新，会多回调一次，不加判断会把栈弹空
                         onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                         transitionSpec = {
-                            fadeIn(animationSpec = tween(120)) togetherWith
-                                fadeOut(animationSpec = tween(100))
+                            if (backStack.size == 1) fadeIn() togetherWith fadeOut()
+                            else {
+                                slideInHorizontally { it } togetherWith
+                                    slideOutHorizontally { -it / 2 } + scaleOut(targetScale = 0.7f) + fadeOut()
+                            }
                         },
                         popTransitionSpec = {
-                            fadeIn(animationSpec = tween(120)) togetherWith
-                                fadeOut(animationSpec = tween(100))
+                            slideInHorizontally { -it / 2 } + scaleIn(initialScale = 0.7f) + fadeIn() togetherWith
+                                slideOutHorizontally { it }
                         },
                         predictivePopTransitionSpec = {
-                            fadeIn(animationSpec = tween(120)) togetherWith
-                                fadeOut(animationSpec = tween(100))
+                            slideInHorizontally { -it / 2 } + scaleIn(initialScale = 0.7f) + fadeIn() togetherWith
+                                slideOutHorizontally { it }
                         },
                         entryProvider = entryProvider {
                             entry<Screen.Chat>(
-                                metadata = NavDisplay.transitionSpec { fadeIn(tween(120)) togetherWith fadeOut(tween(100)) }
-                                    + NavDisplay.popTransitionSpec { fadeIn(tween(120)) togetherWith fadeOut(tween(100)) }
+                                metadata = NavDisplay.transitionSpec { fadeIn() togetherWith fadeOut() }
+                                    + NavDisplay.popTransitionSpec { fadeIn() togetherWith fadeOut() }
                             ) { key ->
                                 ChatPage(
                                     id = Uuid.parse(key.id),
