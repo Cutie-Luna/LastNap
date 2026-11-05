@@ -195,8 +195,8 @@ class ChatService(
         customExtensionSessionGrants[conversationId]?.toSet().orEmpty()
 
     fun cleanup() = runCatching {
-        sessionManager.cleanup()
         customExtensionSessionGrants.clear()
+        sessionManager.cleanup()
     }
 
     private fun onSessionGenerationFinished(session: ConversationSession, cause: Throwable?) {
