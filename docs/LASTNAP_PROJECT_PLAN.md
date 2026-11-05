@@ -418,7 +418,7 @@ At the end of the chat, update this document before presenting the handoff summa
 
 ## 8. Current next action
 
-Stages 0 and 1 are complete; Stage 2 source identity/artwork acceptance is closed on the documented bounded-scan basis in Section 30. Stage 3's assistant-scoped custom-tool persistence foundation and its four focused unit-test classes passed on GitHub Actions (run 42028485101, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`). Stage 4's pre-edit runtime and permission design is recorded in Section 36; its source implementation and runtime regression tests are the current work. APK/package-table and Android 13 device proof remain assigned to Stage 8; they are not claimed complete.
+Stages 0 and 1 are complete; Stage 2 source identity/artwork acceptance is closed on the documented bounded-scan basis in Section 30. Stage 3 persistence and Stage 4 custom-tool runtime/permission integration are complete on the documented source and focused-CI basis in Sections 34–37. The next stage is Stage 5: build the Simple / Advanced Tool Builder UI without changing unrelated RikkaHub screens. Stage 7 integration/regression and Stage 8 APK/package-table/signing/Android 13 device verification remain open; no phone action is needed yet.
 
 When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experience while preserving Simple and Advanced and all existing functionality. This is a UI presentation change, not permission to simplify away features.
 
@@ -799,13 +799,14 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Stage 3 disposition:** complete. The acceptance tests and relevant compile path passed in CI. Keep the focused workflow as a reusable regression check.
 - **Next action / Stage 4 entry:** review the live assistant tool-registration path and the historical implementation only as reference; explicitly analyze `ASK_EVERY_TIME` versus `THIS_SESSION` approval resumption, tool-name collisions/normalization, JSON-schema adaptation limits, input/output bounds, and current-assistant selection filtering. Write the Stage 4 design and acceptance criteria into this plan before editing runtime files.
 
-## 35. Focused Stage 3 test-runner and successful execution — 2026-11-05
+## 35. Focused custom-tool test-runner and successful execution — 2026-11-05
 
-- Added `.github/workflows/stage3-persistence-tests.yml` on `lastnap-clean-foundation`. It runs on pushes to that branch (and supports manual dispatch), uses JDK 21 / Node 22 / pnpm 11, creates a CI-only dummy `app/google-services.json`, and runs only the four focused persistence/model test classes through `:app:testGithubDebugUnitTest`.
+- Added `.github/workflows/stage3-persistence-tests.yml` on `lastnap-clean-foundation`. It runs on pushes to that branch (and supports manual dispatch), uses JDK 21 / Node 22 / pnpm 11, creates a CI-only dummy `app/google-services.json`, and runs the four Stage 3 persistence/model test classes plus the Stage 4 CustomExtensionToolsTest through `:app:testGithubDebugUnitTest`. The workflow display name is now “Custom Tool Model and Runtime Tests”.
 - Safety review of the workflow: `permissions: contents: read`; no signing secrets or keystore access; no release/assemble task; no artifact upload or publication. The dummy Google Services file exists only in the ephemeral runner workspace.
 - First run: [GitHub Actions run 42028485101](https://github.com/Cutie-Luna/LastNap/actions/runs/42028485101), event `push`, branch `lastnap-clean-foundation`, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`, run attempt 1. Overall run and sole `persistence-tests` job both completed successfully.
 - The log confirms all setup steps completed, Gradle compiled the GithubDebug app and unit-test sources, then `:app:testGithubDebugUnitTest` completed with `BUILD SUCCESSFUL` in 4m 43s (228 actionable tasks). The four filters were `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, and `SettingsStoreTest`. The log contains non-fatal existing deprecation/opt-in warnings; no test or compile failure.
 - **Disposition:** Stage 3 acceptance is met and Stage 3 is complete. The focused workflow remains as a reusable non-publishing regression check. This result is not a lint result, full APK build, signing verification, install, or device test.
+- The workflow was extended for Stage 4 without changing its safety boundary: read-only repository permissions, CI-only Google Services configuration, no signing secrets, no release task, no publication, and no artifact upload.
 
 
 ## 36. Stage 4 runtime and permission design — reviewed before source edits (2026-11-05)
@@ -842,4 +843,36 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - THIS_SESSION is explicitly defined here as a conversation-scoped, in-memory grant lasting for the app process, rather than a persisted permission or a short-lived ConversationSession object (which is evicted after an idle timeout). This avoids surprising re-prompts when navigating away and back while still resetting grants after process restart.
 - A model-provided schema is a contract for tool-call generation, not a security boundary. Runtime must still validate the actual JSON object and byte limit. Do not claim full JSON Schema validation unless a complete validator is implemented and tested.
 - Focused unit tests can validate the pure registration/permission/input logic; they do not replace provider-specific schema compatibility or device verification. Keep Stage 7 integration/regression and Stage 8 build/device gates open.
-- No Stage 4 source files have been changed yet. This design is recorded before implementation; next step is to implement only the listed runtime integration and focused tests.
+- Stage 4 implementation and verification are recorded in Section 37. The design above remains the acceptance reference; Stage 7 still owns end-to-end integration/regression verification.
+
+
+## 37. Stage 4 runtime implementation and focused verification — 2026-11-05
+
+### Source changes on lastnap-clean-foundation
+
+- Added app/src/main/java/me/rerere/rikkahub/data/ai/tools/local/CustomExtensionTools.kt. It registers only the current assistant's selected, enabled, structurally valid, currently tested definitions; preserves the complete object schema under the required input property; uses provider-safe names bound to the extension ID and schema/code fingerprint; rejects duplicate IDs and name collisions; escapes custom skill text before adding it to the tool system prompt; and runs code only through the existing evaluateJavascript QuickJS helper.
+- Runtime input handling requires a JSON object and applies the 64 KiB limit to the complete argument payload using UTF-8 byte size. It serializes the input as a JSON string and reconstructs it with JSON.parse, so special property names such as __proto__ remain ordinary JSON data. The existing QuickJS time, memory, stack, log, and result limits remain unchanged; no host APIs or capabilities were added.
+- Updated ChatToolFactory.kt to append custom tools after the existing tool set and skip/log collisions rather than shadow existing tools. Updated ChatRequestFactory.kt to pass per-conversation grants into tool construction. Updated ChatService.kt to record a THIS_SESSION grant only after the matching pending call is explicitly approved and its approval-state update succeeds.
+- Permission behavior is implemented as designed: ALWAYS_ALLOW does not prompt; ASK_EVERY_TIME prompts on each new invocation; THIS_SESSION prompts until approved for that conversation/assistant/extension-definition fingerprint, then suppresses later prompts for that same grant; DISABLED is not registered. Grants remain in memory only, survive navigation and ConversationSession idle eviction, and are cleared on conversation deletion, restoration, or ChatService cleanup. They are not persisted or backed up.
+- Versioned tool names prevent a pending approval for an older schema/code definition from resolving to newly edited code. If a tool is edited, disabled, removed, or deselected while approval is pending, the old tool name is not registered and cannot execute the new definition.
+- No changes were made to AgentLoop, the core Tool model, built-in tool implementations, navigation, existing chat screens, or unrelated RikkaHub behavior.
+
+### Focused tests and CI result
+
+- Added app/src/test/java/me/rerere/rikkahub/data/ai/tools/local/CustomExtensionToolsTest.kt with 11 focused tests covering assistant selection and validity, schema preservation, all permission modes, exact session-grant matching, versioned names, collision handling, required-schema structure, QuickJS execution, safe handling of __proto__, JSON-object and UTF-8 argument limits, and duplicate IDs.
+- Final verification: [GitHub Actions run 42034011902](https://github.com/Cutie-Luna/LastNap/actions/runs/42034011902), branch lastnap-clean-foundation, commit 2f47a4706fd6fc1cd6b7603f376957e5362e451d. The overall run and persistence-tests job completed with success. The workflow executed :app:testGithubDebugUnitTest with filters for CustomExtensionTest, SettingsNormalizationTest, SettingsFieldsTest, SettingsStoreTest, and CustomExtensionToolsTest.
+- The log reports BUILD SUCCESSFUL in 3m 44s (228 actionable tasks). The app and unit-test sources compiled and all five selected test classes passed. The web-ui bundling emitted non-fatal sourcemap-location warnings; they did not fail the build and were not expanded into unrelated cleanup.
+- The CI-only Google Services file was generated in the ephemeral runner workspace. No signing key/secrets, signed APK task, release task, publishing, or artifact upload was used.
+
+### Full-tree audit at the verified source head
+
+- At source head 2f47a4706fd6fc1cd6b7603f376957e5362e451d, the complete recursive tree was non-truncated: 1,546 LastNap blobs versus 1,536 blobs in frozen fork baseline 903e058b9361bff71d0b79f4ef2d8ac23d6597e6; 10 LastNap-only paths, zero baseline paths missing, and 61 shared paths with different blob hashes. The other 1,475 shared blobs are byte-identical to the frozen baseline.
+- Compared with live upstream RikkaHub master f958af6a1a4a16dd8c1ac4138662a838b590e6c5, the non-truncated trees contain 1,546 LastNap blobs and 1,538 upstream blobs: 10 LastNap-only paths, 2 upstream-only paths, and 62 shared paths with different hashes. The two upstream-only paths are app/src/main/assets/icons/sta1n.png and docs/sponsors/sta1n.png; they are unrelated sponsor assets and were not copied as part of this custom-tool stage.
+- The two new Stage 4 source paths are CustomExtensionTools.kt and CustomExtensionToolsTest.kt. The three existing runtime integration paths are ChatToolFactory.kt, ChatRequestFactory.kt, and ChatService.kt. The focused workflow was extended; no baseline path was removed.
+
+### Stage 4 disposition and remaining gates
+
+- **Stage 4 source/runtime implementation: complete.** The focused CI run compiled the integration and passed the pure registration, permission, schema, input-bound, and QuickJS execution tests.
+- No separate lint task, full assemble task, signed APK build, signature check, install, or phone verification was run. This is intentional: those remain Stage 8 gates. No phone action is needed from the user now.
+- The ChatService approval/resumption path was compiled and reviewed, while the focused tests exercise its exact grant-resolution policy rather than a full live conversation. Provider-specific schema compatibility and full chat/UI integration remain Stage 7 verification work.
+- **Next stage:** Stage 5 — implement the Simple / Advanced Tool Builder interface, following the documented original-RikkaHub-preservation boundary. Do not begin Stage 6 skills/entry points until Stage 5 is reviewed and accepted.
