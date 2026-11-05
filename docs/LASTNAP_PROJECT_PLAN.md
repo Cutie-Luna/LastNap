@@ -751,3 +751,47 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Minimal safety correction:** remove the scheduled trigger; keep manual `workflow_dispatch`; add an explicit boolean `publish_prerelease` input defaulting to false; gate the public prerelease step on that input. Manual verification builds remain possible without publishing.
 - **Scope:** workflow trigger and publish gate only. Do not change Gradle build tasks, signing setup, secrets, package identity, ABI, or APK configuration.
 - **Acceptance:** no scheduled build or release can run; a manually dispatched build does not publish unless the user explicitly opts in through the workflow input.
+
+## 34. Stage 3 persistence foundation — implementation checkpoint (2026-11-05)
+
+### Branch and repository checkpoint
+
+- Working branch: `lastnap-clean-foundation`. Source/workflow head before this plan update: `7de2a15c3e409ee8a5479e6f6b688183e5901a10`.
+- Protected branch tips rechecked: `master` remains `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`; historical `feature/extensions-foundation` remains `942c1b49019dbbd55f02606f31b74cc258c14641`. Neither was modified.
+- Complete, non-truncated recursive tree comparison against frozen fork baseline `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`: 1,543 LastNap blobs vs 1,536 baseline blobs; 7 LastNap-only paths; zero baseline paths missing; 58 shared paths differ; 1,478 shared blobs are byte-identical. The 58 comprise the previously reviewed identity/upstream-baseline set, seven Stage 3 existing-file additions/updates, and the release-workflow guard. The three Stage 3 new paths are the custom-tool model and two focused test files.
+- A separate comparison against current upstream `rikkahub/rikkahub` master shows upstream has continued to move (including two newly added upstream-only assets); do not treat those newer upstream changes as omissions from the frozen fork baseline.
+
+### Stage 3 source changes
+
+- `app/src/main/java/me/rerere/rikkahub/data/model/CustomExtension.kt` — new serializable user-level tool definition, stable UUID-string ID, schema/code/description/skill limits, permission state, disabled-by-default draft state, structural validation, and successful-test fingerprint. The fingerprint binds both exact input-schema text and implementation text.
+- `app/src/main/java/me/rerere/rikkahub/data/model/Assistant.kt` — adds `selectedCustomExtensionIds: Set<String> = emptySet()`; old assistant JSON remains default-empty.
+- `app/src/main/java/me/rerere/rikkahub/data/datastore/Settings.kt` — adds `customExtensions: List<CustomExtension> = emptyList()`.
+- `app/src/main/java/me/rerere/rikkahub/data/datastore/PreferencesStore.kt` and `SettingsFields.kt` — register the `custom_extensions` JSON preference key and field mapping. No existing preference key is renamed.
+- `SettingsNormalization.kt` — removes blank/duplicate tool IDs, cleans dangling assistant selections, and provides a pure deletion transformation that removes the definition and every assistant assignment together.
+- Tests added/extended:
+  - `CustomExtensionTest.kt`: disabled safe defaults, schema shape/malformed JSON, field limits, enable/test gate, disabled-permission rejection, and schema/code fingerprint invalidation.
+  - `SettingsNormalizationTest.kt`: no implicit assignment, duplicate/dangling-reference cleanup, and atomic deletion cleanup.
+  - `SettingsFieldsTest.kt`: one-to-one field mapping, DataStore round trip, absent-key defaults, legacy Assistant/Settings JSON defaults, and stored-key compatibility.
+  - `SettingsStoreTest.kt`: custom-tool records and assistant selections survive a DataStore close/reopen.
+- No V6 migration or database table is needed: the new DataStore key is absent on old installs and resolves through the empty Settings default; old backup `settings.json` is decoded through the same serializable Settings model and missing fields default safely. `BackupManager.kt` and `SettingsJsonMigrator.kt` were inspected and intentionally left unchanged.
+- No runtime registration, filtering, QuickJS execution, permission prompt, Builder UI, navigation, skills, or unrelated RikkaHub screens were changed. `ChatToolFactory.kt` remains unchanged, so persisted definitions do not become callable merely by existing.
+
+### Runtime and historical-feature inspection for the next stage
+
+- Current `ChatToolFactory` composes built-in, selected local, workspace, skill, and MCP tools; it has no custom-extension registration.
+- Current JavaScript execution is QuickJS/ES2020 with a fresh bounded runtime, 10-second execution timeout, 64 MiB memory limit, bounded stack/log/result output, and no DOM/Node/Android bindings. The existing sandbox helper is reusable, but custom tool code must not add new host capabilities.
+- The internal `Tool` contract exposes a name, description, `InputSchema.Obj` parameters, approval predicate, and suspend execution callback. MCP's schema adapter provides a precedent for converting richer JSON Schema while inlining local references.
+- Historical `CustomExtensionTools.kt` is reference-only, not ported. It filtered by assistant selection, enabled state, permission, size, schema validity, and test hash; it wrapped invocation input and reused QuickJS. Its old fingerprint covered implementation only, which is why the new persisted model now requires a schema-plus-implementation fingerprint.
+- Before Stage 4 implementation, explicitly review approval-resumption semantics for `ASK_EVERY_TIME` versus `THIS_SESSION`, tool-name collision/normalization, schema adaptation limits, input/output limits, and the current assistant's selected IDs. Do not assume the old branch's permission predicate is sufficient.
+
+### Release-workflow safety
+
+- `.github/workflows/daily-build.yml` previously scheduled builds twice daily and automatically published a public prerelease after a successful build. This contradicted the project's explicit no-automatic-publication rule.
+- The schedule is removed. Manual `workflow_dispatch` remains, with `publish_prerelease` defaulting to false; the release step runs only when that input is explicitly enabled. Gradle task, signing configuration, and secret references are unchanged.
+
+### Verification and remaining gate
+
+- Source files and focused test cases were fetched and reviewed after the final edits. The stale implementation-only test fixture was corrected to use the schema-plus-implementation fingerprint.
+- **Tests have been written but not executed.** The available GitHub connection exposes no workflow-dispatch action, the repository has no dedicated unit-test workflow, and the existing manual daily workflow performs a signed release APK build rather than a focused test run. No local checkout/runtime is available here. Do not report these tests as passing; Stage 3 remains open until the focused unit tests (and relevant compile check) are actually run.
+- No Gradle build, lint, APK build, signature check, install, or phone verification was run. No phone action is needed for the current source-only work.
+- **Next action:** establish a focused, non-publishing way to run the Stage 3 unit tests and compile checks; inspect results and fix any failures. Only after Stage 3 passes should implementation begin for Stage 4 runtime registration/permission enforcement.
