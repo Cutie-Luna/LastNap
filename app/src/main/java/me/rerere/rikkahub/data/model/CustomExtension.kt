@@ -33,6 +33,7 @@ enum class CustomExtensionValidationError {
     INVALID_INPUT_SCHEMA,
     IMPLEMENTATION_TOO_LONG,
     ENABLED_WITHOUT_CURRENT_TEST,
+    ENABLED_WITH_DISABLED_PERMISSION,
 }
 
 /**
@@ -92,6 +93,9 @@ fun CustomExtension.validationErrors(): Set<CustomExtensionValidationError> = bu
     }
     if (enabled && (implementation.isBlank() || testedImplementationHash != implementation.extensionSha256())) {
         add(CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST)
+    }
+    if (enabled && permission == ExtensionPermission.DISABLED) {
+        add(CustomExtensionValidationError.ENABLED_WITH_DISABLED_PERMISSION)
     }
 }
 
