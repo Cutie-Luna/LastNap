@@ -26,13 +26,19 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
+/** Narrow runtime-facing interface; tests can provide values without Android Keystore. */
+interface CustomToolSecretProvider {
+    fun getSecret(toolId: String, name: String): String?
+    fun missingRequiredSecrets(extension: CustomExtension): List<String>
+}
+
 /**
  * Stores custom-tool Secrets encrypted under a dedicated Android Keystore key.
  *
  * Ciphertext lives only under noBackupFilesDir and is never part of Settings, Room or exports.
  * The cipher binds every value to its immutable tool ID and declared name using GCM AAD.
  */
-class CustomToolSecretStore(context: Context) {
+class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
     private val root = File(context.noBackupFilesDir, DIRECTORY_NAME)
     private val lock = Any()
 
@@ -47,7 +53,7 @@ class CustomToolSecretStore(context: Context) {
         writeEncryptedValues(toolId, secrets)
     }
 
-    fun getSecret(toolId: String, name: String): String? = synchronized(lock) {
+    override fun getSecret(toolId: String, name: String): String? = synchronized(lock) {
         validateReference(toolId, name)
         readEncryptedValues(toolId)[name]?.let { encrypted ->
             try {
@@ -63,7 +69,7 @@ class CustomToolSecretStore(context: Context) {
     fun hasSecret(toolId: String, name: String): Boolean =
         getSecret(toolId, name)?.isNotEmpty() == true
 
-    fun missingRequiredSecrets(extension: CustomExtension): List<String> =
+    override fun missingRequiredSecrets(extension: CustomExtension): List<String> =
         extension.secrets.filter { it.required && !hasSecret(extension.id, it.name) }.map { it.name }
 
     fun deleteSecret(toolId: String, name: String) = synchronized(lock) {
