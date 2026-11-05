@@ -12,7 +12,7 @@ class CustomExtensionTest {
 
         assertFalseEnabled(extension)
         assertEquals(ExtensionPermission.ASK_EVERY_TIME, extension.permission)
-        assertEquals(null, extension.testedImplementationHash)
+        assertEquals(null, extension.testedDefinitionHash)
         assertEquals(emptySet<CustomExtensionValidationError>(), extension.validationErrors())
     }
 
@@ -74,7 +74,7 @@ class CustomExtensionTest {
     }
 
     @Test
-    fun `enabled definition needs a matching implementation test hash`() {
+    fun `enabled definition needs a matching schema and implementation test hash`() {
         val code = "input.value * 2"
         val untested = CustomExtension(
             name = "Double",
@@ -91,14 +91,31 @@ class CustomExtensionTest {
                 tested.copy(implementation = "input.value + 2").validationErrors()
         )
         assertTrue(
+            CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST in
+                tested.copy(inputSchema = """{"type":"object","properties":{"value":{"type":"string"}}}""")
+                    .validationErrors()
+        )
+        assertTrue(
             CustomExtensionValidationError.ENABLED_WITH_DISABLED_PERMISSION in
                 tested.copy(permission = ExtensionPermission.DISABLED).validationErrors()
         )
     }
 
     @Test
-    fun `implementation fingerprint changes when code changes`() {
-        assertTrue("return 1".extensionSha256() != "return 2".extensionSha256())
+    fun `test fingerprint changes when schema or implementation changes`() {
+        val original = CustomExtension(
+            name = "Lookup",
+            description = "",
+            inputSchema = """{"type":"object","properties":{"value":{"type":"string"}}}""",
+            implementation = "return input.value",
+        )
+
+        assertTrue(
+            original.testFingerprint() != original.copy(implementation = "return input.value.trim()").testFingerprint()
+        )
+        assertTrue(
+            original.testFingerprint() != original.copy(inputSchema = """{"type":"object","properties":{}}""").testFingerprint()
+        )
     }
 
     private fun assertFalseEnabled(extension: CustomExtension) {
