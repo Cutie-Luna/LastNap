@@ -134,6 +134,7 @@ class SettingsStore internal constructor(
         val SELECT_ASSISTANT = stringPreferencesKey("select_assistant")
         val ASSISTANTS = stringPreferencesKey("assistants")
         val ASSISTANT_TAGS = stringPreferencesKey("assistant_tags")
+        val CUSTOM_EXTENSIONS = stringPreferencesKey("custom_extensions")
 
         // 搜索
         val SEARCH_SERVICES = stringPreferencesKey("search_services")
