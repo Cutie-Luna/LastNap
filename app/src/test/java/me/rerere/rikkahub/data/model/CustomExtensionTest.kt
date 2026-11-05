@@ -35,7 +35,7 @@ class CustomExtensionTest {
         val invalid = CustomExtension(
             name = "Lookup",
             description = "",
-            inputSchema = """{"type":"object"""",
+            inputSchema = "{",
         )
 
         assertTrue(CustomExtensionValidationError.INVALID_INPUT_SCHEMA in invalid.validationErrors())
