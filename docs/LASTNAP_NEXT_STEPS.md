@@ -63,7 +63,7 @@ This file preserves the agreed product requirements and implementation order so 
 - [x] Added a direct Tool Builder shortcut from the assistant's custom-tools tab.
 - [x] Restored the LastNap cat artwork as both launcher and round icon (`@drawable/appicon`); kept the existing white `@drawable/noticon` for notification small icons.
 - [x] Unit tests, debug APK assembly/upload, and Android lint all passed in GitHub Actions run [#41888159799](https://github.com/Cutie-Luna/LastNap/actions/runs/41888159799) for commit `8a44de73`. The run produced `lastnap-debug-apk`, `lastnap-unit-test-reports`, and `lastnap-lint-reports` artifacts.
-- [x] Replaced full-screen horizontal slide/scale navigation transitions with short 120 ms fade-in / 100 ms fade-out transitions to reduce avoidable transition work on lower-end devices.
+- [x] An earlier performance pass replaced the original full-screen slide/scale navigation transitions with short fades; the 2026-11-05 source-parity review reversed that simplification and restored the original RikkaHub slide/scale transitions.
 - [ ] The target itel P55 has not been profiled with Android Macrobenchmark/Perfetto. Navigation transitions are lighter now, but cold-start and page-entry latency still need measurement on the actual device; don't claim a fully measured performance fix.
 
 Implementation remains on `feature/extensions-foundation`; `master` was not changed.
@@ -87,3 +87,13 @@ Implementation remains on `feature/extensions-foundation`; `master` was not chan
 - Keep releases ARM64-only for this device; preserve R8, locale filtering, unused-class exclusions, and Baseline Profile unless measurements justify a change.
 
 Implementation remains on `feature/extensions-foundation`; `master` was not changed.
+
+## Full upstream parity audit — 2026-11-05
+
+- [x] Compared the complete source/resource tree against upstream RikkaHub. No upstream files are missing from the LastNap feature branch.
+- [x] Reviewed all 34 modified Kotlin source files and their removed diff lines. Apart from the previously simplified navigation transitions (now restored), the changes are additive LastNap functionality or compatibility substitutions for Compose context/resource APIs; no other animation/effect removal was identified.
+- [x] Confirmed the shared-element animation implementation and the chat-list animated-content calls remain in place and match upstream.
+- [x] Fixed launcher shortcut targets so the camera shortcut uses `lastnap://shortcut`, and translator/media-creation shortcuts use the matching `com.lastnap.app.action.*` actions registered by the manifest.
+- [x] Synchronized the newest upstream context-compression control, including direct numeric entry for the number of recent messages to keep.
+- [x] Bumped the next personal update to LastNap 3.1.3, version code 196, so it can update an installed 3.1.2/version-code-195 build with the same application ID and signing key.
+- [ ] Verify final unit tests, lint, signed release APK assembly, APK signature, and install/update behaviour on the target itel P55.
