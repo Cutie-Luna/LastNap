@@ -55,6 +55,7 @@ class CustomToolHttpRuntime(
         extension: CustomExtension,
         code: String,
         variables: Map<String, String> = emptyMap(),
+        storageOverride: CustomToolStorageProvider? = null,
         timeoutMillis: Long = DEFAULT_EXECUTION_TIMEOUT_MS,
     ): String = withContext(Dispatchers.Default) {
         require(code.length <= CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH) {
@@ -85,6 +86,7 @@ class CustomToolHttpRuntime(
         val variablesJson = kotlinx.serialization.json.JsonObject(
             safeVariables.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
         ).toString()
+        val executionStorage = storageOverride ?: storage
         val logs = StringBuilder()
         var logsTruncated = false
         fun appendLog(line: String) {
@@ -149,7 +151,7 @@ class CustomToolHttpRuntime(
                         function("__customToolStorageRead") { args ->
                             requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
-                            val bytes = storage.readBytes(extension.id, name)
+                            val bytes = executionStorage.readBytes(extension.id, name)
                             buildJsonObject {
                                 put("found", bytes != null)
                                 if (bytes != null) put("value", bytes.toString(Charsets.UTF_8))
@@ -159,18 +161,18 @@ class CustomToolHttpRuntime(
                             requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
                             val value = args.getOrNull(1) as? String ?: error("Storage text value is required")
-                            storage.writeBytes(extension.id, name, value.toByteArray(Charsets.UTF_8))
+                            executionStorage.writeBytes(extension.id, name, value.toByteArray(Charsets.UTF_8))
                             true
                         }
                         function("__customToolStorageDelete") { args ->
                             requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
-                            storage.delete(extension.id, name)
+                            executionStorage.delete(extension.id, name)
                         }
                         function("__customToolStorageList") { _ ->
                             requireStorageOperation()
                             buildJsonArray {
-                                storage.list(extension.id).forEach { add(JsonPrimitive(it)) }
+                                executionStorage.list(extension.id).forEach { add(JsonPrimitive(it)) }
                             }.toString()
                         }
                         evaluate<Unit>(STORAGE_POLYFILL + "\nvoid 0;")
