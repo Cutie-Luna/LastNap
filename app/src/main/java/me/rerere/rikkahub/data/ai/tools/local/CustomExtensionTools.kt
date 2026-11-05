@@ -15,7 +15,6 @@ import me.rerere.rikkahub.data.model.CustomExtensionLimits
 import me.rerere.rikkahub.data.model.testFingerprint
 import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.data.model.extensionSha256
-import kotlin.uuid.Uuid
 
 /**
  * The provider-visible name is bound to both identity and the tested definition.
