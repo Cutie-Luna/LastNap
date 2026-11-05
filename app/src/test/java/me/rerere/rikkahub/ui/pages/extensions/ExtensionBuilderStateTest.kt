@@ -44,6 +44,28 @@ class ExtensionBuilderStateTest {
     }
 
     @Test
+    fun apiAccessAndAllowedHostChangesInvalidateTheBuilderTest() {
+        val tested = testedExtension()
+
+        assertFalse(
+            tested.copy(
+                apiAccessEnabled = true,
+                allowedApiHosts = listOf("api.example.com"),
+            ).hasCurrentBuilderTest()
+        )
+        val apiDraft = tested.copy(
+            apiAccessEnabled = true,
+            allowedApiHosts = listOf("api.example.com"),
+        )
+        val testedApi = apiDraft.copy(testedDefinitionHash = apiDraft.testFingerprint())
+
+        assertTrue(testedApi.hasCurrentBuilderTest())
+        assertFalse(testedApi.copy(allowedApiHosts = listOf("other.example.com")).hasCurrentBuilderTest())
+        assertFalse(testedApi.copy(allowLocalNetwork = true).hasCurrentBuilderTest())
+        assertFalse(testedApi.copy(apiAccessEnabled = false).hasCurrentBuilderTest())
+    }
+
+    @Test
     fun testCodeUsesJsonParseAndPreservesSpecialJsonPropertyNames() {
         val code = buildCustomExtensionTestCode(
             testInput = """{"__proto__":{"safe":true},"value":21}""",
