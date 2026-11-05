@@ -634,7 +634,7 @@
   <string name="setting_asr_configure_step_itn">逆文本归一化</string>
   <string name="setting_asr_configure_step_itn_desc">把口语数字转成阿拉伯数字（如「三百」→「300」），方便后续处理</string>
   <string name="setting_asr_configure_step_timestamp">返回时间戳</string>
-  <string name="setting_asr_configure_step_timestamp_desc">在 delta 事件里返回词级时间戳。rikkahub 当前不消费时间戳，默认关闭节省 token</string>
+  <string name="setting_asr_configure_step_timestamp_desc">在 delta 事件里返回词级时间戳。LastNap 当前不消费时间戳，默认关闭节省 token</string>
   <string name="setting_asr_configure_step_hotwords">热词</string>
   <string name="setting_asr_configure_step_hotwords_desc">逗号分隔的热词列表，提升专有名词、术语的识别准确率</string>
   <string name="setting_asr_page_add_provider">添加ASR提供商</string>
