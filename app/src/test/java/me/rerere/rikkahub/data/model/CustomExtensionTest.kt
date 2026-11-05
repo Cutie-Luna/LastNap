@@ -3,6 +3,7 @@ package me.rerere.rikkahub.data.model
 import kotlinx.serialization.decodeFromString
 import me.rerere.rikkahub.utils.JsonInstant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -152,6 +153,116 @@ class CustomExtensionTest {
         assertTrue(
             original.testFingerprint() != original.copy(inputSchema = """{"type":"object","properties":{}}""").testFingerprint()
         )
+    }
+
+    @Test
+    fun `legacy definitions keep their original test fingerprint`() {
+        val extension = CustomExtension(
+            name = "Legacy",
+            description = "",
+            inputSchema = """{"type":"object","properties":{"value":{"type":"string"}}}""",
+            implementation = "return input.value",
+        )
+        val legacyDefinition =
+            "${extension.inputSchema.length}:${extension.inputSchema}${extension.implementation.length}:${extension.implementation}"
+
+        assertEquals(legacyDefinition.extensionSha256(), extension.testFingerprint())
+    }
+
+    @Test
+    fun `API access is off by default and requires an explicit host allowlist`() {
+        val legacy = CustomExtension(name = "Legacy", description = "")
+        val missingHosts = CustomExtension(
+            name = "API tool",
+            description = "",
+            apiAccessEnabled = true,
+        )
+
+        assertFalse(legacy.apiAccessEnabled)
+        assertTrue(legacy.allowedApiHosts.isEmpty())
+        assertTrue(missingHosts.validationErrors().contains(CustomExtensionValidationError.API_HOSTS_REQUIRED))
+    }
+
+    @Test
+    fun `host allowlist accepts exact and bounded wildcard hostnames`() {
+        val extension = CustomExtension(
+            name = "API tool",
+            description = "",
+            apiAccessEnabled = true,
+            allowedApiHosts = listOf("api.example.com", "*.images.example.com"),
+        )
+
+        assertEquals(emptySet<CustomExtensionValidationError>(), extension.validationErrors())
+        assertTrue(extension.allowsApiHost("api.example.com"))
+        assertTrue(extension.allowsApiHost("cdn.images.example.com"))
+        assertTrue(extension.allowsApiHost("a.b.images.example.com"))
+        assertFalse(extension.allowsApiHost("example.com"))
+        assertFalse(extension.allowsApiHost("images.example.com"))
+        assertFalse(extension.allowsApiHost("notexample.com"))
+        assertFalse(extension.allowsApiHost("api.other.com"))
+    }
+
+    @Test
+    fun `host allowlist rejects URL syntax ports credentials and IP literals`() {
+        val invalidHosts = listOf(
+            "https://api.example.com",
+            "api.example.com:443",
+            "user@api.example.com",
+            "api.example.com/path",
+            "127.0.0.1",
+            "*.example.com/path",
+            "*api.example.com",
+            "api..example.com",
+        )
+
+        invalidHosts.forEach { host ->
+            val extension = CustomExtension(
+                name = "API tool",
+                description = "",
+                apiAccessEnabled = true,
+                allowedApiHosts = listOf(host),
+            )
+            assertTrue(
+                "Expected invalid host pattern: $host",
+                CustomExtensionValidationError.INVALID_API_HOST_PATTERN in extension.validationErrors(),
+            )
+        }
+    }
+
+    @Test
+    fun `local network host patterns require a separate capability`() {
+        val invalid = CustomExtension(
+            name = "Local API",
+            description = "",
+            apiAccessEnabled = true,
+            allowedApiHosts = listOf("localhost", "homeassistant.local"),
+        )
+        val enabled = invalid.copy(allowLocalNetwork = true)
+
+        assertTrue(CustomExtensionValidationError.INVALID_API_HOST_PATTERN in invalid.validationErrors())
+        assertEquals(emptySet<CustomExtensionValidationError>(), enabled.validationErrors())
+        assertTrue(enabled.allowsApiHost("localhost"))
+        assertTrue(enabled.allowsApiHost("homeassistant.local"))
+    }
+
+    @Test
+    fun `API capability and host changes invalidate the successful test hash`() {
+        val base = CustomExtension(
+            name = "API tool",
+            description = "",
+            inputSchema = """{"type":"object","properties":{}}""",
+            implementation = "return 1",
+        )
+        val api = base.copy(
+            apiAccessEnabled = true,
+            allowedApiHosts = listOf("api.example.com"),
+        )
+        val anotherHost = api.copy(allowedApiHosts = listOf("other.example.com"))
+        val localNetwork = api.copy(allowLocalNetwork = true)
+
+        assertNotEquals(base.testFingerprint(), api.testFingerprint())
+        assertNotEquals(api.testFingerprint(), anotherHost.testFingerprint())
+        assertNotEquals(api.testFingerprint(), localNetwork.testFingerprint())
     }
 
     private fun assertFalseEnabled(extension: CustomExtension) {
