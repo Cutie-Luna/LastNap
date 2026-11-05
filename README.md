@@ -1,29 +1,29 @@
 <div align="center">
-  <img src="docs/icon.png" alt="App Icon" width="100" />
-  <h1>RikkaHub</h1>
+  <img src="app/src/main/res/drawable-nodpi/appicon.png" alt="LastNap app icon" width="100" />
+  <h1>LastNap</h1>
 
-A native Android LLM chat client that supports switching between different providers for
-conversations 🤖💬
+LastNap is a personal fork of RikkaHub, a native Android LLM chat client that supports switching between different providers for conversations 🤖💬
 
-Click to join our Discord server 👉 [【RikkaHub】](https://discord.gg/9weBqxe5c4)
+Join the upstream RikkaHub Discord community 👉 [【RikkaHub】](https://discord.gg/9weBqxe5c4)
 
 [简体中文](README_ZH_CN.md) | [繁體中文](README_ZH_TW.md) | English
 </div>
 
 <div align="center">
-  <img src="docs/img/poster.png" alt="RikkaHub" width="800" />
+  <img src="docs/img/poster.png" alt="App preview" width="800" />
 </div>
 
 ## 🚀 Download
 
-🔗 [Download from Website](https://rikka-ai.com/download) (Recommended)
+LastNap does not have a published release yet. Builds will be linked from [LastNap GitHub Releases](https://github.com/Cutie-Luna/LastNap/releases) after release verification.
 
-🔗 [Download from Google Play](https://play.google.com/store/apps/details?id=me.rerere.rikkahub)
+Original upstream app downloads (not LastNap):
+- [RikkaHub website](https://rikka-ai.com/download)
+- [RikkaHub on Google Play](https://play.google.com/store/apps/details?id=me.rerere.rikkahub)
 
-> [!WARNING]
-> There are many forked versions of RikkaHub. Issues with forks are unrelated to RikkaHub, so please use forks with caution to avoid privacy leaks or excessive permission requests.
+> LastNap is an independent personal fork of RikkaHub, not an official RikkaHub release. Please report LastNap-specific issues in this repository.
 
-## 💖 Sponsors
+## 💖 Upstream RikkaHub sponsors
 
 | Sponsor | Description |
 |:---:|:---|
@@ -82,9 +82,9 @@ Technology stack documentation:
 * [Ko-fi](https://ko-fi.com/reovodev)
 * [爱发电](https://afdian.com/a/reovo)
 
-## ⭐ Star History
+## ⭐ Upstream RikkaHub star history
 
-If you like this project, please give it a star ⭐
+The chart below tracks the upstream RikkaHub repository.
 
 <a href="https://www.star-history.com/?type=date&repos=re-ovo%2Frikkahub">
  <picture>
