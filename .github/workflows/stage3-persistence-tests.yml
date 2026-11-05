@@ -1,0 +1,88 @@
+name: Stage 3 Persistence Tests
+
+on:
+  push:
+    branches:
+      - lastnap-clean-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage3-persistence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  persistence-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web-ui/pnpm-lock.yaml
+
+      - name: Install Web UI dependencies
+        working-directory: web-ui
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Provide CI-only Google Services configuration
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "1234567890",
+              "project_id": "lastnap-ci",
+              "storage_bucket": "lastnap-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:1234567890:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.lastnap.app.debug"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "ci-placeholder"
+                  }
+                ],
+                "services": {}
+              }
+            ]
+          }
+          EOF
+
+      - name: Run focused persistence and model tests
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testGithubDebugUnitTest \
+            --tests 'me.rerere.rikkahub.data.model.CustomExtensionTest' \
+            --tests 'me.rerere.rikkahub.data.datastore.SettingsNormalizationTest' \
+            --tests 'me.rerere.rikkahub.data.datastore.SettingsFieldsTest' \
+            --tests 'me.rerere.rikkahub.data.datastore.SettingsStoreTest'
