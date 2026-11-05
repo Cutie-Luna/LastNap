@@ -1863,4 +1863,7 @@ mDNS 주소: .local 호스트네임을 사용하며, IP를 몰라도 같은 네�
     <string name="extension_builder_page_delete_message">“%1$s” 도구가 삭제되며 모든 어시스턴트에서 할당도 해제됩니다.</string>
     <string name="extensions_page_custom_tools">사용자 지정 도구</string>
     <string name="extensions_page_custom_tools_desc">어시스턴트 도구를 만들고 테스트하고 재사용하도록 관리하세요</string>
+  <string name="chat_page_compress_keep_recent">최근 메시지 유지</string>
+  <string name="chat_page_compress_keep_recent_desc">이 메시지는 압축되지 않고 요약 뒤에도 유지됩니다. 0으로 설정하면 모든 내용을 압축하고 프롬프트 캐시를 가장 효율적으로 재사용합니다. 대화가 너무 길어 압축할 수 없다면 더 많은 메시지를 유지하세요.</string>
+  <string name="chat_page_compress_not_enough_messages">압축할 메시지가 충분하지 않습니다. 유지할 메시지 수를 줄이세요.</string>
 </resources>
