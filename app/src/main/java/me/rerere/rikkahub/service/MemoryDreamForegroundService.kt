@@ -134,7 +134,7 @@ class MemoryDreamForegroundService : Service() {
 
     private fun buildNotification() =
         NotificationCompat.Builder(this, MEMORY_DREAM_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_rikkahub)
+            .setSmallIcon(R.drawable.noticon)
             .setContentTitle(getString(R.string.memory_dreaming))
             .setContentText(getString(R.string.memory_dream_notification_text))
             .setContentIntent(
