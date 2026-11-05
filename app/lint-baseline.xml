@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.0">
+  <issue id="NonObservableLocale" message="Reading locale in a non-observable way in a composable function">
+    <location file="src/main/java/me/rerere/rikkahub/ui/stats/StatsPage.kt" line="290" column="85" />
+  </issue>
+  <issue id="ContextCastToActivity" message="LocalContext should not be cast to Activity, use LocalActivity instead">
+    <location file="src/main/java/me/rerere/rikkahub/ui/chat/ChatList.kt" line="242" column="20" />
+  </issue>
+  <issue id="ContextCastToActivity" message="LocalContext should not be cast to Activity, use LocalActivity instead">
+    <location file="src/main/java/me/rerere/rikkahub/ui/chat/ChatPage.kt" line="113" column="70" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/assistant/detail/AssistantImporter.kt" line="89" column="59" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/assistant/detail/AssistantImporter.kt" line="115" column="59" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/chat/ChatDrawer.kt" line="679" column="42" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/imggen/ImgGenPage.kt" line="596" column="65" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/imggen/ImgGenPage.kt" line="597" column="38" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/imggen/ImgGenPage.kt" line="763" column="75" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/imggen/ImgGenPage.kt" line="768" column="75" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/ImportExportTab.kt" line="81" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/ImportExportTab.kt" line="87" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/ImportExportTab.kt" line="161" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/ImportExportTab.kt" line="168" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/mediacreation/MediaCreationRecordItem.kt" line="524" column="33" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/mediacreation/MediaCreationRecordItem.kt" line="530" column="47" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/mediacreation/MediaCreationRecordItem.kt" line="540" column="43" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/mediacreation/MediaCreationRecordItem.kt" line="626" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/components/richtext/Mermaid.kt" line="74" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/components/richtext/Mermaid.kt" line="80" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/assistant/detail/PropertyEditor.kt" line="203" column="45" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/components/ProviderConnectionTester.kt" line="203" column="41" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/components/ProviderConnectionTester.kt" line="212" column="41" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="53" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="59" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="75" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="81" column="39" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="127" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="134" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="149" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/S3Tab.kt" line="157" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/SettingMcpDetailPage.kt" line="141" column="13" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/SettingMediaPage.kt" line="396" column="41" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/SettingMediaPage.kt" line="402" column="41" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/SettingMediaProviderDetailPage.kt" line="106" column="13" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/SettingProviderDetailPage.kt" line="265" column="37" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/setting/SettingProviderPage.kt" line="374" column="30" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/extensions/skills/SkillsPage.kt" line="120" column="30" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/extensions/skills/SkillsPage.kt" line="122" column="30" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/extensions/skills/SkillsPage.kt" line="259" column="38" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/extensions/skills/SkillsPage.kt" line="273" column="38" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/extensions/skills/SkillsPage.kt" line="275" column="38" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/components/ui/TextArea.kt" line="99" column="34" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/components/ui/TextArea.kt" line="102" column="53" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/components/ui/UpdateCard.kt" line="128" column="30" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="62" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="68" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="84" column="25" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="90" column="39" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="188" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="195" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="210" column="29" />
+  </issue>
+  <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes">
+    <location file="src/main/java/me/rerere/rikkahub/ui/backup/tabs/WebDavTab.kt" line="218" column="29" />
+  </issue>
+</issues>
