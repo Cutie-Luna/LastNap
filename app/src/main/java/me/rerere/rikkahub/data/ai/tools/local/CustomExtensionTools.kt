@@ -38,6 +38,7 @@ internal fun createCustomExtensionTools(
     reservedToolNames: Set<String> = emptySet(),
     onNameCollision: (String) -> Unit = {},
     httpRuntime: CustomToolHttpRuntime? = null,
+    variablesByTool: Map<String, Map<String, String>> = emptyMap(),
 ): List<Tool> {
     val usedNames = reservedToolNames.toMutableSet()
     val seenIds = mutableSetOf<String>()
@@ -87,6 +88,7 @@ internal fun createCustomExtensionTools(
                     if (extension.apiAccessEnabled) {
                         appendLine("HTTP fetch is enabled only for the tool's configured allowed hosts.")
                         appendLine("Use fetch(url, { method, headers, body }) to make bounded API requests.")
+                        appendLine("Use {{secret:SECRET_NAME}} only inside an HTTP header value; Secret values are inserted by the native host and are not exposed to JavaScript.")
                     } else {
                         appendLine("Network access is not available to this tool.")
                     }
@@ -106,7 +108,11 @@ internal fun createCustomExtensionTools(
                 val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
                 val code = "const input = JSON.parse($serializedInputLiteral);\n$implementation"
                 val output = if (extension.apiAccessEnabled) {
-                    requireNotNull(httpRuntime).evaluate(extension, code)
+                    requireNotNull(httpRuntime).evaluate(
+                        extension = extension,
+                        code = code,
+                        variables = variablesByTool[extension.id].orEmpty(),
+                    )
                 } else {
                     evaluateJavascript(code)
                 }
