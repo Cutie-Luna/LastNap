@@ -635,3 +635,9 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - No Gradle build, Kotlin compilation, unit/instrumentation test, lint, Web UI build, APK/signature inspection, install, or Android 13 device check has run. The migration is source-reviewed only; Stage 8 must verify the GitHub API JSON mapping and a real APK download when a LastNap release exists.
 - Remaining limitation: all 1,453 text-like blobs are not yet individually opened. Complete recursive tree and per-path hash comparison are proven, all 44 changed source/resource paths plus 32 string resource files and relevant identity references were inspected, but do not claim full text-blob exhaustive scanning. The GitHub connector execution caps batch tool calls; the local archive/clone route is unavailable in the current environment.
 - Next action: continue targeted old-brand and compatibility-reference review, then close Stage 2 only when a reliable full tracked-text scan is possible. Do not start Stage 3 before that. Stage 8 retains the build, tests, API/no-release behavior, and device verification gates.
+
+
+## 25. Additional Gradle project-name identity check — 2026-11-05
+
+- Reviewed root `settings.gradle.kts` and found `rootProject.name = "rikkahub"`. This name is presented by Gradle tooling and IDE project windows, although it does not affect the Android application ID, package namespace, build paths, or runtime behavior.
+- **Planned minimal correction:** change only the root Gradle project display name to `LastNap`. Preserve every project include, plugin/dependency declaration, module name, Kotlin package, source path, and application namespace.
