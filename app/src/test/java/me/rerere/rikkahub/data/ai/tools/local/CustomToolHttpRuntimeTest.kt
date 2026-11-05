@@ -3,6 +3,8 @@ package me.rerere.rikkahub.data.ai.tools.local
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import me.rerere.rikkahub.data.model.CustomExtension
@@ -56,13 +58,11 @@ class CustomToolHttpRuntimeTest {
                 else -> {
                     val requestBody = exchange.requestBody.use { it.readBytes() }
                         .toString(StandardCharsets.UTF_8)
-                    val reply = """
-                        {
-                          "method": "${exchange.requestMethod}",
-                          "header": "${exchange.requestHeaders.getFirst("X-Test").orEmpty()}",
-                          "body": ${Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(requestBody))}
-                        }
-                    """.trimIndent().toByteArray(StandardCharsets.UTF_8)
+                    val reply = buildJsonObject {
+                        put("method", exchange.requestMethod)
+                        put("header", exchange.requestHeaders.getFirst("X-Test").orEmpty())
+                        put("body", requestBody)
+                    }.toString().toByteArray(StandardCharsets.UTF_8)
                     exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
                     exchange.responseHeaders.add("X-Reply", "local-test")
                     exchange.sendResponseHeaders(200, reply.size.toLong())
