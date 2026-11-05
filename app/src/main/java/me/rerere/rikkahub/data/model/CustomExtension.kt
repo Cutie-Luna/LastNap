@@ -90,6 +90,7 @@ data class CustomExtension(
     val apiAccessEnabled: Boolean = false,
     val allowedApiHosts: List<String> = emptyList(),
     val allowLocalNetwork: Boolean = false,
+    val storageEnabled: Boolean = false,
     val secrets: List<CustomToolValueDeclaration> = emptyList(),
     val variables: List<CustomToolValueDeclaration> = emptyList(),
 )
@@ -256,7 +257,7 @@ fun CustomExtension.testFingerprint(): String {
     // Preserve the exact pre-capability fingerprint for legacy tools. Their existing
     // successful-test hashes remain valid because all new fields default to disabled/empty.
     val legacyDefinition = "${inputSchema.length}:$inputSchema${implementation.length}:$implementation"
-    if (!apiAccessEnabled && !allowLocalNetwork && secrets.isEmpty() && variables.isEmpty()) {
+    if (!apiAccessEnabled && !allowLocalNetwork && !storageEnabled && secrets.isEmpty() && variables.isEmpty()) {
         return legacyDefinition.extensionSha256()
     }
 
@@ -273,6 +274,7 @@ fun CustomExtension.testFingerprint(): String {
         append(legacyDefinition)
         append("|api=").append(apiAccessEnabled)
         append("|local=").append(allowLocalNetwork)
+        append("|storage=").append(storageEnabled)
         append("|hosts=").append(hostDefinition)
         append("|secrets=").append(declarationFingerprint(secrets))
         append("|variables=").append(declarationFingerprint(variables))
