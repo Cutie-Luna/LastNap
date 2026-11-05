@@ -12,43 +12,10 @@ import me.rerere.ai.core.Tool
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.CustomExtensionLimits
-import me.rerere.rikkahub.data.model.ExtensionPermission
 import me.rerere.rikkahub.data.model.testFingerprint
 import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.data.model.extensionSha256
 import kotlin.uuid.Uuid
-
-/** A conversation-scoped approval; never persisted to Settings or backups. */
-internal data class CustomExtensionSessionGrant(
-    val assistantId: Uuid,
-    val extensionId: String,
-    val definitionHash: String,
-)
-
-internal fun CustomExtension.sessionGrant(assistantId: Uuid) = CustomExtensionSessionGrant(
-    assistantId = assistantId,
-    extensionId = id,
-    definitionHash = testFingerprint(),
-)
-
-/** Resolves only the exact currently selected THIS_SESSION definition that was approved. */
-internal fun findApprovedCustomExtensionSessionGrant(
-    extensions: List<CustomExtension>,
-    selectedExtensionIds: Set<String>,
-    assistantId: Uuid,
-    toolName: String?,
-): CustomExtensionSessionGrant? {
-    if (toolName == null) return null
-    val extension = extensions.firstOrNull {
-        it.id in selectedExtensionIds &&
-            it.enabled &&
-            it.permission == ExtensionPermission.THIS_SESSION &&
-            it.validationErrors().isEmpty() &&
-            parseCustomInputSchema(it.inputSchema) != null &&
-            customExtensionToolName(it) == toolName
-    } ?: return null
-    return extension.sessionGrant(assistantId)
-}
 
 /**
  * The provider-visible name is bound to both identity and the tested definition.
@@ -69,8 +36,6 @@ internal fun customExtensionToolName(extension: CustomExtension): String {
 internal fun createCustomExtensionTools(
     extensions: List<CustomExtension>,
     selectedExtensionIds: Set<String>,
-    assistantId: Uuid,
-    sessionApprovedExtensions: Set<CustomExtensionSessionGrant> = emptySet(),
     reservedToolNames: Set<String> = emptySet(),
     onNameCollision: (String) -> Unit = {},
 ): List<Tool> {
@@ -80,7 +45,7 @@ internal fun createCustomExtensionTools(
     return extensions.mapNotNull { extension ->
         if (!seenIds.add(extension.id)) return@mapNotNull null
         if (extension.id !in selectedExtensionIds) return@mapNotNull null
-        if (!extension.enabled || extension.permission == ExtensionPermission.DISABLED) return@mapNotNull null
+        if (!extension.enabled) return@mapNotNull null
         if (extension.validationErrors().isNotEmpty()) return@mapNotNull null
 
         val inputSchema = parseCustomInputSchema(extension.inputSchema) ?: return@mapNotNull null
@@ -90,7 +55,6 @@ internal fun createCustomExtensionTools(
             return@mapNotNull null
         }
 
-        val grant = extension.sessionGrant(assistantId)
         val description = extension.description.ifBlank {
             "User-created custom tool: ${extension.name}"
         }.take(CustomExtensionLimits.MAX_DESCRIPTION_LENGTH)
@@ -120,14 +84,7 @@ internal fun createCustomExtensionTools(
                     appendLine("The implementation runs in an isolated JavaScript runtime.")
                 }
             },
-            needsApproval = { _ ->
-                when (extension.permission) {
-                    ExtensionPermission.ALWAYS_ALLOW -> false
-                    ExtensionPermission.ASK_EVERY_TIME -> true
-                    ExtensionPermission.THIS_SESSION -> grant !in sessionApprovedExtensions
-                    ExtensionPermission.DISABLED -> true
-                }
-            },
+            needsApproval = { _ -> extension.needsApproval },
             execute = { arguments ->
                 val args = arguments as? JsonObject ?: error("Custom tool arguments must be a JSON object")
                 val serializedArguments = args.toString()
