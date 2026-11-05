@@ -227,6 +227,25 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun builderTestStorageDoesNotOverwritePersistentToolStorage() = runBlocking {
+        val extension = CustomExtension(id = "tool-isolated", name = "Builder storage test", description = "", storageEnabled = true)
+        val persistent = MemoryStorage().apply {
+            writeBytes(extension.id, "cache.txt", "real".toByteArray())
+        }
+        val temporary = InMemoryCustomToolStorage()
+        val output = runtime(storage = persistent).evaluate(
+            extension,
+            """storage.writeText("cache.txt", "test"); storage.readText("cache.txt")""",
+            storageOverride = temporary,
+        )
+        val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+        assertEquals("test", result)
+        assertEquals("real", persistent.readBytes(extension.id, "cache.txt")!!.decodeToString())
+        assertEquals("test", temporary.readBytes(extension.id, "cache.txt")!!.decodeToString())
+    }
+
+    @Test
     fun binaryStorageRoundTripsBase64WithoutTextDecoding() = runBlocking {
         val extension = CustomExtension(name = "Binary storage test", description = "", storageEnabled = true)
         val storage = MemoryStorage()
