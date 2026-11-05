@@ -98,16 +98,26 @@ class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
      * Removes orphaned stores after interrupted tool deletion. Corrupt/unreadable records are
      * retained for safety; cleanup never guesses ownership from an unverified filename.
      */
-    fun reconcile(validToolIds: Set<String>): Int = synchronized(lock) {
+    fun reconcile(declaredSecretsByTool: Map<String, Set<String>>): Int = synchronized(lock) {
         if (!root.isDirectory) return@synchronized 0
-        var removed = 0
+        var changedStores = 0
         root.listFiles().orEmpty().filter { it.isFile && it.extension == "json" }.forEach { file ->
             val owner = runCatching {
                 Json.parseToJsonElement(file.readText()).jsonObject["toolId"]?.jsonPrimitive?.contentOrNull
             }.getOrNull() ?: return@forEach
-            if (owner !in validToolIds && file.delete()) removed += 1
+            val declaredNames = declaredSecretsByTool[owner]
+            if (declaredNames == null) {
+                if (file.delete()) changedStores += 1
+                return@forEach
+            }
+            val encryptedValues = runCatching { readEncryptedValues(owner) }.getOrNull() ?: return@forEach
+            val retainedValues = encryptedValues.filterKeys { it in declaredNames }
+            if (retainedValues.size != encryptedValues.size) {
+                if (retainedValues.isEmpty()) deleteFile(owner) else writeEncryptedValues(owner, retainedValues)
+                changedStores += 1
+            }
         }
-        removed
+        changedStores
     }
 
     private fun readEncryptedValues(toolId: String): Map<String, String> {
