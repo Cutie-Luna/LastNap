@@ -86,5 +86,5 @@ jobs:
             --tests 'me.rerere.rikkahub.data.datastore.SettingsNormalizationTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsFieldsTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsStoreTest' \
-            --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomExtensionToolsTest' \\
+            --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomExtensionToolsTest' \
             --tests 'me.rerere.rikkahub.ui.pages.extensions.ExtensionBuilderStateTest'
