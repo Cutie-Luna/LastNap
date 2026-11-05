@@ -154,6 +154,7 @@ fun ExtensionBuilderPage(
     }
 
     var isTesting by remember { mutableStateOf(false) }
+    var isSavingSecret by remember { mutableStateOf(false) }
     var testPassed by remember { mutableStateOf<Boolean?>(null) }
     var testResult by remember { mutableStateOf("") }
     var showDeleteConfirmation by rememberSaveable { mutableStateOf(false) }
