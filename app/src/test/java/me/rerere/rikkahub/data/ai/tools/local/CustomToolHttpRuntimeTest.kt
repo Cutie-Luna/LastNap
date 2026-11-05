@@ -227,6 +227,19 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun binaryStorageRoundTripsBase64WithoutTextDecoding() = runBlocking {
+        val extension = CustomExtension(name = "Binary storage test", description = "", storageEnabled = true)
+        val storage = MemoryStorage()
+        val output = runtime(storage = storage).evaluate(
+            extension,
+            """storage.writeBase64("image.bin", "AAUQ"); storage.readBase64("image.bin")""",
+        )
+        val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+        assertEquals("AAUQ", result)
+    }
+
+    @Test
     fun disabledStorageCapabilityDoesNotInstallStorageApiOrDeleteSavedData() = runBlocking {
         val extension = CustomExtension(name = "No storage", description = "", storageEnabled = false)
         val storage = MemoryStorage().apply {
