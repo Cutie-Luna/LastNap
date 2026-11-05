@@ -29,12 +29,17 @@ class CustomToolHttpRuntimeTest {
         allowLocalNetwork = true,
     )
 
-    private fun runtime() = CustomToolHttpRuntime(
+    private fun runtime(secrets: Map<String, String> = emptyMap()) = CustomToolHttpRuntime(
         OkHttpClient.Builder()
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(3, TimeUnit.SECONDS)
             .callTimeout(5, TimeUnit.SECONDS)
-            .build()
+            .build(),
+        object : CustomToolSecretProvider {
+            override fun getSecret(toolId: String, name: String): String? = secrets[name]
+            override fun missingRequiredSecrets(extension: CustomExtension): List<String> =
+                extension.secrets.filter { it.required && secrets[it.name].isNullOrEmpty() }.map { it.name }
+        },
     )
 
     private fun startServer(): HttpServer {
@@ -111,6 +116,74 @@ class CustomToolHttpRuntimeTest {
             val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
 
             assertEquals("20", result)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun namedSecretIsInjectedIntoHeaderAndRedactedFromToolResult() = runBlocking {
+        val server = startServer()
+        val secret = "never-return-this-secret"
+        try {
+            val extension = localExtension().copy(
+                secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
+            )
+            val code = """
+                const response = fetch("http://127.0.0.1:${server.address.port}/echo", {
+                    headers: { "X-Test": "{{secret:API_KEY}}" }
+                });
+                response.json().header
+            """.trimIndent()
+
+            val output = runtime(mapOf("API_KEY" to secret)).evaluate(extension, code)
+            val payload = Json.parseToJsonElement(output).jsonObject
+            val result = payload["result"]?.jsonPrimitive?.content.orEmpty()
+
+            assertEquals("[REDACTED]", result)
+            assertFalse(output.contains(secret))
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun requiredSecretMustExistBeforeApiToolRuns() = runBlocking {
+        val extension = localExtension().copy(
+            secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
+        )
+
+        val output = runtime().evaluate(extension, "1")
+        val error = Json.parseToJsonElement(output).jsonObject["error"]?.jsonPrimitive?.content.orEmpty()
+
+        assertTrue(error.contains("Missing required Secrets"))
+    }
+
+    @Test
+    fun declaredVariablesAreAvailableToJavaScript() = runBlocking {
+        val extension = CustomExtension(
+            name = "Variable test",
+            description = "",
+            variables = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_BASE"))
+        )
+
+        val output = runtime().evaluate(extension, "globalThis.variables.API_BASE", mapOf("API_BASE" to "https://api.example.com"))
+        val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+        assertEquals("https://api.example.com", result)
+    }
+
+    @Test
+    fun undeclaredSecretReferenceIsRejected() = runBlocking {
+        val server = startServer()
+        try {
+            val output = runtime(mapOf("API_KEY" to "value")).evaluate(
+                localExtension(),
+                """fetch("http://127.0.0.1:${server.address.port}/echo", { headers: { "X-Test": "{{secret:API_KEY}}" } }).status""",
+            )
+            val error = Json.parseToJsonElement(output).jsonObject["error"]?.jsonPrimitive?.content.orEmpty()
+
+            assertTrue(error.contains("undeclared Secret"))
         } finally {
             server.stop(0)
         }
