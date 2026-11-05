@@ -672,3 +672,10 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - The OpenRouter media implementation was already changed to LastNap attribution, but `mediagen/src/test/java/me/rerere/mediagen/provider/providers/openrouter/OpenRouterMediaGenerationProviderTest.kt` still asserts the old `X-Title: RikkaHub` value.
 - **Planned minimal correction:** update the runtime and UI default User-Agent to `LastNap-Android/<version>`, change only the blank-name MCP dynamic-registration fallback from `RikkaHub` to `LastNap`, and update the OpenRouter media test expectation to `LastNap`. Existing saved custom User-Agent values and explicit MCP server names are preserved.
 - Keep `MCP_OAUTH_CLIENT_METADATA_URL = https://rikkahub.github.io/oauth/client.json` unchanged for now: it is a hosted OAuth Client ID Metadata Document, not a cosmetic label, and the registered redirect URI may be coupled to that upstream client identity. Replacing it without hosting/registering a real LastNap client metadata document could break OAuth. Keep the upstream QQ/Discord community names, RikkaHub Search provider, SponsorAPI/service endpoints, internal `RikkaHubAPI`, and trace CLI identity unchanged where they identify upstream services rather than the LastNap app.
+
+
+## 29. Lowercase localized product-name audit — 2026-11-05
+
+- A case-insensitive scan of the eight app-module locale files found the ASR word-timestamp help string still refers to the app as `rikkahub` in every translation. This is a user-facing product-name mention, separate from the stable resource key `rikkahub_provider_description` that names the upstream RikkaHub hosted provider.
+- **Planned minimal correction:** replace only the lowercase app-name token `rikkahub` with `LastNap` in `setting_asr_configure_step_timestamp_desc` across all eight app locale files. Preserve the rest of each translation and all resource keys.
+- All eight OAuth locale files have zero case-insensitive `rikkahub` references. Search/UI locale resource case-insensitive verification will be included in the final focused check.
