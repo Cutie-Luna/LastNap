@@ -427,6 +427,8 @@
   <string name="extension_builder_page_delete">Delete tool</string>
   <string name="extension_builder_page_delete_title">Delete this tool?</string>
   <string name="extension_builder_page_delete_message">“%1$s” will be removed, and it will also be unassigned from every assistant.</string>
+  <string name="extensions_page_custom_tools">Custom Tools</string>
+  <string name="extensions_page_custom_tools_desc">Create, test and manage reusable assistant tools</string>
   <string name="extensions_page_title">Extensions</string>
   <string name="favorite_page_no_favorites">No favorites yet</string>
   <string name="favorite_page_removed">Favorite removed</string>
