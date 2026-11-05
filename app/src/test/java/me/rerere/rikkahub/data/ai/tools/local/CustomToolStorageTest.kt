@@ -1,6 +1,5 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -42,7 +41,7 @@ class CustomToolStorageTest {
             storage.deleteToolStorage("tool-a")
 
             assertNull(storage.readBytes("tool-a", "data.txt"))
-            assertArrayEquals("second".toByteArray(), storage.readBytes("tool-b", "data.txt"))
+            assertEquals("second", storage.readBytes("tool-b", "data.txt")!!.decodeToString())
         } finally {
             parent.deleteRecursively()
         }
