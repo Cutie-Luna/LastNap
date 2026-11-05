@@ -439,7 +439,7 @@
   <string name="extension_builder_page_api_access_off">Disabled</string>
   <string name="extension_builder_page_api_access_allowed_hosts">Allowed hosts</string>
   <string name="extension_builder_page_api_allowed_hosts">Allowed hosts</string>
-  <string name="extension_builder_page_api_allowed_hosts_help">Enter one hostname per line or separate them with commas. Exact hosts are safest; a wildcard such as *.api.example.com matches one subdomain level. Do not include a URL, path or port.</string>
+  <string name="extension_builder_page_api_allowed_hosts_help">Enter one host per line or separate them with commas. Exact hosts are safest; a wildcard such as *.api.example.com matches one subdomain level. Private IPv4 addresses require local-network access. Do not include a URL, path or port.</string>
   <string name="extension_builder_page_local_network">Allow local-network hosts</string>
   <string name="extension_builder_page_local_network_help">Allows explicitly listed local, private or loopback hosts. Keep this off for ordinary public APIs.</string>
   <string name="extension_builder_page_local_network_on">Local-network access enabled</string>
