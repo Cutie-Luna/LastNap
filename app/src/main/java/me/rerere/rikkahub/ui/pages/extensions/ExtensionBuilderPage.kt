@@ -53,6 +53,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1316,14 +1317,23 @@ fun ExtensionBuilderPage(
                 TextButton(
                     onClick = {
                         scope.launch {
-                            httpRuntime.revokeToolAndJoin(draftId)
-                            withContext(Dispatchers.IO) {
-                                secretStore.deleteToolSecrets(draftId)
-                                storage.deleteToolStorage(draftId)
+                            try {
+                                httpRuntime.revokeToolAndJoin(draftId)
+                                withContext(Dispatchers.IO) {
+                                    secretStore.deleteToolSecrets(draftId)
+                                    storage.deleteToolStorage(draftId)
+                                }
+                                settingsStore.update { it.removeCustomExtension(draftId) }
+                                showDeleteConfirmation = false
+                                clearDraftState()
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                httpRuntime.restoreToolAfterFailedDeletion(draftId)
+                                showDeleteConfirmation = false
+                                testPassed = false
+                                testResult = (error.message ?: "Could not delete this tool").take(6_000)
                             }
-                            settingsStore.update { it.removeCustomExtension(draftId) }
-                            showDeleteConfirmation = false
-                            clearDraftState()
                         }
                     },
                 ) {
