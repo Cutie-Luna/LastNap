@@ -2,12 +2,9 @@ package me.rerere.rikkahub.data.ai.tools.local
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import me.rerere.ai.core.InputSchema
@@ -121,7 +118,7 @@ internal fun createCustomExtensionTools(
                 require(inputBytes <= CustomExtensionLimits.MAX_INPUT_LENGTH) {
                     "Custom tool input exceeds the 64 KiB limit"
                 }
-                val code = "const input = $serializedInput;\\n$implementation"
+                val code = "const input = $serializedInput;\n$implementation"
                 listOf(UIMessagePart.Text(evaluateJavascript(code)))
             },
         )
