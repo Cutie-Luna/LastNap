@@ -1118,3 +1118,29 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - Planned changes: only the seven app-module locale `strings.xml` files. Add every missing base key, retain the English base resource unchanged, preserve unrelated translations and ordering, and keep formatting placeholders such as `%1$s` intact. Do not edit OAuth/Search/Web UI locales in this pass because they have no corresponding new Stage 7 keys.
 - After locale edits, compare all 80 added keys against the base resource in all seven locales, verify duplicate-free resource names and matching format placeholders, then review LastNap shortcut/manifest action IDs and settings backup inclusion for the custom-tool and assistant-selection fields.
 - No source edits are to be made until this scope has been documented. Do not combine unrelated identity or UI redesign work into Stage 7.
+
+## 45. Stage 8 full verification workflow — pre-edit audit and design (2026-11-05)
+
+### Repository and build audit
+
+- Starting branch/head: `lastnap-clean-foundation`, `00a14f04b7a6fa901d953f86f624570a9e7ffaf2`.
+- Rechecked protected refs: LastNap `master` remains `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`; historical `feature/extensions-foundation` remains `942c1b49019dbbd55f02606f31b74cc258c14641`. Neither is a work target.
+- Re-fetched complete recursive trees against live upstream `rikkahub/rikkahub` master `f958af6a1a4a16dd8c1ac4138662a838b590e6c5`. Both responses are non-truncated: LastNap 1,550 blobs, upstream 1,538; 14 LastNap-only paths, 2 unrelated upstream-only sponsor paths, 68 differing shared paths. The tree matches the post-Stage-7 audit; no unexplained source path was introduced by the locale changes.
+- Current workflows inspected: `.github/workflows/stage3-persistence-tests.yml` runs the focused regression suite; `.github/workflows/daily-build.yml` is manual and has `contents: write`, secret-backed signing/Google Services setup, and an optional nightly prerelease publication input. Do not broaden or repurpose that publishing-capable workflow for verification.
+- Current Android configuration in `app/build.gradle.kts`: application ID `com.lastnap.app`, versionName `3.1.3`, versionCode `196`, GitHub distribution flavor, optimized release build type, and ABI splits for `arm64-v8a` and `x86_64` plus a universal output. Build settings will remain unchanged for this stage; the signed artifact exposed to the user will be the ARM64 split only.
+- Release signing reads `local.properties` and expects the key file created at `app/app.key`. `.gitignore` currently excludes `local.properties` but does not explicitly exclude `app/app.key`; add that path before introducing a workflow that materializes the key in a runner.
+
+### Chosen verification workflow
+
+- Add a dedicated `.github/workflows/stage8-verification.yml`, triggered by pushes to `lastnap-clean-foundation` and by manual dispatch. Grant `contents: read` only. Do not create, update, or publish a GitHub Release.
+- Separate the non-secret verification job from the signed release job. The verification job creates only the same temporary CI dummy Google Services configuration used by the existing focused workflow (debug package `com.lastnap.app.debug`), runs all app GitHub-debug unit tests plus every Android-library debug unit-test task, runs Android lint for the GitHub debug variant, and assembles the GitHub debug APK.
+- Only after the verification job succeeds, a release-artifact job consumes the existing repository secrets `KEY_BASE64`, `SIGNING_CONFIG`, and `GOOGLE_SERVICES_JSON`. It writes them to runner-local files using environment variables without printing values, assembles `:app:assembleGithubRelease`, and fails safely if any required secret is absent.
+- Inspect the single split APK matching `arm64-v8a`: verify package `com.lastnap.app`, versionName `3.1.3`, versionCode `196`, that its packaged native libraries contain only `arm64-v8a`, that expected launcher/notification resources are present in the APK resource table, and that `apksigner verify` succeeds. Record SHA-256 and the public signing-certificate digest in a metadata file. Upload only the ARM64 split APK and non-secret verification metadata/reports as workflow artifacts; do not upload the keystore, local.properties, or Google Services file.
+- Leave the app Gradle ABI configuration and the existing manual daily-build/release workflow unchanged. The user will receive a signed APK artifact for review, not an automatically published release.
+
+### Risks and acceptance
+
+- The build runner receives existing signing and Google Services secrets only in the signed job, after tests/lint pass. Secret values must never be printed, included in metadata, uploaded, or committed. The runner-local `app/app.key` is added to `.gitignore`.
+- The Gradle release task may also create x86_64 and universal intermediate APKs because that is the current configured split policy; only the ARM64-specific split is validated as the deliverable and uploaded. Do not describe other APKs as the user deliverable.
+- If the signing or Google Services secrets are unavailable or malformed, the signed-release job must fail with a safe missing-configuration message and no artifact; do not substitute a debug/unsigned APK or weaken signing requirements.
+- Acceptance requires successful full tests, Android lint, debug APK assembly, signed optimized GitHub release assembly, ARM64/package/version/resource checks, signature verification and artifact upload. A matching historical signing-certificate comparison is only possible if a trusted previous APK is available; actual update/install behavior and phone UI/icon observations remain separate user-device checks.
