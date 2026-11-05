@@ -117,14 +117,15 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         val totalSize = existingFiles.sumOf { it.length() } - oldSize + bytes.size
         require(totalSize <= MAX_TOTAL_BYTES) { "Tool storage exceeds the 10 MiB total limit" }
 
-        if (!directory.exists()) {
+        val createdDirectory = !directory.exists()
+        if (createdDirectory) {
             check(directory.mkdirs()) { "Could not create private tool storage" }
-            writeOwnerMarker(toolId, directory)
         }
-        requireOwnedDirectory(toolId, directory)
         val destination = File(directory, name)
         val temporary = File(directory, ".$name.${System.nanoTime()}.tmp")
         try {
+            if (createdDirectory) writeOwnerMarker(toolId, directory)
+            requireOwnedDirectory(toolId, directory)
             FileOutputStream(temporary).use { output ->
                 output.write(bytes)
                 output.fd.sync()
@@ -139,6 +140,18 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
             } catch (_: AtomicMoveNotSupportedException) {
                 Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
+        } catch (error: Exception) {
+            if (createdDirectory) {
+                directory.listFiles().orEmpty().forEach { file ->
+                    if (file.isFile && !Files.isSymbolicLink(file.toPath()) &&
+                        file.canonicalFile.parentFile == directory.canonicalFile
+                    ) {
+                        file.delete()
+                    }
+                }
+                directory.delete()
+            }
+            throw error
         } finally {
             temporary.delete()
         }
