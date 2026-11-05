@@ -162,9 +162,17 @@ fun normalizeCustomApiHostPattern(
         }
     ) return null
 
-    val isIpv4Literal = ascii.matches(Regex("""\d{1,3}(\.\d{1,3}){3}""")) &&
-        ascii.split('.').all { label -> label.toIntOrNull()?.let { it in 0..255 } == true }
-    if (isIpv4Literal) return null
+    val looksLikeIpv4 = ascii.matches(Regex("""\d{1,3}(\.\d{1,3}){3}"""))
+    if (looksLikeIpv4) {
+        val octets = ascii.split('.').map { it.toIntOrNull() ?: return null }
+        if (octets.any { it !in 0..255 } || wildcard) return null
+        val first = octets[0]
+        val second = octets[1]
+        val isPrivateOrLoopback = first == 10 || first == 127 ||
+            (first == 172 && second in 16..31) ||
+            (first == 192 && second == 168)
+        return ascii.takeIf { allowLocalNetwork && isPrivateOrLoopback }
+    }
 
     val isLocalName = ascii == "localhost" || ascii.endsWith(".localhost") ||
         ascii.endsWith(".local") || !ascii.contains('.')
