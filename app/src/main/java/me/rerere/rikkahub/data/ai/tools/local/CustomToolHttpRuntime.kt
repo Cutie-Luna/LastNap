@@ -139,7 +139,15 @@ class CustomToolHttpRuntime(
                         evaluate<Unit>(FETCH_POLYFILL + "\nvoid 0;")
                     }
                     if (extension.storageEnabled) {
+                        var storageOperationCount = 0
+                        fun requireStorageOperation() {
+                            storageOperationCount += 1
+                            require(storageOperationCount <= MAX_STORAGE_OPERATIONS_PER_EXECUTION) {
+                                "Custom tool exceeded the storage operation limit"
+                            }
+                        }
                         function("__customToolStorageRead") { args ->
+                            requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
                             val bytes = storage.readBytes(extension.id, name)
                             buildJsonObject {
@@ -148,12 +156,14 @@ class CustomToolHttpRuntime(
                             }.toString()
                         }
                         function("__customToolStorageWrite") { args ->
+                            requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
                             val value = args.getOrNull(1) as? String ?: error("Storage text value is required")
                             storage.writeBytes(extension.id, name, value.toByteArray(Charsets.UTF_8))
                             true
                         }
                         function("__customToolStorageDelete") { args ->
+                            requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
                             storage.delete(extension.id, name)
                         }
@@ -606,6 +616,7 @@ class CustomToolHttpRuntime(
         private const val MAX_BINARY_RESPONSE_BYTES = 8 * 1024 * 1024
         private const val MAX_REDIRECTS = 5
         private const val MAX_REQUESTS_PER_EXECUTION = 20
+        private const val MAX_STORAGE_OPERATIONS_PER_EXECUTION = 100
         private const val REDACTED_SECRET = "[REDACTED]"
         private val SECRET_REFERENCE_PATTERN = Regex("""\{\{secret:([A-Z][A-Z0-9_]{0,63})}}""")
         private val ALLOWED_METHODS = setOf("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
