@@ -40,7 +40,9 @@ import me.rerere.hugeicons.stroke.Package
 import me.rerere.hugeicons.stroke.Settings03
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.skills.SkillMetadata
+import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.Lorebook
+import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.data.model.PromptInjection
 import me.rerere.rikkahub.data.model.QuickMessage
 
@@ -126,6 +128,41 @@ fun SkillsContent(
 }
 
 @Composable
+fun CustomExtensionsContent(
+    extensions: List<CustomExtension>,
+    selectedIds: Set<String>,
+    onToggle: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    colors: ListItemColors = ListItemDefaults.segmentedColors(),
+    onManage: (() -> Unit)? = null,
+) {
+    ExtensionList(
+        items = extensions,
+        modifier = modifier,
+        contentPadding = contentPadding,
+        onManage = onManage,
+        key = { it.id },
+    ) { extension, shapes ->
+        val ready = extension.enabled && extension.validationErrors().isEmpty()
+        val status = when {
+            ready -> ""
+            !extension.enabled -> stringResource(R.string.extension_content_tool_not_enabled)
+            else -> stringResource(R.string.extension_content_tool_not_ready)
+        }
+        ExtensionListItem(
+            title = extension.name,
+            description = listOf(extension.description, status).filter { it.isNotBlank() }.joinToString(" · "),
+            checked = ready && selectedIds.contains(extension.id),
+            onCheckedChange = { checked -> if (ready) onToggle(extension.id, checked) },
+            shapes = shapes,
+            colors = colors,
+            enabled = ready,
+        )
+    }
+}
+
+@Composable
 fun QuickMessagesContent(
     quickMessages: List<QuickMessage>,
     selectedIds: Set<Uuid>,
@@ -191,10 +228,12 @@ private fun ExtensionListItem(
     description: String = "",
     // 技能等的描述可能很长，完整内容在管理页看
     descriptionMaxLines: Int = 3,
+    enabled: Boolean = true,
 ) {
     SegmentedListItem(
         checked = checked,
         onCheckedChange = onCheckedChange,
+        enabled = enabled,
         shapes = shapes,
         colors = colors,
         supportingContent = if (description.isNotBlank()) {
