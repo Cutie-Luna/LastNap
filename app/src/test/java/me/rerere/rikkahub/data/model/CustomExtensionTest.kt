@@ -196,7 +196,7 @@ class CustomExtensionTest {
         assertEquals(emptySet<CustomExtensionValidationError>(), extension.validationErrors())
         assertTrue(extension.allowsApiHost("api.example.com"))
         assertTrue(extension.allowsApiHost("cdn.images.example.com"))
-        assertTrue(extension.allowsApiHost("a.b.images.example.com"))
+        assertFalse(extension.allowsApiHost("a.b.images.example.com"))
         assertFalse(extension.allowsApiHost("example.com"))
         assertFalse(extension.allowsApiHost("images.example.com"))
         assertFalse(extension.allowsApiHost("notexample.com"))
