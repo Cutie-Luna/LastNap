@@ -78,12 +78,12 @@ jobs:
           }
           EOF
 
-      - name: Run focused persistence and model tests
+      - name: Run focused custom-tool model and runtime tests
         run: |
           chmod +x gradlew
           ./gradlew :app:testGithubDebugUnitTest \
             --tests 'me.rerere.rikkahub.data.model.CustomExtensionTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsNormalizationTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsFieldsTest' \
-            --tests 'me.rerere.rikkahub.data.datastore.SettingsStoreTest' \\
+            --tests 'me.rerere.rikkahub.data.datastore.SettingsStoreTest' \
             --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomExtensionToolsTest'
