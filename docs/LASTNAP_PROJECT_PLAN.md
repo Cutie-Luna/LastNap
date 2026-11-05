@@ -1369,3 +1369,52 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - Storage is not App Manager storage and not per-assistant storage. It is one private tool-owned folder, created lazily on first write, shared by the tool across assistants.
 - No Markdown video/player source changes before the Builder completion gate.
 - Current status: requirements and ordering recorded; Stage A audit is in progress; no source implementation has started on this branch.
+
+## 50. Stage A architecture audit — first findings (2026-11-05)
+
+### Branch and scope verification
+
+- Re-read the full project plan before inspection.
+- Compared `feature/custom-tool-api-runtime` with base `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`: before this audit note it was three commits ahead, zero behind, and the only changed path was this plan. No source code has been edited on this branch.
+- All inspection below is read-only. The protected baseline and historical branch remain untouched.
+
+### Builder and current custom-tool runtime
+
+- Read `CustomExtension.kt`, `CustomExtensionTools.kt`, `JavascriptTool.kt`, `ExtensionBuilderPage.kt`, `ExtensionBuilderState.kt`, and the built-in `tool-creator/SKILL.md`.
+- The existing Builder is already a full-page, mobile-first draft list/editor with Simple and Advanced modes, informational Review, schema/JavaScript/sample-input fields, a real QuickJS test, result display, stale-test invalidation, test-before-enable, delete cleanup, and the one **Need approval** switch.
+- Both modes already provide AI assistance guidance for all fields. The user places/reviews AI-prepared content and runs the real test; AI does not mark tests successful, save, enable, assign, or change approval.
+- The persisted `CustomExtension` currently has no API/network capability flag, named-secret references, or storage capability setting. The runtime currently returns only text and calls `evaluateJavascript` without injecting network or storage bindings. The Builder/skill must not advertise those capabilities until the native runtime and tests are implemented.
+- The current Tool Creator skill correctly says there is no network or filesystem API. It must be revised alongside the Builder capability implementation, not prematurely.
+
+### HTTP bridge findings
+
+- `common/src/main/java/me/rerere/common/js/QuickJSFetch.kt` already provides an OkHttp-backed `fetch()` polyfill. `search/src/main/java/me/rerere/search/CustomJsSearchService.kt` injects it for Custom JS search/scrape; the custom-tool runtime does not.
+- Current response DTO exposes only status, ok, statusText and a fully materialized text body; the JavaScript response exposes `text()` and `json()`. Response headers and binary-safe response/request handling are absent.
+- The bridge executes a synchronous OkHttp call from the QuickJS native callback. It observes parent coroutine cancellation and cancels the OkHttp call, but the current bridge itself does not define per-request timeout, body-size limit, redirect policy, header filtering, or binary handling. The existing SearchService client uses redirects and a 30-second read timeout; that shared client configuration must not automatically become the custom-tool security policy.
+- The existing bridge is a useful foundation, not complete custom-tool API support. Extend it narrowly and preserve Custom JS search behavior with regression tests. Only opted-in custom tools should receive the network binding.
+
+### Credential and storage findings
+
+- `app/src/main/java/me/rerere/rikkahub/utils/SecretCipher.kt` exists. It encrypts strings with AES/GCM/NoPadding using a 256-bit Android Keystore key that is non-exportable. Its documentation explicitly notes that ciphertext cannot be decrypted after uninstall/reinstall or device restore without the local key, so callers must ask the user to enter the secret again.
+- Do not put secret values in the serializable `Settings` / `CustomExtension` model: settings are backed up as a full JSON payload. Persist only named references in the tool definition. Keep values in a separate local secret store, and verify backup/restore exclusions and existing SecretCipher call-site conventions before selecting the exact store.
+- `FilesManager.saveManagedFromBytes(folder, ...)` and `saveManagedText(folder, ...)` can create managed files and DB records under a supplied folder. The current generic helper accepts an arbitrary folder string and creates the directory during a write. Do not expose this generic API or folder paths to JavaScript. Add a narrow native API that derives and validates the folder from the immutable tool ID, applies quotas, and creates it only on the first successful write.
+- Existing `FileFolders` has no custom-tool folder constant or per-tool API. Existing managed-file storage is therefore a reusable primitive, not an already-implemented per-tool storage feature.
+- Settings are serialized through the existing DataStore `Settings` model; the custom-tool collection is currently stored as normal tool definitions. Keep secret values out of this path and keep tool-owned data separate from the general App Manager folders.
+
+### Remaining Stage A work
+
+- [ ] Trace SecretCipher call sites and current encrypted-setting patterns; verify Android backup rules and choose a local secret-store location/lifecycle.
+- [ ] Inspect Koin registration and FilesManager/FilesRepository ownership before adding a narrow per-tool storage service.
+- [ ] Define exact JavaScript fetch contract, request/response DTOs, timeout/cancellation and size limits, redirect and URL policy, secret injection semantics, and fake-server test matrix.
+- [ ] Define persisted opt-in capability fields and which fields participate in the test fingerprint; confirm safe defaults for existing tools.
+- [ ] Define tool-owned data deletion/retention behavior for tool deletion, storage disablement, and tool re-import.
+- [ ] Record the final Builder UX contract for API access, named credentials, and optional storage before source changes.
+
+### Status
+
+- [x] Confirmed existing Builder presentation and AI-assistance behavior are already implemented.
+- [x] Confirmed the new branch has no source changes yet.
+- [x] Confirmed existing QuickJS HTTP bridge is used only by Custom JS search/scrape, not custom tools.
+- [x] Confirmed existing Android Keystore AES-GCM primitive and managed-file save primitives.
+- [ ] Stage A architecture audit and capability contract are not complete.
+- [ ] No source implementation or video-player work has started on this branch.
