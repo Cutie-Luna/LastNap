@@ -112,6 +112,25 @@ The agreed new feature is an assistant-aware custom tool system with a built-in 
 - Simple mode must not bypass testing or enable a tool automatically. The user controls saving, assigning, enabling, and permissions.
 - A stale test result must never enable edited code. Invalid or oversized input schemas must not become callable tools.
 
+**Tool Builder presentation redesign — UI only**
+
+The current add-tool popup feels cramped. The user wants it to feel more open and less complicated, without making it tiny or removing functionality. This is a presentation/layout redesign only.
+
+Preferred direction for Stage 5:
+- Replace the cramped add-tool modal with a dedicated full-screen page or roomy page-like editor route.
+- Give it a clear title, short explanation, and a visible Simple / Advanced mode switch.
+- Keep Simple and Advanced functionally intact. The mode switch changes presentation and guidance only, never the saved tool model, permissions, sandbox, validation, testing, or enablement rules.
+- Use a comfortable vertical flow with grouped sections and generous spacing. Do not dump every technical field onto one screen in Simple mode.
+- Simple mode guides the user through the same underlying information with plain-language labels and examples.
+- Advanced mode keeps direct access to all technical fields and controls, organized into readable sections.
+- Add a Preview / Review step or panel before saving. It summarizes name, description, inputs, and implementation/test status. Preview is informational: it must not execute or enable a tool.
+- Keep test input/output, validation errors, permissions, and test-before-enable status visible and understandable.
+- On phones, use a single-column scrollable layout with a persistent but unobtrusive bottom action area for valid actions such as Back, Test, and Save. Avoid cramped split panes.
+- A side preview on larger screens is optional only if it genuinely improves clarity; mobile is the primary design target.
+- Before changing the UI, inspect the existing popup and make a parity checklist of every field, action, validation state, test control, permission, and save/enable behavior. Nothing may disappear.
+
+**Design acceptance:** the page feels open and readable on a phone; Simple and Advanced both remain available; every existing field/action remains reachable; preview is informational only; all current safety gates remain unchanged.
+
 **Tool Creator skill**
 - Add the built-in `tool-creator` Agent Skill alongside `skill-creator`.
 - It is opt-in and assistant-scoped. It must not be injected globally or made available to unrelated assistants by default.
@@ -188,17 +207,18 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 
 ### Stage 1 — Refresh and freeze the upstream baseline
 
-<badge color="success">Completed 2026-11-05</badge>
+**Completed 2026-11-05**
 
 **Goal:** make the clean branch match the chosen current RikkaHub upstream baseline before adding LastNap code.
 
-- Recheck the current upstream default-branch commit; upstream can move between chats.
-- Review the only known baseline difference in `CompressContextDialog.kt` and sync it if it is still the only difference.
-- Compare full recursive trees again; inspect every path addition, deletion, rename, and blob mismatch.
-- Record the exact upstream commit SHA and tree SHA used as the frozen base.
-- Record any upstream files intentionally not synchronized and the reason.
-- Confirm original navigation transitions, shared-element animation code, and baseline app startup behavior match upstream.
-- Do not port feature code during this stage.
+- [x] Rechecked upstream default branch: commit `e85c1d901d30fa32d3c21a423432d940d77acddb`, tree `4551b659557a56ade035d97fce62bec18a4199d4`.
+- [x] Reviewed the sole source difference in `CompressContextDialog.kt`; it was the upstream manual numeric-entry enhancement for the keep-recent-messages count.
+- [x] Synced that file byte-for-byte from upstream into the clean branch. No feature code was ported.
+- [x] Compared complete recursive trees after sync: 1,537 files in LastNap (including this plan), 1,536 upstream files, and exactly one path difference: this project plan. No remaining source/resource mismatches.
+- [x] Recorded the exact upstream commit and tree SHAs above. Re-check upstream at the start of future stages in case it advances.
+- [x] No upstream files intentionally omitted; the only additional path is the LastNap project plan.
+- [x] The clean branch inherited original upstream navigation and animation sources; no navigation/animation source was changed in Stage 1.
+- [x] No feature code was ported.
 
 **Acceptance:** complete tree comparison is clean against the chosen upstream commit, except for the documented LastNap project plan; baseline SHAs are written here. This acceptance was met on 2026-11-05.
 
