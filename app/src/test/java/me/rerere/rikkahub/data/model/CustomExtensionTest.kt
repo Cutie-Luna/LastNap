@@ -231,6 +231,25 @@ class CustomExtensionTest {
     }
 
     @Test
+    fun `private IPv4 hosts require the local network capability`() {
+        val withoutLocalAccess = CustomExtension(
+            name = "Local API",
+            description = "",
+            apiAccessEnabled = true,
+            allowedApiHosts = listOf("127.0.0.1"),
+        )
+        val withLocalAccess = withoutLocalAccess.copy(allowLocalNetwork = true)
+        val publicIp = withLocalAccess.copy(allowedApiHosts = listOf("8.8.8.8"))
+
+        assertTrue(CustomExtensionValidationError.INVALID_API_HOST_PATTERN in withoutLocalAccess.validationErrors())
+        assertEquals(emptySet<CustomExtensionValidationError>(), withLocalAccess.validationErrors())
+        assertTrue(withLocalAccess.allowsApiHost("127.0.0.1"))
+        assertTrue(withLocalAccess.allowsApiHost("192.168.1.40"))
+        assertFalse(publicIp.allowsApiHost("8.8.8.8"))
+        assertTrue(CustomExtensionValidationError.INVALID_API_HOST_PATTERN in publicIp.validationErrors())
+    }
+
+    @Test
     fun `local network host patterns require a separate capability`() {
         val invalid = CustomExtension(
             name = "Local API",
