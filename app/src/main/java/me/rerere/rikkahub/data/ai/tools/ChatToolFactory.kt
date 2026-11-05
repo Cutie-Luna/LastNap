@@ -9,6 +9,7 @@ import me.rerere.ai.provider.Model
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.tools.local.LocalTools
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntime
 import me.rerere.rikkahub.data.ai.tools.local.createCustomExtensionTools
 import me.rerere.rikkahub.data.datastore.Settings
 import me.rerere.rikkahub.data.files.FileFolders
@@ -45,6 +46,7 @@ class ChatToolFactory(
     private val mcpManager: McpManager,
     private val skillManager: SkillManager,
     private val workspaceRepository: WorkspaceRepository,
+    private val customToolHttpRuntime: CustomToolHttpRuntime,
 ) {
     internal suspend fun createTools(
         settings: Settings,
@@ -102,6 +104,7 @@ class ChatToolFactory(
             extensions = settings.customExtensions,
             selectedExtensionIds = assistant.selectedCustomExtensionIds,
             reservedToolNames = tools.mapTo(mutableSetOf()) { it.name },
+            httpRuntime = customToolHttpRuntime,
             onNameCollision = { name ->
                 Log.w(TAG, "Skipping custom tool with colliding name: $name")
             },
