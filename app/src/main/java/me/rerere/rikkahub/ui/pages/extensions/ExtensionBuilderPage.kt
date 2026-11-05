@@ -973,6 +973,8 @@ fun ExtensionBuilderPage(
                                                     enabled = false
                                                     testPassed = null
                                                     testResult = ""
+                                                } catch (cancelled: CancellationException) {
+                                                    throw cancelled
                                                 } catch (error: Exception) {
                                                     testPassed = false
                                                     testResult = error.message ?: "Could not save Secret"
