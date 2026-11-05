@@ -68,6 +68,27 @@ Freeze and document these contracts:
 11. Test fingerprint inputs: all executable code/schema/capability declarations that affect execution, but never secret values.
 12. Regression matrix proving Custom JS search and SSH credential flows remain unchanged.
 
+### Media ownership and lifecycle contract
+
+This contract is separate from tool-owned storage and is mandatory for every supported media type (initially images; later any audio/video/document type only when fully supported):
+
+- **Conversation media belongs to the conversation, never to the producing tool.** Once a generated result has been committed to a chat message, deleting, disabling, editing, or re-importing the originating tool must not invalidate that result.
+- Store generated chat media through a conversation-owned managed-media path/record, not inside the tool's private storage directory. Tool storage is temporary/private working data; chat media is durable user-visible output.
+- Associate each media reference with its owning conversation and message. Deleting one conversation removes its messages and all media references/assets owned only by that conversation. It must not affect any other conversation, even if another message references the same underlying bytes.
+- If physical blobs can be shared/deduplicated, use explicit ownership/reference records and delete a blob only after its final live reference is removed. Otherwise use independently owned copies. Never infer ownership from filename, tool ID, URL, or matching content.
+- Message deletion, regeneration, editing, truncation, and conversation deletion must clean up only media no longer referenced by any surviving message. Cleanup must be idempotent and safe after crashes.
+- Tool deletion must never cascade into conversation messages, media references, or conversation-owned media files.
+- Treat media publication as an atomic boundary: a result is either committed to its target message with durable media ownership, or remains temporary and is cleaned up. No half-published message, dangling reference, or permanent orphan is acceptable.
+- If a tool is deleted while executing, block new invocations and cancel/invalidate in-flight work. Any output already atomically committed to a conversation remains; uncommitted temporary output is discarded. A late callback must not resurrect a deleted tool or publish an unowned file.
+- Chat backup/restore must preserve the relationship between messages and their media, or explicitly report missing media and render a safe placeholder. Tool deletion must not change chat backup contents. Tool exports must not contain conversation media.
+- When a conversation is deleted, remove its associated media from managed storage and metadata without touching media belonging to other conversations. If the same underlying blob has references in multiple conversations, remove only the deleted conversation's references and retain the blob until no references remain.
+- Failed cleanup must be recoverable: mark pending deletion, retry safely, and never expose deleted media in another chat. Avoid deleting files before the metadata transaction establishes that no live owner remains.
+
+Acceptance:
+- Tests prove tool deletion leaves old chat media readable.
+- Tests prove deleting chat A removes its unshared media but leaves chat B and its media readable, including a shared-blob/reference-count scenario if deduplication exists.
+- Tests cover message-only deletion/regeneration, repeated deletion, process death between metadata/file operations, tool deletion during an active media-producing call, and backup/restore consistency.
+
 Acceptance:
 - Contracts and risks are documented in this new plan before source edits.
 - Any design that would require unrelated app changes is narrowed or rejected.
@@ -124,6 +145,11 @@ Tasks:
 - Keep one folder per tool, shared across assistants using that tool.
 - Enforce per-tool and global quotas, file-size limits, path traversal protection, and safe file types.
 - Define storage disablement, tool deletion, import/re-import, and retention semantics. Disabling storage must not silently erase existing data.
+- Tool-owned storage is not conversation media. Deleting a tool removes its own private storage and its own configuration/credentials according to the deletion contract, but never deletes files already published into chats.
+- Define crash-safe tool deletion as a staged/idempotent operation: mark tool unavailable and prevent new runs; cancel active runs; remove assistant assignments and tool-owned configuration/secret/variable records; clean only the tool's private storage; then finalize deletion. Recover incomplete cleanup on next launch. Preserve any already-committed conversation results.
+- Keep immutable tool identity distinct from display name and import identity. Re-importing a tool must not silently regain access to deleted tool data or another tool's namespace. Explicit restore/import semantics must be defined.
+- Storage disablement blocks future reads/writes but retains existing data until the user explicitly deletes it or deletes the tool; show that retained data exists and explain its ownership.
+- Define behavior for tool deletion while a call is running and for storage writes racing with deletion. A late completion must not recreate deleted storage.
 - Keep tool storage separate from the Secret store.
 - Exclude tool data from backup unless an explicit product decision and safe implementation are documented.
 - Add tests for lazy creation, restart persistence, tool isolation, shared assistant access, quotas, path traversal, disablement, deletion, and import behavior.
@@ -170,6 +196,12 @@ Tasks:
 - Investigate audio/video/document parts only where both provider input serialization and UI rendering are genuinely supported. Do not advertise unsupported media types.
 - Keep Base64 out of model context when typed media is supported.
 - Add end-to-end tests for binary response -> managed file -> typed part -> renderer/provider handoff, plus invalid/oversized data.
+- Persist chat-generated media under conversation/message ownership, never in tool-owned storage. The producing tool ID may be retained as non-owning provenance metadata, but must not control media lifetime.
+- Ensure the message/media reference is committed atomically enough that the UI cannot show a durable message whose media was never safely stored. Clean temporary files on cancellation/failure.
+- Verify media remains available after tool disable, tool deletion, tool edit, and tool re-import.
+- Verify deleting one conversation removes only its media and references; other conversations remain intact. If deduplicated blobs are used, validate reference counting/ownership and final-owner garbage collection.
+- Verify deleting a message, regenerating a response, or clearing a conversation releases only media no longer referenced by surviving messages.
+- Test a tool deletion racing an active API/media call: committed results survive; uncommitted results are cancelled and cleaned; no late callback recreates tool-owned state or leaks orphaned files.
 
 Acceptance:
 - A tool can return a real image through the supported native path.
@@ -181,7 +213,8 @@ Acceptance:
 **Goal:** prove the complete custom-tool feature before beginning video work.
 
 Tasks:
-- Run all focused custom-tool, QuickJS, credential, storage, media, settings normalization, backup, and skill tests.
+- Run all focused custom-tool, QuickJS, credential, storage, media ownership/lifecycle, settings normalization, backup/restore, and skill tests.
+- Verify chat backup/restore preserves media ownership and message references, and that deleting a tool does not alter chat backup data.
 - Run lint, all unit tests, debug APK build, and the configured signed ARM64 release workflow.
 - Inspect workflow logs and artifacts; verify APK package, ABI, signature, and version metadata where the workflow provides them.
 - Review the full diff against the recorded base. Reject unrelated file changes.
@@ -233,6 +266,7 @@ Acceptance:
 
 Tasks:
 - Run the full relevant test/lint/debug/release pipeline again after video integration.
+- Re-run media ownership/deletion/backup tests for every newly supported media type; do not assume image coverage proves video/audio/document lifecycle correctness.
 - Review all changed paths against the base and verify that only this plan's explicitly scoped custom-tool/media files changed.
 - Inspect release artifact metadata/signature if produced.
 - Update this new plan with commit SHAs, changed-file explanations, test/workflow links, and known limitations.
