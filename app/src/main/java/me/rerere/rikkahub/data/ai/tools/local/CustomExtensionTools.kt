@@ -130,13 +130,14 @@ internal fun createCustomExtensionTools(
             },
             execute = { arguments ->
                 val args = arguments as? JsonObject ?: error("Custom tool arguments must be a JSON object")
+                val serializedArguments = args.toString()
+                val argumentBytes = serializedArguments.toByteArray(Charsets.UTF_8).size
+                require(argumentBytes <= CustomExtensionLimits.MAX_INPUT_LENGTH) {
+                    "Custom tool arguments exceed the 64 KiB limit"
+                }
                 val input = args["input"] as? JsonObject
                     ?: error("The input object is required")
                 val serializedInput = input.toString()
-                val inputBytes = serializedInput.toByteArray(Charsets.UTF_8).size
-                require(inputBytes <= CustomExtensionLimits.MAX_INPUT_LENGTH) {
-                    "Custom tool input exceeds the 64 KiB limit"
-                }
                 val code = "const input = $serializedInput;\n$implementation"
                 listOf(UIMessagePart.Text(evaluateJavascript(code)))
             },
@@ -149,19 +150,11 @@ private fun parseCustomInputSchema(source: String): JsonObject? {
     val schema = runCatching { Json.parseToJsonElement(source) as? JsonObject }.getOrNull() ?: return null
     if ((schema["type"] as? JsonPrimitive)?.contentOrNull != "object") return null
 
-    val properties = when (val value = schema["properties"]) {
-        null -> emptySet()
-        is JsonObject -> value.keys
-        else -> return null
+    if (schema["properties"] != null && schema["properties"] !is JsonObject) return null
+    if (schema["required"] != null) {
+        val required = schema["required"] as? JsonArray ?: return null
+        if (required.any { (it as? JsonPrimitive)?.isString != true }) return null
     }
-    val required = when (val value = schema["required"]) {
-        null -> emptyList()
-        is JsonArray -> value.map { element ->
-            (element as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
-        }
-        else -> return null
-    }
-    if (required.any { it !in properties }) return null
     return schema
 }
 
