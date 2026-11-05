@@ -30,7 +30,7 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -66,7 +66,6 @@ import me.rerere.rikkahub.data.datastore.removeCustomExtension
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.CustomExtensionLimits
 import me.rerere.rikkahub.data.model.CustomExtensionValidationError
-import me.rerere.rikkahub.data.model.ExtensionPermission
 import me.rerere.rikkahub.data.model.testFingerprint
 import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.ui.components.nav.BackButton
@@ -105,8 +104,7 @@ fun ExtensionBuilderPage(
     var testInput by rememberSaveable { mutableStateOf("{}") }
     var testedHash by rememberSaveable { mutableStateOf<String?>(null) }
     var enabled by rememberSaveable { mutableStateOf(false) }
-    var permissionName by rememberSaveable { mutableStateOf(ExtensionPermission.ASK_EVERY_TIME.name) }
-    val permission = ExtensionPermission.valueOf(permissionName)
+    var needsApproval by rememberSaveable { mutableStateOf(true) }
 
     var isTesting by remember { mutableStateOf(false) }
     var testPassed by remember { mutableStateOf<Boolean?>(null) }
@@ -120,7 +118,7 @@ fun ExtensionBuilderPage(
         skill = skill,
         inputSchema = inputSchema,
         implementation = implementation,
-        permission = permission,
+        needsApproval = needsApproval,
         enabled = false,
         testedDefinitionHash = testedHash,
     )
@@ -160,7 +158,7 @@ fun ExtensionBuilderPage(
         testInput = "{}"
         testedHash = null
         enabled = false
-        permissionName = ExtensionPermission.ASK_EVERY_TIME.name
+        needsApproval = true
         testPassed = null
         testResult = ""
         isReviewing = false
@@ -180,7 +178,7 @@ fun ExtensionBuilderPage(
         testInput = "{}"
         testedHash = extension.testedDefinitionHash
         enabled = extension.enabled && extension.copy(enabled = true).validationErrors().isEmpty()
-        permissionName = extension.permission.name
+        needsApproval = extension.needsApproval
         testPassed = null
         testResult = ""
         isReviewing = false
@@ -494,7 +492,7 @@ fun ExtensionBuilderPage(
                     }
                     item {
                         ReviewSection(title = stringResource(R.string.extension_builder_page_permission)) {
-                            Text(permissionLabel(permission))
+                            Text(stringResource(if (needsApproval) R.string.extension_builder_page_approval_on else R.string.extension_builder_page_approval_off))
                         }
                     }
                     item {
@@ -598,19 +596,25 @@ fun ExtensionBuilderPage(
                             )
                         }
                     }
-                    if (builderMode == BuilderMode.SIMPLE) {
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                            ) {
-                                Text(
-                                    stringResource(R.string.extension_builder_page_simple_help),
-                                    modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                )
-                            }
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        ) {
+                            Text(
+                                stringResource(
+                                    if (builderMode == BuilderMode.SIMPLE) {
+                                        R.string.extension_builder_page_simple_help
+                                    } else {
+                                        R.string.extension_builder_page_advanced_help
+                                    }
+                                ),
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
                         }
+                    }
+                    if (builderMode == BuilderMode.SIMPLE) {
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable { showBuildDetails = !showBuildDetails }.padding(vertical = 4.dp),
@@ -773,30 +777,22 @@ fun ExtensionBuilderPage(
                     }
                     item {
                         BuilderSection(title = stringResource(R.string.extension_builder_page_permission)) {
-                            ExtensionPermission.entries.forEach { option ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().clickable {
-                                        permissionName = option.name
-                                        if (option == ExtensionPermission.DISABLED) enabled = false
-                                    }.padding(vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    RadioButton(
-                                        selected = permission == option,
-                                        onClick = {
-                                            permissionName = option.name
-                                            if (option == ExtensionPermission.DISABLED) enabled = false
-                                        },
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.extension_builder_page_need_approval))
+                                    Text(
+                                        stringResource(R.string.extension_builder_page_need_approval_help),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(permissionLabel(option), style = MaterialTheme.typography.bodyMedium)
-                                        Text(
-                                            permissionDescription(option),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
                                 }
+                                Switch(
+                                    checked = needsApproval,
+                                    onCheckedChange = { needsApproval = it },
+                                )
                             }
                         }
                     }
@@ -909,18 +905,3 @@ private fun ReviewCode(value: String) {
     }
 }
 
-@Composable
-private fun permissionLabel(permission: ExtensionPermission): String = when (permission) {
-    ExtensionPermission.ALWAYS_ALLOW -> stringResource(R.string.extension_builder_page_permission_always)
-    ExtensionPermission.ASK_EVERY_TIME -> stringResource(R.string.extension_builder_page_permission_ask)
-    ExtensionPermission.THIS_SESSION -> stringResource(R.string.extension_builder_page_permission_session)
-    ExtensionPermission.DISABLED -> stringResource(R.string.extension_builder_page_permission_disabled)
-}
-
-@Composable
-private fun permissionDescription(permission: ExtensionPermission): String = when (permission) {
-    ExtensionPermission.ALWAYS_ALLOW -> stringResource(R.string.extension_builder_page_permission_always_help)
-    ExtensionPermission.ASK_EVERY_TIME -> stringResource(R.string.extension_builder_page_permission_ask_help)
-    ExtensionPermission.THIS_SESSION -> stringResource(R.string.extension_builder_page_permission_session_help)
-    ExtensionPermission.DISABLED -> stringResource(R.string.extension_builder_page_permission_disabled_help)
-}
