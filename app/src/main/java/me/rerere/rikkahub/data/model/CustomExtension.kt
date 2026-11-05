@@ -154,6 +154,7 @@ fun normalizeCustomApiHostPattern(
     if (ascii.length > CustomExtensionLimits.MAX_API_HOST_PATTERN_LENGTH) return null
 
     val labels = ascii.split('.')
+    if (wildcard && labels.size < 2) return null
     if (labels.any { label ->
             label.isEmpty() || label.length > 63 ||
                 !label.first().isLetterOrDigit() || !label.last().isLetterOrDigit() ||
@@ -184,7 +185,8 @@ fun CustomExtension.allowsApiHost(host: String): Boolean {
         val pattern = normalizeCustomApiHostPattern(entry, allowLocalNetwork) ?: return@any false
         if (pattern.startsWith("*.")) {
             val suffix = pattern.removePrefix("*")
-            normalizedHost.length > suffix.length && normalizedHost.endsWith(suffix)
+            val matchedPrefix = normalizedHost.removeSuffix(suffix).removeSuffix(".")
+            matchedPrefix.isNotEmpty() && '.' !in matchedPrefix && normalizedHost.endsWith(suffix)
         } else {
             normalizedHost == pattern
         }
