@@ -1,11 +1,14 @@
 name: Daily Build
 
 on:
-  # 每天 UTC 09:00、18:00 触发（北京时间 17:00、次日 02:00）
-  schedule:
-    - cron: '0 9,18 * * *'
-  # 也支持手动触发
+  # Build manually. Publishing is a separate, explicit opt-in.
   workflow_dispatch:
+    inputs:
+      publish_prerelease:
+        description: "Publish this build as the public nightly prerelease"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   # 检查过去 24 小时内是否有新提交，没有则跳过构建，避免重复打包
@@ -98,7 +101,7 @@ jobs:
       # 把 APK 直接发布为 Prerelease，用户点链接即可下载单个 apk，无需登录、无需解压
       - name: Publish nightly prerelease
         uses: softprops/action-gh-release@v2
-        if: success()
+        if: success() && inputs.publish_prerelease
         with:
           tag_name: nightly            # 固定 tag，每晚覆盖同一个「最新每日构建」
           name: Nightly Build
