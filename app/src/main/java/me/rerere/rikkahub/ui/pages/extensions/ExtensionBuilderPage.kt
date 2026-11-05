@@ -172,7 +172,12 @@ fun ExtensionBuilderPage(
         it == CustomExtensionValidationError.API_HOSTS_REQUIRED ||
             it == CustomExtensionValidationError.TOO_MANY_API_HOSTS ||
             it == CustomExtensionValidationError.INVALID_API_HOST_PATTERN ||
-            it == CustomExtensionValidationError.LOCAL_NETWORK_WITHOUT_API_ACCESS
+            it == CustomExtensionValidationError.LOCAL_NETWORK_WITHOUT_API_ACCESS ||
+            it == CustomExtensionValidationError.TOO_MANY_SECRETS ||
+            it == CustomExtensionValidationError.TOO_MANY_VARIABLES ||
+            it == CustomExtensionValidationError.INVALID_SECRET_DECLARATION ||
+            it == CustomExtensionValidationError.INVALID_VARIABLE_DECLARATION ||
+            it == CustomExtensionValidationError.DUPLICATE_VALUE_NAME
     }
     val inputError = remember(testInput) {
         runCatching { buildCustomExtensionTestCode(testInput, "0") }.exceptionOrNull()?.message
