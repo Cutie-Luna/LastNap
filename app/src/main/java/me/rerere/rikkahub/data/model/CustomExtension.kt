@@ -36,7 +36,6 @@ enum class CustomExtensionValidationError {
     INVALID_INPUT_SCHEMA,
     IMPLEMENTATION_TOO_LONG,
     ENABLED_WITHOUT_CURRENT_TEST,
-    ENABLED_WITH_DISABLED_PERMISSION,
 }
 
 /**
@@ -54,19 +53,10 @@ data class CustomExtension(
     val skill: String = "",
     val inputSchema: String = """{"type":"object","properties":{},"additionalProperties":true}""",
     val implementation: String = "",
-    val permission: ExtensionPermission = ExtensionPermission.ASK_EVERY_TIME,
+    val needsApproval: Boolean = true,
     val enabled: Boolean = false,
     val testedDefinitionHash: String? = null,
 )
-
-/** Permission policy for the later runtime approval gate. */
-@Serializable
-enum class ExtensionPermission {
-    ALWAYS_ALLOW,
-    ASK_EVERY_TIME,
-    THIS_SESSION,
-    DISABLED,
-}
 
 /**
  * Returns structural validation failures without discarding an incomplete draft.
@@ -96,9 +86,6 @@ fun CustomExtension.validationErrors(): Set<CustomExtensionValidationError> = bu
     }
     if (enabled && (implementation.isBlank() || testedDefinitionHash != testFingerprint())) {
         add(CustomExtensionValidationError.ENABLED_WITHOUT_CURRENT_TEST)
-    }
-    if (enabled && permission == ExtensionPermission.DISABLED) {
-        add(CustomExtensionValidationError.ENABLED_WITH_DISABLED_PERMISSION)
     }
 }
 
