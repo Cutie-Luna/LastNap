@@ -1,0 +1,543 @@
+package me.rerere.rikkahub.data.ai.tools.local
+
+import com.dokar.quickjs.QuickJsException
+import com.dokar.quickjs.QuickJsInterruptedException
+import com.dokar.quickjs.binding.function
+import com.dokar.quickjs.quickJs
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.job
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
+import me.rerere.rikkahub.data.model.CustomExtension
+import me.rerere.rikkahub.data.model.CustomExtensionLimits
+import me.rerere.rikkahub.data.model.allowsApiHost
+import me.rerere.rikkahub.data.model.validationErrors
+import okhttp3.Dns
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.UnknownHostException
+import java.nio.charset.Charset
+import java.util.Base64
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * Dedicated, policy-enforced HTTP bridge for custom tools. It deliberately does not use
+ * SearchService's shared client, which has application request logging interceptors.
+ */
+class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
+
+    suspend fun evaluate(
+        extension: CustomExtension,
+        code: String,
+        timeoutMillis: Long = DEFAULT_EXECUTION_TIMEOUT_MS,
+    ): String = withContext(Dispatchers.Default) {
+        require(code.length <= CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH) {
+            "Custom tool implementation exceeds the size limit"
+        }
+        if (extension.apiAccessEnabled) {
+            require(extension.validationErrors().isEmpty()) {
+                "Custom tool API permissions or definition are invalid"
+            }
+        }
+
+        val logs = StringBuilder()
+        var logsTruncated = false
+        fun appendLog(line: String) {
+            val remaining = MAX_LOG_CHARS - logs.length
+            if (remaining <= 0) {
+                logsTruncated = true
+                return
+            }
+            val entry = if (logs.isEmpty()) line else "\n$line"
+            logs.append(entry.take(remaining))
+            if (entry.length > remaining) logsTruncated = true
+        }
+        fun errorPayload(message: String) = buildJsonObject { put("error", message) }.toString()
+
+        try {
+            withTimeoutOrNull(timeoutMillis.milliseconds) {
+                val executionJob = currentCoroutineContext().job
+                val toolClient = baseClient.newBuilder()
+                    .followRedirects(false)
+                    .followSslRedirects(false)
+                    .retryOnConnectionFailure(false)
+                    .dns(safeDns(extension))
+                    .build()
+
+                quickJs(Dispatchers.Default) {
+                    memoryLimit = JS_MEMORY_LIMIT_BYTES
+                    maxStackSize = JS_MAX_STACK_BYTES
+                    evaluationTimeoutMillis = timeoutMillis
+                    function("__rikkahubLog") { args -> appendLog(args[0] as String) }
+
+                    if (extension.apiAccessEnabled) {
+                        function("__customToolHttpRequest") { args ->
+                            executeHttpRequest(
+                                extension = extension,
+                                client = toolClient,
+                                executionJob = executionJob,
+                                url = args.getOrNull(0) as? String ?: error("HTTP request URL is required"),
+                                method = args.getOrNull(1) as? String ?: "GET",
+                                headersJson = args.getOrNull(2) as? String,
+                                body = args.getOrNull(3) as? String,
+                                bodyEncoding = args.getOrNull(4) as? String ?: "text",
+                            )
+                        }
+                        evaluate<Unit>(FETCH_POLYFILL + "\\nvoid 0;")
+                    }
+
+                    val result = evaluate<String?>(
+                        """
+                        (() => {
+                            const log = globalThis.__rikkahubLog;
+                            delete globalThis.__rikkahubLog;
+                            const stringify = JSON.stringify;
+                            const toString = String;
+                            const format = value => {
+                                if (value !== null && typeof value === 'object') {
+                                    try { return stringify(value); } catch (_) {}
+                                }
+                                return toString(value);
+                            };
+                            globalThis.console = {};
+                            for (const level of ['log', 'info', 'warn', 'error', 'debug']) {
+                                console[level] = (...args) => {
+                                    let line = '[' + (level === 'debug' ? 'LOG' : level.toUpperCase()) + ']';
+                                    for (const arg of args) {
+                                        line += ' ' + format(arg);
+                                        if (line.length > $MAX_LOG_CHARS) {
+                                            line = line.slice(0, $MAX_LOG_CHARS) + ' [truncated]';
+                                            break;
+                                        }
+                                    }
+                                    log(line);
+                                };
+                            }
+                            const result = (0, eval)(${JsonPrimitive(code)});
+                            if (result == null) return null;
+                            const type = typeof result;
+                            const text = type === 'object' || type === 'function'
+                                ? stringify(result) : toString(result);
+                            if (text != null && text.length > $MAX_RESULT_CHARS) {
+                                throw new Error('JavaScript result exceeds output limit');
+                            }
+                            return text == null ? null : text;
+                        })()
+                        """.trimIndent()
+                    )
+                    buildJsonObject {
+                        if (logs.isNotEmpty()) {
+                            put("logs", logs.toString() + if (logsTruncated) "\n[Logs truncated]" else "")
+                        }
+                        put("result", result?.let(::JsonPrimitive) ?: kotlinx.serialization.json.JsonNull)
+                    }.toString()
+                }
+            } ?: errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: QuickJsInterruptedException) {
+            errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
+        } catch (error: QuickJsException) {
+            errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
+        } catch (error: Exception) {
+            errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
+        }
+    }
+
+    private fun executeHttpRequest(
+        extension: CustomExtension,
+        client: OkHttpClient,
+        executionJob: Job,
+        url: String,
+        method: String,
+        headersJson: String?,
+        body: String?,
+        bodyEncoding: String,
+    ): String {
+        require(url.length <= MAX_URL_LENGTH) { "HTTP request URL exceeds the size limit" }
+        var currentMethod = method.uppercase(Locale.ROOT)
+        require(currentMethod in ALLOWED_METHODS) { "HTTP method is not supported" }
+        val headers = parseRequestHeaders(headersJson)
+        val requestBytes = when (bodyEncoding) {
+            "text" -> body?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
+            "base64" -> runCatching { Base64.getDecoder().decode(body.orEmpty()) }
+                .getOrElse { throw IllegalArgumentException("HTTP request body encoding is invalid") }
+            else -> throw IllegalArgumentException("HTTP request body encoding is not supported")
+        }
+        require(requestBytes.size <= MAX_REQUEST_BODY_BYTES) { "HTTP request body exceeds the size limit" }
+        require(currentMethod !in setOf("GET", "HEAD") || requestBytes.isEmpty()) {
+            "GET and HEAD requests cannot include a body"
+        }
+
+        val contentType = headers.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
+        var currentBody = when {
+            currentMethod in setOf("POST", "PUT", "PATCH") || requestBytes.isNotEmpty() ->
+                requestBytes.toRequestBody(contentType?.toMediaTypeOrNull())
+            else -> null
+        }
+        var currentUrl = parseAndValidateUrl(extension, url)
+        var redirects = 0
+
+        while (true) {
+            validateUrl(extension, currentUrl)
+            val requestBuilder = Request.Builder().url(currentUrl)
+            headers.forEach { (name, value) -> requestBuilder.header(name, value) }
+            requestBuilder.method(currentMethod, currentBody)
+            val call = client.newCall(requestBuilder.build())
+            val cancellation = Job(executionJob)
+            cancellation.invokeOnCompletion { cause ->
+                if (cause is CancellationException) call.cancel()
+            }
+
+            val response = try {
+                call.execute()
+            } catch (_: IOException) {
+                throw IllegalStateException("Custom tool HTTP request failed")
+            } finally {
+                cancellation.complete()
+            }
+
+            response.use { received ->
+                if (received.code in REDIRECT_CODES) {
+                    val location = received.header("Location")
+                        ?: return responseToJson(received, currentUrl)
+                    if (redirects >= MAX_REDIRECTS) {
+                        throw IllegalStateException("Custom tool HTTP redirect limit exceeded")
+                    }
+                    val redirected = currentUrl.resolve(location)
+                        ?: throw IllegalStateException("Custom tool HTTP redirect URL is invalid")
+                    require(sameOrigin(currentUrl, redirected)) {
+                        "Custom tool HTTP redirects must remain on the same origin"
+                    }
+                    currentUrl = parseAndValidateUrl(extension, redirected.toString())
+                    if (received.code == 303 ||
+                        (received.code in setOf(301, 302) && currentMethod !in setOf("GET", "HEAD"))
+                    ) {
+                        currentMethod = "GET"
+                        currentBody = null
+                    }
+                    redirects += 1
+                    return@use
+                }
+                return responseToJson(received, currentUrl)
+            }
+        }
+    }
+
+    private fun parseAndValidateUrl(extension: CustomExtension, rawUrl: String): HttpUrl {
+        val url = rawUrl.toHttpUrlOrNull() ?: throw IllegalArgumentException("HTTP request URL is invalid")
+        require(url.username.isEmpty() && url.password.isEmpty() && url.fragment == null) {
+            "HTTP request URL cannot contain credentials or a fragment"
+        }
+        validateUrl(extension, url)
+        return url
+    }
+
+    private fun validateUrl(extension: CustomExtension, url: HttpUrl) {
+        require(url.host.length <= 253 && extension.allowsApiHost(url.host)) {
+            "HTTP request host is not in this tool's allowlist"
+        }
+        require(url.scheme == "https" || url.scheme == "http") {
+            "Only HTTP and HTTPS request URLs are supported"
+        }
+        val addresses = resolveAndValidate(extension, url.host)
+        if (url.scheme == "http") {
+            require(extension.allowLocalNetwork && addresses.all(::isLocalAddress)) {
+                "Unencrypted HTTP is allowed only for explicitly enabled local-network hosts"
+            }
+        }
+    }
+
+    private fun resolveAndValidate(extension: CustomExtension, host: String): List<InetAddress> {
+        val addresses = try {
+            Dns.SYSTEM.lookup(host)
+        } catch (_: UnknownHostException) {
+            throw IllegalArgumentException("HTTP request host could not be resolved")
+        }
+        require(addresses.isNotEmpty()) { "HTTP request host has no addresses" }
+        require(addresses.all { isSafeAddress(it, extension.allowLocalNetwork) }) {
+            "HTTP request host resolves to a blocked network address"
+        }
+        return addresses
+    }
+
+    private fun safeDns(extension: CustomExtension): Dns = Dns { hostname ->
+        // When an explicit proxy is configured OkHttp resolves the proxy host, not the
+        // destination host. Destination validation is performed separately before each call.
+        if (!extension.allowsApiHost(hostname)) {
+            Dns.SYSTEM.lookup(hostname)
+        } else {
+            try {
+                resolveAndValidate(extension, hostname)
+            } catch (_: IllegalArgumentException) {
+                throw UnknownHostException("Custom tool host resolves to a blocked network address")
+            }
+        }
+    }
+
+    private fun parseRequestHeaders(source: String?): Map<String, String> {
+        if (source.isNullOrBlank() || source == "null") return emptyMap()
+        val objectValue = runCatching { Json.parseToJsonElement(source).jsonObject }
+            .getOrElse { throw IllegalArgumentException("HTTP request headers must be an object") }
+        require(objectValue.size <= MAX_REQUEST_HEADERS) { "Too many HTTP request headers" }
+        val result = linkedMapOf<String, String>()
+        var totalBytes = 0
+        objectValue.forEach { (name, element) ->
+            val value = (element as? JsonPrimitive)?.contentOrNull
+                ?: throw IllegalArgumentException("HTTP request header values must be strings or primitives")
+            require(name.isNotBlank() && name.length <= 128 && value.length <= MAX_HEADER_VALUE_CHARS) {
+                "HTTP request header exceeds the size limit"
+            }
+            require(name.lowercase(Locale.ROOT) !in BLOCKED_REQUEST_HEADERS) {
+                "HTTP request contains a restricted header"
+            }
+            totalBytes += name.toByteArray(Charsets.UTF_8).size + value.toByteArray(Charsets.UTF_8).size
+            require(totalBytes <= MAX_REQUEST_HEADER_BYTES) { "HTTP request headers exceed the size limit" }
+            result[name] = value
+        }
+        return result
+    }
+
+    private fun responseToJson(response: okhttp3.Response, url: HttpUrl): String {
+        val responseBody = response.body
+        val mediaType = responseBody?.contentType()
+        val expectedLength = responseBody?.contentLength() ?: 0L
+        val isText = mediaType == null || mediaType.type == "text" ||
+            mediaType.subtype.contains("json") || mediaType.subtype.contains("xml") ||
+            mediaType.subtype.contains("javascript") || mediaType.subtype == "x-www-form-urlencoded"
+        val limit = if (isText) MAX_TEXT_RESPONSE_BYTES else MAX_BINARY_RESPONSE_BYTES
+        require(expectedLength < 0 || expectedLength <= limit) {
+            "Custom tool HTTP response exceeds the size limit"
+        }
+
+        val bytes = try {
+            responseBody?.byteStream()?.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(8 * 1024)
+                var total = 0
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    total += read
+                    require(total <= limit) { "Custom tool HTTP response exceeds the size limit" }
+                    output.write(buffer, 0, read)
+                }
+                output.toByteArray()
+            } ?: ByteArray(0)
+        } catch (error: IllegalArgumentException) {
+            throw error
+        } catch (_: IOException) {
+            throw IllegalStateException("Custom tool HTTP response could not be read")
+        }
+
+        val charset: Charset = mediaType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        val headerObject = buildJsonObject {
+            response.headers.names().forEach { name ->
+                put(name.lowercase(Locale.ROOT), response.headers.values(name).joinToString(", "))
+            }
+        }
+        return buildJsonObject {
+            put("status", response.code)
+            put("ok", response.isSuccessful)
+            put("statusText", response.message)
+            put("url", url.newBuilder().query(null).fragment(null).build().toString())
+            put("headers", headerObject)
+            put("isText", isText)
+            put("body", if (isText) bytes.toString(charset) else "")
+            put("bodyBase64", Base64.getEncoder().encodeToString(bytes))
+        }.toString()
+    }
+
+    private fun sameOrigin(first: HttpUrl, second: HttpUrl): Boolean =
+        first.scheme == second.scheme && first.host == second.host && first.port == second.port
+
+    private fun isSafeAddress(address: InetAddress, allowLocalNetwork: Boolean): Boolean {
+        if (address.isAnyLocalAddress || address.isMulticastAddress) return false
+        val bytes = address.address
+        val ipv4 = when {
+            address is Inet4Address -> bytes
+            bytes.size == 16 && bytes.take(10).all { it == 0.toByte() } &&
+                bytes[10] == 0xff.toByte() && bytes[11] == 0xff.toByte() -> bytes.copyOfRange(12, 16)
+            else -> null
+        }
+        if (ipv4 != null) {
+            val first = ipv4[0].toInt() and 0xff
+            val second = ipv4[1].toInt() and 0xff
+            val third = ipv4[2].toInt() and 0xff
+            val fourth = ipv4[3].toInt() and 0xff
+            val reserved = first == 0 || first >= 224 ||
+                (first == 100 && second in 64..127) ||
+                (first == 192 && second == 0 && (third == 0 || third == 2)) ||
+                (first == 192 && second == 88 && third == 99) ||
+                (first == 198 && second in 18..19) ||
+                (first == 198 && second == 51 && third == 100) ||
+                (first == 203 && second == 0 && third == 113)
+            if (reserved) return false
+
+            // Cloud metadata addresses remain blocked even with local-network access enabled.
+            if ((first == 169 && second == 254 && third == 169 && fourth == 254) ||
+                (first == 169 && second == 254 && third == 170 && fourth == 2) ||
+                (first == 100 && second == 100 && third == 100 && fourth == 200) ||
+                (first == 168 && second == 63 && third == 129 && fourth == 16)
+            ) return false
+
+            val local = first == 10 || first == 127 ||
+                (first == 172 && second in 16..31) ||
+                (first == 192 && second == 168) ||
+                (first == 169 && second == 254)
+            return !local || allowLocalNetwork
+        }
+
+        if (address is java.net.Inet6Address) {
+            if (address.isLinkLocalAddress || address.isSiteLocalAddress) return false
+            val isLoopback = address.isLoopbackAddress
+            val isUniqueLocal = (bytes[0].toInt() and 0xfe) == 0xfc
+            val isDocumentation = (bytes[0].toInt() and 0xff) == 0x20 &&
+                (bytes[1].toInt() and 0xff) == 0x01 &&
+                (bytes[2].toInt() and 0xff) == 0x0d &&
+                (bytes[3].toInt() and 0xff) == 0xb8
+            if (isDocumentation) return false
+            if (isLoopback || isUniqueLocal) return allowLocalNetwork
+        }
+        return true
+    }
+
+    private fun isLocalAddress(address: InetAddress): Boolean {
+        val bytes = address.address
+        if (address is Inet4Address) {
+            val first = bytes[0].toInt() and 0xff
+            val second = bytes[1].toInt() and 0xff
+            return first == 10 || first == 127 ||
+                (first == 172 && second in 16..31) ||
+                (first == 192 && second == 168) ||
+                (first == 169 && second == 254)
+        }
+        if (address is java.net.Inet6Address) {
+            return address.isLoopbackAddress || (bytes[0].toInt() and 0xfe) == 0xfc
+        }
+        return false
+    }
+
+    companion object {
+        private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L
+        private const val JS_MEMORY_LIMIT_BYTES = 64L * 1024 * 1024
+        private const val JS_MAX_STACK_BYTES = 256L * 1024
+        private const val MAX_LOG_CHARS = 64 * 1024
+        private const val MAX_RESULT_CHARS = 1024 * 1024
+        private const val MAX_URL_LENGTH = 2_048
+        private const val MAX_REQUEST_BODY_BYTES = 1024 * 1024
+        private const val MAX_REQUEST_HEADERS = 40
+        private const val MAX_HEADER_VALUE_CHARS = 8 * 1024
+        private const val MAX_REQUEST_HEADER_BYTES = 32 * 1024
+        private const val MAX_TEXT_RESPONSE_BYTES = 1024 * 1024
+        private const val MAX_BINARY_RESPONSE_BYTES = 8 * 1024 * 1024
+        private const val MAX_REDIRECTS = 5
+        private val ALLOWED_METHODS = setOf("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+        private val BLOCKED_REQUEST_HEADERS = setOf(
+            "host", "content-length", "transfer-encoding", "connection",
+            "proxy-authorization", "proxy-connection", "keep-alive", "upgrade", "te", "trailer",
+        )
+        private const val FETCH_POLYFILL = """
+globalThis.fetch = function(url, options) {
+    options = options || {};
+    const method = (options.method || 'GET').toUpperCase();
+    const headers = options.headers ? JSON.stringify(options.headers) : null;
+    let body = options.body;
+    let bodyEncoding = 'text';
+
+    const bytesToBase64 = bytes => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let output = '';
+        for (let index = 0; index < bytes.length; index += 3) {
+            const a = bytes[index];
+            const hasB = index + 1 < bytes.length;
+            const hasC = index + 2 < bytes.length;
+            const b = hasB ? bytes[index + 1] : 0;
+            const c = hasC ? bytes[index + 2] : 0;
+            output += chars[a >> 2];
+            output += chars[((a & 3) << 4) | (b >> 4)];
+            output += hasB ? chars[((b & 15) << 2) | (c >> 6)] : '=';
+            output += hasC ? chars[c & 63] : '=';
+        }
+        return output;
+    };
+    const base64ToBytes = encoded => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        const padding = encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0;
+        const output = new Uint8Array(Math.floor(encoded.length * 3 / 4) - padding);
+        let offset = 0;
+        for (let index = 0; index < encoded.length; index += 4) {
+            const a = chars.indexOf(encoded[index]);
+            const b = chars.indexOf(encoded[index + 1]);
+            const c = encoded[index + 2] === '=' ? 0 : chars.indexOf(encoded[index + 2]);
+            const d = encoded[index + 3] === '=' ? 0 : chars.indexOf(encoded[index + 3]);
+            if (offset < output.length) output[offset++] = (a << 2) | (b >> 4);
+            if (offset < output.length) output[offset++] = ((b & 15) << 4) | (c >> 2);
+            if (offset < output.length) output[offset++] = ((c & 3) << 6) | d;
+        }
+        return output;
+    };
+
+    if (body && typeof body === 'object') {
+        if (body instanceof ArrayBuffer) {
+            body = bytesToBase64(new Uint8Array(body));
+            bodyEncoding = 'base64';
+        } else if (ArrayBuffer.isView(body)) {
+            body = bytesToBase64(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
+            bodyEncoding = 'base64';
+        } else {
+            body = JSON.stringify(body);
+        }
+    } else if (typeof body !== 'string') {
+        body = null;
+    }
+
+    const data = JSON.parse(__customToolHttpRequest(url, method, headers, body, bodyEncoding));
+    const responseHeaders = data.headers || {};
+    const headerApi = {
+        get: name => responseHeaders[String(name).toLowerCase()] ?? null,
+        has: name => Object.prototype.hasOwnProperty.call(responseHeaders, String(name).toLowerCase()),
+        forEach: callback => Object.keys(responseHeaders).forEach(key => callback(responseHeaders[key], key))
+    };
+    return {
+        status: data.status,
+        ok: data.ok,
+        statusText: data.statusText,
+        url: data.url,
+        headers: headerApi,
+        text: function() {
+            if (!data.isText) throw new Error('Response body is binary; use arrayBuffer()');
+            return data.body;
+        },
+        json: function() {
+            if (!data.isText) throw new Error('Response body is binary; use arrayBuffer()');
+            return JSON.parse(data.body);
+        },
+        arrayBuffer: function() {
+            return base64ToBytes(data.bodyBase64 || '').buffer;
+        }
+    };
+};
+"""
+    }
+}
