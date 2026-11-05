@@ -961,21 +961,23 @@ fun ExtensionBuilderPage(
                                     OutlinedButton(
                                         onClick = {
                                             val value = pendingSecretValues[declaration.name].orEmpty()
+                                            isSavingSecret = true
                                             scope.launch {
-                                                runCatching {
+                                                try {
                                                     withContext(Dispatchers.IO) {
                                                         secretStore.putSecret(draftId, declaration.name, value)
                                                     }
-                                                }.onSuccess {
                                                     savedSecretNames = savedSecretNames + declaration.name
                                                     pendingSecretValues.remove(declaration.name)
                                                     testedHash = null
                                                     enabled = false
                                                     testPassed = null
                                                     testResult = ""
-                                                }.onFailure {
+                                                } catch (error: Exception) {
                                                     testPassed = false
-                                                    testResult = it.message ?: "Could not save Secret"
+                                                    testResult = error.message ?: "Could not save Secret"
+                                                } finally {
+                                                    isSavingSecret = false
                                                 }
                                             }
                                         },
