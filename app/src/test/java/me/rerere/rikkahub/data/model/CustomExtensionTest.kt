@@ -1,5 +1,6 @@
 package me.rerere.rikkahub.data.model
 
+import me.rerere.rikkahub.utils.JsonInstant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,6 +15,14 @@ class CustomExtensionTest {
         assertEquals(true, extension.needsApproval)
         assertEquals(null, extension.testedDefinitionHash)
         assertEquals(emptySet<CustomExtensionValidationError>(), extension.validationErrors())
+    }
+
+    @Test
+    fun `legacy permission values migrate to approval required`() {
+        val legacy = """{"id":"legacy","name":"Legacy","description":"","permission":"ALWAYS_ALLOW"}"""
+        val decoded = JsonInstant.decodeFromString<CustomExtension>(legacy)
+
+        assertTrue(decoded.needsApproval)
     }
 
     @Test
