@@ -1333,3 +1333,39 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - [x] User specified chat Markdown video support and player behavior: no autoplay, first-frame preview, no eager remote video download, clean borderless YouTube-like controls with fade/seek/skip.
 - [ ] Inspect actual player dependencies and Markdown parser behavior before selecting the implementation.
 - [ ] Implement video Markdown renderer/player and tests after the architecture audit; no video source code has been changed yet.
+
+## 49. User priority — finish Tool Builder capabilities before Markdown video (2026-11-05)
+
+### User direction
+
+- The user explicitly set the order: make the custom Tool Builder right first; do not start the YouTube-style Markdown video player until the Tool Builder work is complete.
+- The video requirement remains exactly as recorded in Section 48. It is deferred, not cancelled or redesigned.
+- This is a sequencing decision. Do not interpret it as permission to redesign unrelated app UI or replace the already-agreed video-in-chat behavior.
+
+### Verified current state
+
+- Working branch: `feature/custom-tool-api-runtime`.
+- Compared against its recorded base `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`: the branch is three commits ahead and zero behind; the only changed path is this project plan. No source files have been modified on this branch.
+- The existing full-page Builder is already present in the base source. It includes the draft list, roomy single-column editor, Simple / Advanced modes, Review state, schema and JavaScript fields, sample input, real QuickJS test, test-result display, enable gate, delete flow, and the single **Need approval** switch.
+- Both modes already include AI-assistance guidance. The AI may prepare every field, including schema, JavaScript and example input; the user places/reviews the content and runs the real Builder test. AI assistance cannot mark tests successful, save, enable, assign, or change approval.
+- The current Builder does not yet expose the planned API/network capability, named credential configuration, or optional per-tool storage capability. The current custom-tool runtime does not yet inject the existing QuickJS HTTP bridge. The Tool Creator skill still accurately describes the current no-network/no-storage runtime and must be updated only when those capabilities are implemented and tested.
+- The existing QuickJS HTTP bridge is in `common/src/main/java/me/rerere/common/js/QuickJSFetch.kt` and is currently injected into Custom JS search/scrape only. Its current response contract is text/JSON only; response headers and binary response handling are absent. Do not describe this as custom-tool API support yet.
+
+### Required implementation order
+
+1. **Stage A — finish the read-only architecture audit and write the detailed contracts.** Inspect custom-tool runtime, QuickJS bridge and lifecycle, secure credential storage, FilesManager/managed storage, Settings persistence, DI, and focused tests. Decide the exact opt-in API capability, named-secret access model, per-tool storage contract, migrations, quotas, deletion/disable/re-import behavior, and test fingerprint inputs before source edits.
+2. **Stage B — implement and test the native HTTP/API bridge for opted-in custom tools.** Reuse the existing QuickJS/OkHttp bridge where safe; add bounded metadata and binary support as required. Generic JavaScript and unrelated scripts must not silently gain network access.
+3. **Stage C — implement named credentials and optional isolated per-tool storage.** Keep secrets separate from ordinary tool data. The storage folder remains private to one tool, shared across assistants, and lazily created on first write only when enabled.
+4. **Stage E — finish the Tool Builder and Tool Creator capability experience before video work.** Add clear API-access configuration, safe named-credential setup/reference, optional storage controls and explanations, validation and test-fingerprint behavior, Simple/Advanced AI guidance, Review summary, and updated Tool Creator instructions. Preserve the existing full-page design, both AI-assisted modes, user-controlled copy/place/test/save/enable/assign flow, and one **Need approval** switch. Do not claim a capability in the Builder or skill before its runtime and tests are ready.
+5. **Builder completion gate.** Run focused model, runtime, Builder-state and skill tests; compile the app; verify API access is absent when not opted in, credentials never enter code/prompts/logs/backups, storage isolation and lazy creation work, and both Builder modes describe the real capabilities accurately. Only after this gate is satisfied may Markdown video work begin.
+6. **Deferred media/video work.** After Builder completion, continue managed media results and the Section 48 Markdown video player. The video remains embedded inline in AI Markdown with no card/frame/padding, YouTube-like tap-to-show/hide controls, and controls that fade when the user taps empty video space or after inactivity.
+
+### Preservation and acceptance
+
+- Do not rebuild the existing Builder from scratch. Extend its current fields/state/page in the smallest way necessary.
+- Preserve the already implemented Simple/Advanced AI assistance, informational Review step, real sandbox test, stale-test invalidation, test-before-enable gate, assistant-scoped selection, and shared approval flow.
+- API access and storage must be explicit opt-in capabilities; no implicit network or storage access.
+- No API keys or secret values in tool code, schema, AI prompts, test output, logs, exports, fixtures, or Git.
+- Storage is not App Manager storage and not per-assistant storage. It is one private tool-owned folder, created lazily on first write, shared by the tool across assistants.
+- No Markdown video/player source changes before the Builder completion gate.
+- Current status: requirements and ordering recorded; Stage A audit is in progress; no source implementation has started on this branch.
