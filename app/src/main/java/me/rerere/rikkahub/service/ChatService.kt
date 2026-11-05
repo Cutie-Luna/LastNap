@@ -46,6 +46,9 @@ import me.rerere.rikkahub.data.ai.TranslationHandler
 import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.prompts.buildCompressPrompt
 import me.rerere.rikkahub.data.ai.tools.InvalidMcpServerNamesException
+import me.rerere.rikkahub.data.ai.tools.local.CustomExtensionSessionGrant
+import me.rerere.rikkahub.data.ai.tools.local.customExtensionToolName
+import me.rerere.rikkahub.data.ai.tools.local.sessionGrant
 import me.rerere.rikkahub.data.ai.tools.shouldUseExternalWebSearch
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.getCurrentAssistant
@@ -54,6 +57,7 @@ import me.rerere.rikkahub.data.event.AppEventBus
 import me.rerere.rikkahub.data.files.FilesManager
 import me.rerere.rikkahub.data.model.Assistant
 import me.rerere.rikkahub.data.model.Conversation
+import me.rerere.rikkahub.data.model.ExtensionPermission
 import me.rerere.rikkahub.data.model.bindConfig
 import me.rerere.rikkahub.data.model.cancelInterruptedTools
 import me.rerere.rikkahub.data.model.deleteMessage
@@ -75,6 +79,7 @@ import me.rerere.rikkahub.data.model.withToolApproval
 import me.rerere.rikkahub.data.model.withTranslation
 import me.rerere.rikkahub.data.model.withoutConversationFields
 import me.rerere.rikkahub.data.model.withoutUnresumableToolCalls
+import me.rerere.rikkahub.data.model.validationErrors
 import me.rerere.rikkahub.data.repository.ConversationRepository
 import me.rerere.rikkahub.data.repository.FolderRepository
 import me.rerere.rikkahub.web.BadRequestException
@@ -84,6 +89,7 @@ import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.uuid.Uuid
 
 private const val TAG = "ChatService"
@@ -180,7 +186,18 @@ class ChatService(
     private val _generationDoneFlow = MutableSharedFlow<Uuid>()
     val generationDoneFlow: SharedFlow<Uuid> = _generationDoneFlow.asSharedFlow()
 
-    fun cleanup() = runCatching { sessionManager.cleanup() }
+    // Grants are per conversation and live only for this app process. Keep them outside
+    // ConversationSession because that lightweight state object is evicted after idle time.
+    private val customExtensionSessionGrants =
+        ConcurrentHashMap<Uuid, MutableSet<CustomExtensionSessionGrant>>()
+
+    private fun sessionApprovedCustomExtensions(conversationId: Uuid): Set<CustomExtensionSessionGrant> =
+        customExtensionSessionGrants[conversationId]?.toSet().orEmpty()
+
+    fun cleanup() = runCatching {
+        sessionManager.cleanup()
+        customExtensionSessionGrants.clear()
+    }
 
     private fun onSessionGenerationFinished(session: ConversationSession, cause: Throwable?) {
         // 取消只来自停止（已自行暂停）或删除，这里再暂停会盖掉停止后用户发送时恢复的队列
@@ -544,6 +561,26 @@ class ChatService(
                 try {
                     afterPreviousGeneration(previousJob) {
                         ensureInitialized(session)
+                        if (approved && answer == null) {
+                            val settings = settingsStore.awaitLoaded()
+                            val assistant = settings.getStoredAssistantOf(session.state.value)
+                            val pendingToolName = session.state.value.currentMessages
+                                .flatMap { it.getTools() }
+                                .firstOrNull { it.toolCallId == toolCallId && it.isPending }
+                                ?.toolName
+                            val approvedExtension = settings.customExtensions.firstOrNull { extension ->
+                                extension.permission == ExtensionPermission.THIS_SESSION &&
+                                    extension.id in assistant.selectedCustomExtensionIds &&
+                                    extension.enabled &&
+                                    extension.validationErrors().isEmpty() &&
+                                    customExtensionToolName(extension) == pendingToolName
+                            }
+                            if (approvedExtension != null) {
+                                customExtensionSessionGrants
+                                    .computeIfAbsent(conversationId) { ConcurrentHashMap.newKeySet() }
+                                    .add(approvedExtension.sessionGrant(assistant.id))
+                            }
+                        }
                         val newApprovalState = when {
                             answer != null -> ToolApprovalState.Answered(answer)
                             approved -> ToolApprovalState.Approved
@@ -614,7 +651,11 @@ class ChatService(
             // 它会挂起也可能失败，期间或失败后不能还指着上一轮的回复
             session.replyMessageId.value = history.lastOrNull()?.takeIf { it.role == MessageRole.ASSISTANT }?.id
 
-            val turn = requestFactory.createContext(settings, conversation)
+            val turn = requestFactory.createContext(
+                settings = settings,
+                conversation = conversation,
+                sessionApprovedCustomExtensions = sessionApprovedCustomExtensions(conversationId),
+            )
             senderName = if (turn.assistant.useAssistantAvatar) {
                 turn.assistant.name.ifEmpty { context.getString(R.string.assistant_page_default_assistant) }
             } else {
@@ -1092,6 +1133,7 @@ class ChatService(
             // 数据库那份不知道只在内存里出现过的附件
             previous?.let { filesManager.deleteChatFiles(it.files) }
         }
+        customExtensionSessionGrants.remove(conversationId)
         sessionManager.removeIfIdle(session)
     }
 
@@ -1101,6 +1143,7 @@ class ChatService(
         session.replace(conversation, existsInDatabase = true) {
             conversationStore.write(previous = null, current = conversation)
         }
+        customExtensionSessionGrants.remove(conversation.id)
         sessionManager.removeIfIdle(session)
     }
 
