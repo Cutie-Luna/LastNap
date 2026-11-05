@@ -285,6 +285,34 @@ class CustomExtensionTest {
         assertNotEquals(api.testFingerprint(), localNetwork.testFingerprint())
     }
 
+    @Test
+    fun `value declarations affect the test fingerprint`() {
+        val base = CustomExtension(
+            name = "Configured API",
+            description = "",
+            implementation = "return globalThis.variables.API_BASE",
+        )
+        val declared = base.copy(
+            secrets = listOf(CustomToolValueDeclaration("API_KEY")),
+            variables = listOf(CustomToolValueDeclaration("API_BASE")),
+        )
+
+        assertNotEquals(base.testFingerprint(), declared.testFingerprint())
+        assertEquals(emptySet<CustomExtensionValidationError>(), declared.validationErrors())
+    }
+
+    @Test
+    fun `duplicate value declaration names are rejected`() {
+        val invalid = CustomExtension(
+            name = "Configured API",
+            description = "",
+            secrets = listOf(CustomToolValueDeclaration("API_KEY")),
+            variables = listOf(CustomToolValueDeclaration("API_KEY")),
+        )
+
+        assertTrue(CustomExtensionValidationError.DUPLICATE_VALUE_NAME in invalid.validationErrors())
+    }
+
     private fun assertFalseEnabled(extension: CustomExtension) {
         assertEquals(false, extension.enabled)
     }
