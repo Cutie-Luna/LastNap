@@ -236,7 +236,7 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 - Audit every occurrence of the old application ID and LastNap application ID; classify source namespace references separately.
 - Change only files necessary for identity/artwork and record all of them.
 
-**Source-level acceptance met on 2026-11-05:** the application ID, version, app labels, launcher/monochrome/notification resource references, shortcuts, About branding, and visible localized strings are consistent with LastNap; the source diff contains no feature work or unrelated navigation/UI changes. **Final APK/package-table and on-device icon acceptance remains open for Stage 8** because this clean branch has not yet been built or installed.
+**Initial source-level checkpoint (2026-11-05):** the application ID, version, app labels, launcher/monochrome/notification resource references, shortcuts, About branding, and the eight app-module localized strings were updated; the source diff contains no feature work or unrelated navigation/UI changes. A later review found four additional RikkaHub references in each OAuth locale and four matching English fallbacks in `OAuthLoopbackCallbackServer.kt`. Therefore, Stage 2 source acceptance is not closed until the narrowly scoped OAuth branding correction and the repository-wide literal search are complete. **Final APK/package-table and on-device icon acceptance remains open for Stage 8** because this clean branch has not yet been built or installed.
 
 ### Stage 3 — Design and implement the custom-tool data model
 
@@ -479,3 +479,15 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Build/CI/device checks:** no build, lint, tests, APK inspection, signature verification, installation, or target-device icon check was run. The clean branch currently has only the scheduled/manual `daily-build.yml` workflow (plus close-blank-issues); no run exists for this branch. That workflow is not triggered by push, and no workflow-dispatch action is available in the current GitHub connector. It also expects `GOOGLE_SERVICES_JSON`, whose secret availability was not checked. Do not report this source update as a verified APK.
 - **Stage status:** source implementation is complete. Stage 2 remains open for a reliable full-repository text scan; final package/resource and Android 13 device verification is deferred to Stage 8.
 - **Next action:** finish the exhaustive search when a complete repository checkout/search capability is available. Then continue to Stage 3 only after the Stage 2 source audit is fully closed; carry APK/device proof into Stage 8.
+
+
+## 12. Additional Stage 2 audit — OAuth callback branding (2026-11-05)
+
+- Re-verified branch `lastnap-clean-foundation` at `b8b90177f74ebf74855168627dabab817940d768` before this audit extension. No source edits had been made during the content review.
+- Reviewed all 32 tracked `strings.xml` files across the app, OAuth, Search, and UI modules. The eight app-module locale files have `app_name = LastNap`, LastNap share text and web-server descriptions, and zero literal `RikkaHub` occurrences. Search and UI module strings contain no literal `RikkaHub`. The eight OAuth module locale files each still contain four browser callback hints that tell users to return to RikkaHub.
+- Traced these OAuth strings to `oauth/src/main/java/me/rerere/oauth/OAuthLoopbackCallbackServer.kt`: the values are rendered in success, error, invalid-callback, and already-handled browser pages. The English fallback for each of those four hints also says RikkaHub.
+- The OAuth references are user-facing product branding, not intentional source namespace or internal class names. They were missed by the original Stage 2 inventory.
+- **Planned minimal correction before editing:** change only the product-name token from RikkaHub to LastNap in the four fallback strings in `OAuthLoopbackCallbackServer.kt` and the four corresponding translated string values in each of the eight OAuth locale files. Preserve every sentence's existing translation and all callback logic, layout, keys, and behavior.
+- Inspected the 32 non-`strings.xml` XML resources/manifests. The only other RikkaHub-looking source hits were the existing internal application class `.RikkaHubApp` and theme identifier `Theme.Rikkahub`; keep these stable. The manifest, shortcut XML and route constants use matching LastNap action IDs and scheme. The library module manifests have no app-ID overrides.
+- Repository tree remains 1,540 blobs vs 1,536 upstream; no upstream paths missing; three artwork assets plus this plan are LastNap-only; 15 existing upstream paths differ at this checkpoint. The full-tree comparison is complete, but a complete contents scan of every tracked text blob is still not claimed.
+- Stage 2 remains open. After the OAuth correction, continue with the repository-wide literal scan, then carry APK/resource/device verification into Stage 8.
