@@ -100,7 +100,7 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         val directory = toolDirectory(toolId)
         if (!directory.exists()) return@synchronized emptyList()
         requireOwnedDirectory(toolId, directory)
-        listOwnedFiles(toolId, directory).map { it.name }.sorted()
+        listOwnedFiles(toolId, directory).map { it.name }.filter { SAFE_NAME.matches(it) }.sorted()
     }
 
     override fun deleteToolStorage(toolId: String) = synchronized(lock) {
@@ -108,11 +108,12 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         val directory = toolDirectory(toolId)
         if (!directory.exists()) return@synchronized
         requireOwnedDirectory(toolId, directory)
-        listOwnedFiles(toolId, directory).forEach { file ->
-            check(file.delete()) { "Could not remove private tool storage" }
+        directory.listFiles().orEmpty().forEach { file ->
+            require(file.canonicalFile.parentFile == directory.canonicalFile &&
+                !Files.isSymbolicLink(file.toPath()) && file.isFile
+            ) { "Tool storage contains an unsafe item" }
+            check(file.delete()) { "Could not remove private tool storage item" }
         }
-        val marker = File(directory, OWNER_FILE)
-        if (marker.exists()) check(marker.delete()) { "Could not remove tool storage metadata" }
         check(directory.delete()) { "Could not remove private tool storage directory" }
     }
 
@@ -149,15 +150,15 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
     private fun listOwnedFiles(toolId: String, directory: File): List<File> {
         requireOwnedDirectory(toolId, directory)
         return directory.listFiles().orEmpty().filter { file ->
-            file.name != OWNER_FILE && !file.name.startsWith(".") &&
-                file.isFile && !Files.isSymbolicLink(file.toPath()) &&
-                SAFE_NAME.matches(file.name) &&
+            file.name != OWNER_FILE && file.isFile && !Files.isSymbolicLink(file.toPath()) &&
                 file.canonicalFile.parentFile == directory.canonicalFile
         }
     }
 
     private fun requireOwnedDirectory(toolId: String, directory: File) {
-        require(directory.canonicalFile.parentFile == root.canonicalFile) {
+        require(directory.canonicalFile.parentFile == root.canonicalFile &&
+            directory.name == toolId.sha256()
+        ) {
             "Tool storage path escaped the private storage root"
         }
         require(!Files.isSymbolicLink(directory.toPath())) { "Tool storage directory cannot be a symbolic link" }
