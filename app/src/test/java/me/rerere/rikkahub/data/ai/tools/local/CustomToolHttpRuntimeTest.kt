@@ -29,7 +29,23 @@ class CustomToolHttpRuntimeTest {
         allowLocalNetwork = true,
     )
 
-    private fun runtime(secrets: Map<String, String> = emptyMap()) = CustomToolHttpRuntime(
+    private class MemoryStorage : CustomToolStorageProvider {
+        private val values = mutableMapOf<Pair<String, String>, ByteArray>()
+        override fun readBytes(toolId: String, name: String): ByteArray? = values[toolId to name]
+        override fun writeBytes(toolId: String, name: String, bytes: ByteArray) {
+            values[toolId to name] = bytes.copyOf()
+        }
+        override fun delete(toolId: String, name: String): Boolean = values.remove(toolId to name) != null
+        override fun list(toolId: String): List<String> = values.keys.filter { it.first == toolId }.map { it.second }.sorted()
+        override fun deleteToolStorage(toolId: String) {
+            values.keys.filter { it.first == toolId }.forEach(values::remove)
+        }
+    }
+
+    private fun runtime(
+        secrets: Map<String, String> = emptyMap(),
+        storage: CustomToolStorageProvider = MemoryStorage(),
+    ) = CustomToolHttpRuntime(
         OkHttpClient.Builder()
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(3, TimeUnit.SECONDS)
@@ -40,6 +56,7 @@ class CustomToolHttpRuntimeTest {
             override fun missingRequiredSecrets(extension: CustomExtension): List<String> =
                 extension.secrets.filter { it.required && secrets[it.name].isNullOrEmpty() }.map { it.name }
         },
+        storage,
     )
 
     private fun startServer(): HttpServer {
