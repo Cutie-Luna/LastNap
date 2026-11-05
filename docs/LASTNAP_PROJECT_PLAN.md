@@ -181,8 +181,8 @@ A chat may finish a stage early, but should not silently combine stages. If the 
 - [x] Create `lastnap-clean-foundation` from LastNap `master`.
 - [x] Leave `master` and `feature/extensions-foundation` untouched.
 - [x] Compare complete repository trees against current upstream.
-- [ ] Commit this project plan and session handoff to the new branch.
-- [ ] Verify the new branch contains only the planned documentation change after the plan commit.
+- [x] Commit this project plan and session handoff to the new branch (initial plan commit: `7742b9073370e45658d363d59f3d32628bf4c6bf`).
+- [x] Verify the new branch contains only the planned documentation change after the plan commit; the compare returned exactly one added path: this document.
 
 **Acceptance:** the new branch is a clean RikkaHub base plus this project document; no app source, resources, dependencies, or workflows have been changed.
 
@@ -354,7 +354,7 @@ Update this table at the end of every chat. Add rows rather than erasing previou
 
 | Date / chat | Branch and commit | Files added/changed/deleted | Reason and behavior impact | Verification / outcome |
 |---|---|---|---|---|
-| 2026-11-05 — clean foundation created | `lastnap-clean-foundation`, based on `903e058b9361bff71d0b79f4ef2d8ac23d6597e6` | Pending this document commit | New clean starting point; app source/resources not changed | Full-tree audit: 1,536 paths; one upstream content difference documented above |
+| 2026-11-05 — clean foundation created | `lastnap-clean-foundation`, plan commit `7742b9073370e45658d363d59f3d32628bf4c6bf` (base `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`) | Added `docs/LASTNAP_PROJECT_PLAN.md` only | New clean starting point and permanent project handoff; no app source/resources/workflows changed | Compare against starting commit reported exactly 1 added file, 387 insertions, 0 deletions; no build run because app code was not changed. Full-tree audit: 1,536 paths; one upstream content difference documented above |
 | 2026-11-04 to 2026-11-05 — previous implementation | `feature/extensions-foundation`, audit head `942c1b49019dbbd55f02606f31b74cc258c14641` | 66 changed paths relative to old fork master; detailed GitHub compare remains available | Prior identity, custom-tool work, UI integration, assets, workflow, locale and compatibility changes; must be selectively reviewed before porting | Earlier CI runs passed as listed; latest release run still needed recheck; no measured device performance result |
 
 ### Per-chat handoff template
@@ -384,4 +384,4 @@ At the end of the chat, update this document before presenting the handoff summa
 
 ## 8. Current next action
 
-Finish Stage 0 by committing this document to `lastnap-clean-foundation`, then verify that the branch differs from its starting commit only by this documentation file. Do not begin app code changes in the same stage.
+Stage 0 is complete. The plan is committed on `lastnap-clean-foundation`; the verified diff from its starting commit is one added documentation file only. Do not begin app code changes in the same stage. The next chat should begin Stage 1: refresh and freeze the upstream baseline.
