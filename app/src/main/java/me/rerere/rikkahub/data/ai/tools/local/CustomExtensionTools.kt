@@ -138,7 +138,8 @@ internal fun createCustomExtensionTools(
                 val input = args["input"] as? JsonObject
                     ?: error("The input object is required")
                 val serializedInput = input.toString()
-                val code = "const input = $serializedInput;\n$implementation"
+                val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
+                val code = "const input = JSON.parse($serializedInputLiteral);\n$implementation"
                 listOf(UIMessagePart.Text(evaluateJavascript(code)))
             },
         )
