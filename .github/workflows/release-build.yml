@@ -179,3 +179,5 @@ jobs:
           path: app/build/outputs/mapping/githubRelease/mapping.txt
           if-no-files-found: warn
           retention-days: 14
+
+# Trigger a signed release build when this workflow is intentionally updated.
