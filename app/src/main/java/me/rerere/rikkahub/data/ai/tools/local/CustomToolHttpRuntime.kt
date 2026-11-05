@@ -580,7 +580,7 @@ class CustomToolHttpRuntime(
         private const val MAX_REDIRECTS = 5
         private const val MAX_REQUESTS_PER_EXECUTION = 20
         private const val REDACTED_SECRET = "[REDACTED]"
-        private val SECRET_REFERENCE_PATTERN = Regex("""\\{\\{secret:([A-Z][A-Z0-9_]{0,63})}}""")
+        private val SECRET_REFERENCE_PATTERN = Regex("""\{\{secret:([A-Z][A-Z0-9_]{0,63})}}""")
         private val ALLOWED_METHODS = setOf("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         private val BLOCKED_REQUEST_HEADERS = setOf(
