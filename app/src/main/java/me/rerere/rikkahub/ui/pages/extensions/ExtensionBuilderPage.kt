@@ -1320,8 +1320,8 @@ fun ExtensionBuilderPage(
                             try {
                                 httpRuntime.revokeToolAndJoin(draftId)
                                 withContext(Dispatchers.IO) {
-                                    secretStore.deleteToolSecrets(draftId)
                                     storage.deleteToolStorage(draftId)
+                                    secretStore.deleteToolSecrets(draftId)
                                 }
                                 settingsStore.update { it.removeCustomExtension(draftId) }
                                 showDeleteConfirmation = false
