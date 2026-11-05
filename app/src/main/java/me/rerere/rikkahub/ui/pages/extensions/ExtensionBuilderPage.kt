@@ -96,6 +96,12 @@ fun ExtensionBuilderPage(
 ) {
     val settings by settingsStore.settingsFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+        }
+    }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    var isEditor by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(settings.init, isEditor, settings.customExtensions) {
         if (!settings.init && !isEditor) {
             withContext(Dispatchers.IO) {
@@ -103,11 +109,7 @@ fun ExtensionBuilderPage(
                 secretStore.reconcile(validToolIds)
                 storage.reconcile(validToolIds)
             }
-        }
-    }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    var isEditor by rememberSaveable { mutableStateOf(false) }
     var isReviewing by rememberSaveable { mutableStateOf(false) }
     var isExistingDraft by rememberSaveable { mutableStateOf(false) }
     var draftId by rememberSaveable { mutableStateOf(Uuid.random().toString()) }
