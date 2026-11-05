@@ -22,6 +22,7 @@ import me.rerere.rikkahub.data.ai.RequestLoggingInterceptor
 import me.rerere.rikkahub.data.ai.TranslationHandler
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntime
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStore
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolStorage
 import me.rerere.rikkahub.data.ai.UsageRecorder
 import me.rerere.rikkahub.data.ai.account.ProviderAccountManager
 import me.rerere.rikkahub.data.ai.mcp.McpManager
@@ -63,7 +64,15 @@ val dataSourceModule = module {
     }
 
     single {
-        CustomToolHttpRuntime.create(settingsStore = get(), secretStore = get())
+        CustomToolStorage.fromContext(context = get())
+    }
+
+    single {
+        CustomToolHttpRuntime.create(
+            settingsStore = get(),
+            secretStore = get(),
+            storage = get(),
+        )
     }
 
     single {
