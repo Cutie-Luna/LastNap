@@ -129,6 +129,7 @@ class CustomToolHttpRuntime(
         jobs.add(executionJob)
         if (extension.id in revokedToolIds) {
             jobs.remove(executionJob)
+            if (jobs.isEmpty()) activeExecutions.remove(extension.id, jobs)
             throw CancellationException("Custom tool was deleted")
         }
         try {
