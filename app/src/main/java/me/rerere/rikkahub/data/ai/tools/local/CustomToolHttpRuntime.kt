@@ -101,7 +101,9 @@ class CustomToolHttpRuntime(
         require(missingVariables.isEmpty()) {
             "Missing required Variables: ${missingVariables.joinToString(", ")}"
         }
-        require(safeVariables.values.all { it.length <= CustomExtensionLimits.MAX_SECRET_VALUE_LENGTH }) {
+        require(safeVariables.values.all {
+            it.toByteArray(Charsets.UTF_8).size <= CustomExtensionLimits.MAX_SECRET_VALUE_LENGTH
+        }) {
             "A custom tool Variable exceeds the 8 KiB limit"
         }
         val variablesJson = kotlinx.serialization.json.JsonObject(
