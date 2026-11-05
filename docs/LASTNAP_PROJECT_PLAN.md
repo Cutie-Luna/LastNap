@@ -1186,7 +1186,14 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - `FilesManager` already supports saving managed files from bytes and returns local file URIs. `McpManager` already demonstrates decoding MCP Base64 image content, saving it through `FilesManager.saveUploadFromBytes`, and returning `UIMessagePart.Image`.
 - `UIMessagePart` already has Image, Audio, Video, and Document variants. Chat message rendering already displays image parts with `ZoomableAsyncImage`; text parts are rendered through `MarkdownBlock`. The exact Markdown image loader's handling of absolute local paths and `file://` URIs still requires focused verification.
 - The current custom-tool runtime returns only `UIMessagePart.Text` from the JavaScript evaluator. Media result conversion and model-vision round-tripping are not yet implemented for custom tools.
-- These observations establish viable existing building blocks, not proof that the full feature is already supported. Trace the actual provider/tool-result path before relying on it.
+- `search/src/main/java/me/rerere/search/CustomJsSearchService.kt` is a proven existing call site: it creates a QuickJS runtime and calls `injectFetch(httpClient)` before evaluating user scripts. The existing bridge is therefore already used for user-configured Custom JS search/scrape scripts; the missing integration is specifically the custom-tool runtime.
+- `SearchService.httpClient` supplies that bridge with an OkHttp client configured for redirects and a 30-second read timeout. Its lifecycle/configuration and whether a separate custom-tool client is needed must be reviewed before reuse.
+- The QuickJS fetch polyfill currently exposes `status`, `ok`, `statusText`, `text()`, and `json()`. It does not expose response headers, `arrayBuffer()`, `blob()`, or binary-safe request/response bodies. It is a working baseline for JSON/text APIs, but needs extension for the requested full API/media use cases.
+- `McpManager` confirms an existing native media pattern: decode Base64 image content, save bytes with `FilesManager.saveUploadFromBytes`, and return `UIMessagePart.Image`.
+- `ai/.../FileEncoder.kt` confirms `UIMessagePart.Image.encodeBase64()` can read a managed `file://` URI back into Base64. OpenAI Chat Completions tool-result serialization sends image outputs when the selected model declares `Modality.IMAGE`; otherwise it sends a clear omission placeholder. Google and Claude provider adapters also encode image parts in tool results. This gives a concrete existing model-vision path to reuse and test.
+- `ChatMessageTools.kt` renders image parts inside tool results using `ZoomableAsyncImage`; normal chat image parts are rendered the same way. `Markdown.kt` renders Markdown images using `ZoomableAsyncImage` and already has special absolute-path resolution for workspace files. A managed `file://` URI is the strongest existing candidate for the local Markdown path, but it must be verified in the actual chat renderer.
+- `FilesManager` already has bounded-by-caller managed byte saving and tracks upload-folder files in its database. The new bridge should use managed-file APIs rather than allowing arbitrary filesystem paths.
+- These observations establish viable existing building blocks, not proof that the full feature is already supported. Trace the complete custom-tool execution/persistence path and verify local Markdown image loading before implementation.
 
 ### Target capability contract
 
@@ -1280,6 +1287,8 @@ The user approved continuing with corrections to Stages 4 and 5, then proceeding
 - [x] Created `feature/custom-tool-api-runtime` from `lastnap-clean-foundation` at `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`.
 - [x] Confirmed the current branch remains the preserved baseline; no source edits have been made on the new branch.
 - [x] Located the existing upstream QuickJS HTTP bridge and the MCP Base64-to-local-image path.
-- [ ] Finish tracing the bridge's existing call sites and the full model-vision/Markdown local-image pipeline.
+- [x] Trace the existing fetch call site: Custom JS search/scrape injects the bridge; custom tools currently do not. Confirmed the bridge's text-only response limitation.
+- [x] Trace the model tool-result vision path for OpenAI, Google, and Claude image-capable models; confirmed existing typed image outputs can be encoded from managed file URIs.
+- [ ] Verify local Markdown image rendering for managed `file://` URIs and finish checking tool-output persistence.
 - [ ] Confirm the storage-sharing decision above.
 - [ ] Begin Stage A source audit and detailed capability-contract design; no feature implementation has started.
