@@ -1861,4 +1861,7 @@
     <string name="extension_builder_page_delete_message">ستتم إزالة “%1$s”، كما ستُلغى إتاحتها لكل المساعدين.</string>
     <string name="extensions_page_custom_tools">الأدوات المخصصة</string>
     <string name="extensions_page_custom_tools_desc">أنشئ أدوات للمساعدين واختبرها وأدِرها لإعادة استخدامها.</string>
+  <string name="chat_page_compress_keep_recent">الاحتفاظ بالرسائل الأخيرة</string>
+  <string name="chat_page_compress_keep_recent_desc">لا يتم ضغط هذه الرسائل وتبقى بعد الملخص. يؤدي تعيين القيمة إلى 0 إلى ضغط كل شيء والاستفادة بشكل أفضل من ذاكرة التخزين المؤقت للمطالبة؛ وإذا كانت المحادثة طويلة جدًا بحيث لا يمكن ضغطها، فاحتفظ بمزيد من الرسائل.</string>
+  <string name="chat_page_compress_not_enough_messages">لا توجد رسائل كافية لضغطها. قلّل عدد الرسائل المطلوب الاحتفاظ بها.</string>
 </resources>
