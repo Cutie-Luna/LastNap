@@ -48,8 +48,10 @@ internal fun createCustomExtensionTools(
         if (extension.id !in selectedExtensionIds) return@mapNotNull null
         if (!extension.enabled) return@mapNotNull null
         if (extension.validationErrors().isNotEmpty()) return@mapNotNull null
-        // API-enabled tools must never silently fall back to the no-network evaluator.
-        if (extension.apiAccessEnabled && httpRuntime == null) return@mapNotNull null
+        // Capability-enabled tools must never silently fall back to the legacy evaluator.
+        if ((extension.apiAccessEnabled || extension.variables.isNotEmpty()) && httpRuntime == null) {
+            return@mapNotNull null
+        }
 
         val inputSchema = parseCustomInputSchema(extension.inputSchema) ?: return@mapNotNull null
         val toolName = customExtensionToolName(extension)
