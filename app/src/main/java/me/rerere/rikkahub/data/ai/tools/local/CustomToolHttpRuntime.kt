@@ -254,6 +254,9 @@ class CustomToolHttpRuntime(
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
         } catch (error: Exception) {
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
+        } finally {
+            jobs.remove(executionJob)
+            if (jobs.isEmpty()) activeExecutions.remove(extension.id, jobs)
         }
     }
 
