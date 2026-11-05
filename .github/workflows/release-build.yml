@@ -164,7 +164,10 @@ jobs:
             ### Installation
             Download the APK asset, open it on your Android device, and allow installation from that source if Android asks. This is a personal GitHub build, not a Google Play release.
 
-            The APK is signed and verified by the release workflow.\n\n            - APK size: ${{ steps.apk.outputs.size }} bytes\n            - SHA-256: ${{ steps.apk.outputs.sha256 }}
+            The APK is signed and verified by the release workflow.
+
+            - APK size: ${{ steps.apk.outputs.size }} bytes
+            - SHA-256: ${{ steps.apk.outputs.sha256 }}
 
             This is a personal build, not an official Google Play distribution.
           fail_on_unmatched_files: true
