@@ -488,7 +488,7 @@ fun ExtensionBuilderPage(
                         Button(
                             modifier = Modifier.weight(1f),
                             onClick = ::saveDraft,
-                            enabled = name.isNotBlank() && !isTesting,
+                            enabled = name.isNotBlank() && !isTesting && !isSavingSecret,
                         ) {
                             Text(stringResource(R.string.extension_builder_page_save))
                         }
