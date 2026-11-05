@@ -1,4 +1,4 @@
-name: Stage 3 Persistence Tests
+name: Custom Tool Model and Runtime Tests
 
 on:
   push:
@@ -85,4 +85,5 @@ jobs:
             --tests 'me.rerere.rikkahub.data.model.CustomExtensionTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsNormalizationTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsFieldsTest' \
-            --tests 'me.rerere.rikkahub.data.datastore.SettingsStoreTest'
+            --tests 'me.rerere.rikkahub.data.datastore.SettingsStoreTest' \\
+            --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomExtensionToolsTest'
