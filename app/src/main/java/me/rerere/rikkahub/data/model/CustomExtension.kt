@@ -104,7 +104,7 @@ private fun String.isObjectInputSchema(): Boolean = runCatching {
 }.getOrDefault(false)
 
 /**
- * Stable fingerprint used to ensure enabled code is exactly the code that was tested.
+ * Stable fingerprint used to ensure the enabled schema and implementation match the tested definition.
  *
  * The Builder must invalidate this value whenever either implementation or schema changes.
  */
