@@ -130,7 +130,8 @@ private fun String.isObjectInputSchema(): Boolean = runCatching {
 
 /**
  * Validates and canonicalizes a host allowlist entry. Entries are hostnames only:
- * schemes, ports, paths, credentials, query strings, and IP literals are rejected.
+ * schemes, ports, paths, credentials, and query strings are rejected. Private IPv4 literals
+ * are accepted only when the separate local-network capability is enabled.
  *
  * A wildcard is permitted only as the complete left-most label (for example
  * "*.api.example.com"). Local names such as localhost and .local require the separate
