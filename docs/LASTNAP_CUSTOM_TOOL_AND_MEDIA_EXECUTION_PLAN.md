@@ -1,10 +1,10 @@
 # LastNap — Custom Tools and Inline Media Execution Plan
 
 **Created:** 2026-11-06  
-**Working branch:** `feature/custom-tool-api-runtime`  
+**Working branch:** `feature/custom-tool-api-runtime-next`  
 **Protected baseline:** `lastnap-clean-foundation` at `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`
 
-> This is a new, standalone execution plan. It does not replace, edit, renumber, or mark complete any stage in `docs/LASTNAP_PROJECT_PLAN.md`. The existing plan and its historical stages remain untouched. All implementation work described here is confined to the working branch above.
+> This is a new, standalone execution plan. It does not replace, edit, renumber, or mark complete any stage in `docs/LASTNAP_PROJECT_PLAN.md`. The existing plan and its historical stages remain untouched. All implementation work described here is confined to `feature/custom-tool-api-runtime-next`. The pre-existing `feature/custom-tool-api-runtime` branch is a frozen source point for this continuation and must not be modified.
 
 ## Mission
 
@@ -15,7 +15,8 @@ After the custom-tool capability is complete and regression-tested, implement th
 ## Non-negotiable boundaries
 
 - Never modify `lastnap-clean-foundation`, `master`, or `feature/extensions-foundation`.
-- Work only on `feature/custom-tool-api-runtime`.
+- Do not modify `feature/custom-tool-api-runtime`; it is the frozen source branch from which this continuation was created.
+- Work only on `feature/custom-tool-api-runtime-next`.
 - Do not modify the old project plan or its stages.
 - Do not redesign or refactor unrelated app features, navigation, settings, shared styling, performance, or integrations.
 - Preserve existing RikkaHub behavior, SSH SecretCipher behavior, Custom JS search behavior, existing custom-tool approval flow, and existing assistant-scoped assignment.
@@ -27,20 +28,22 @@ After the custom-tool capability is complete and regression-tested, implement th
 - Do not begin video-player implementation until the custom-tool completion gate passes.
 - Never claim a test, build, APK verification, installation, or device behavior that has not actually been observed.
 
-## Stage 0 — Establish an isolated execution workspace
+## Stage 0 — Establish an isolated continuation workspace
 
-**Goal:** verify the exact branch/base and make the new plan the only initial change.
+**Goal:** preserve the existing working branch and continue from an exact, verified snapshot on a new branch.
 
 Tasks:
-- Verify current branch head and compare it with the recorded base.
-- Confirm the existing project plan is unchanged.
-- Confirm the protected branches remain untouched.
-- Create this file as a separate plan document.
-- Record the initial commit and changed-path list.
+- Create `feature/custom-tool-api-runtime-next` from the current tip of `feature/custom-tool-api-runtime` without moving or modifying the source branch.
+- Verify both branches point to the same commit immediately after branch creation.
+- Record the source commit SHA and the new branch name.
+- Confirm the existing project plan and all inherited files are unchanged by branch creation.
+- Keep all subsequent commits and edits exclusively on the new continuation branch.
 
 Acceptance:
-- Only this new plan file is added in this stage.
-- No source, resource, workflow, dependency, or old-plan change is made.
+- `feature/custom-tool-api-runtime-next` begins at source commit `5178056124ba9728f9edb63f5d668bb52117f561`.
+- The source branch remains at that same commit until the user explicitly authorizes otherwise.
+- Protected branches remain untouched.
+- No source, resource, workflow, dependency, or old-plan change is made as part of branch creation.
 
 ## Stage 1 — Complete the architecture audit and freeze contracts
 
@@ -57,7 +60,7 @@ Inspect current source and direct call sites for:
 Freeze and document these contracts:
 1. Persisted opt-in capability flags with safe defaults for existing tools.
 2. A single documented named-reference convention shared by Simple and Advanced modes.
-3. Tool-declared Secrets and Variables, with required/optional status and descriptions.
+3. Tool-declared Secrets and Variables, with required/optional status and descriptions, namespaced to the immutable tool identity by default.
 4. Dedicated CRUD experience for named values. Secret values are masked and never read back into Builder code or AI context.
 5. Native request-time secret resolution. Do not provide a generic plaintext secret getter to JavaScript. Define supported injection locations and reject unsafe/ambiguous substitutions.
 6. Missing required values are clearly identified before a tool can be enabled or invoked.
@@ -65,6 +68,7 @@ Freeze and document these contracts:
 8. Explicit opt-in enforcement at runtime, not just in the Builder UI.
 9. Per-tool storage API, safe relative names, quotas, size limits, lazy directory creation, and cross-tool isolation.
 10. Retention and deletion behavior for tool removal, storage disablement, tool re-import, and app backup/restore.
+13. Explicit ownership for Secrets/Variables: tool-scoped values are removed with their owning tool; any future cross-tool shared value requires explicit sharing/ownership records and must not be deleted while another owner still references it.
 11. Test fingerprint inputs: all executable code/schema/capability declarations that affect execution, but never secret values.
 12. Regression matrix proving Custom JS search and SSH credential flows remain unchanged.
 
@@ -80,16 +84,23 @@ This contract is separate from tool-owned storage and is mandatory for every sup
 - Tool deletion must never cascade into conversation messages, media references, or conversation-owned media files.
 - Treat media publication as an atomic boundary: a result is either committed to its target message with durable media ownership, or remains temporary and is cleaned up. No half-published message, dangling reference, or permanent orphan is acceptable.
 - If a tool is deleted while executing, block new invocations and cancel/invalidate in-flight work. Any output already atomically committed to a conversation remains; uncommitted temporary output is discarded. A late callback must not resurrect a deleted tool or publish an unowned file.
-- Chat backup/restore must preserve the relationship between messages and their media, or explicitly report missing media and render a safe placeholder. Tool deletion must not change chat backup contents. Tool exports must not contain conversation media.
+- Chat backup/restore must preserve the relationship between messages and their media, or explicitly report missing media and render a safe placeholder. Tool deletion must not change chat backup contents. Tool exports must not contain conversation media. Explicit user export/save is a separate copy operation and must not change the ownership of the chat's original media.
 - When a conversation is deleted, remove its associated media from managed storage and metadata without touching media belonging to other conversations. If the same underlying blob has references in multiple conversations, remove only the deleted conversation's references and retain the blob until no references remain.
 - Failed cleanup must be recoverable: mark pending deletion, retry safely, and never expose deleted media in another chat. Avoid deleting files before the metadata transaction establishes that no live owner remains.
+- If an API returns a temporary or signed media URL rather than bytes, materialize it into conversation-owned managed storage before publishing the message, using bounded downloads and the same URL, redirect, and private-network protections as the API bridge. Do not treat an expiring remote URL as durable chat media. If safe materialization fails, surface a clear tool error rather than publishing a result that is expected to disappear.
+- Media generated by a tool must be copied or ownership-transferred into conversation-managed storage before its tool-owned temporary file can be cleaned up. A chat message must never point directly into a tool's private storage namespace.
+- Deleting a conversation cancels or invalidates any still-running work targeting that conversation. Late callbacks cannot recreate its messages, media records, or files; uncommitted temporary output is cleaned up.
+- Explicitly saving/exporting a chat image to a user-owned library or external destination creates a separate user-owned copy. That deliberate copy survives later deletion of the conversation; merely viewing or generating the image does not create such a copy.
+- Remove conversation-specific thumbnails, previews, and cached derivatives when their owning media is no longer referenced. Shared derivatives follow the same ownership/reference rules as the source media.
 
 Acceptance:
 - Tests prove tool deletion leaves old chat media readable.
 - Tests prove deleting chat A removes its unshared media but leaves chat B and its media readable, including a shared-blob/reference-count scenario if deduplication exists.
-- Tests cover message-only deletion/regeneration, repeated deletion, process death between metadata/file operations, tool deletion during an active media-producing call, and backup/restore consistency.
+- Tests prove explicitly saved user-owned copies survive conversation deletion, while ordinary chat-owned media does not.
+- Tests cover message-only deletion/regeneration, repeated deletion, deleting a chat during an active media-producing call, process death between metadata/file operations, tool deletion during an active media-producing call, and backup/restore consistency.
+- Tests verify temporary URL results are materialized and remain readable after URL expiry or tool deletion.
 
-Acceptance:
+Stage 1 audit acceptance:
 - Contracts and risks are documented in this new plan before source edits.
 - Any design that would require unrelated app changes is narrowed or rejected.
 
@@ -122,6 +133,7 @@ Tasks:
 - Store ordinary Variables separately from sensitive Secrets and define their backup/export behavior explicitly.
 - Add per-tool declarations of required and optional names, descriptions, and intended use.
 - Add a dedicated masked management flow to create, update, and delete named values.
+- Namespace values by immutable tool ID. Deleting a tool removes only values it owns; if cross-tool sharing is ever introduced, remove the deleted tool's reference and retain a shared value until its final owner explicitly releases it.
 - Resolve secret references only inside native request construction. JavaScript, AI prompts, test output, diagnostics, logs, tool exports, and serialized definitions never receive the plaintext.
 - Make missing required values visible and actionable.
 - Handle reinstall/device restore by asking the user to recreate unavailable local Secrets; never silently substitute or export them.
@@ -147,6 +159,8 @@ Tasks:
 - Define storage disablement, tool deletion, import/re-import, and retention semantics. Disabling storage must not silently erase existing data.
 - Tool-owned storage is not conversation media. Deleting a tool removes its own private storage and its own configuration/credentials according to the deletion contract, but never deletes files already published into chats.
 - Define crash-safe tool deletion as a staged/idempotent operation: mark tool unavailable and prevent new runs; cancel active runs; remove assistant assignments and tool-owned configuration/secret/variable records; clean only the tool's private storage; then finalize deletion. Recover incomplete cleanup on next launch. Preserve any already-committed conversation results.
+- Make the delete confirmation explicit that the tool's private data/configuration will be removed but images and other media already delivered to conversations will remain.
+- Never delete shared Secrets/Variables or files that have another explicit owner. With the current per-tool namespace, tool deletion removes only that tool's namespaced values.
 - Keep immutable tool identity distinct from display name and import identity. Re-importing a tool must not silently regain access to deleted tool data or another tool's namespace. Explicit restore/import semantics must be defined.
 - Storage disablement blocks future reads/writes but retains existing data until the user explicitly deletes it or deletes the tool; show that retained data exists and explain its ownership.
 - Define behavior for tool deletion while a call is running and for storage writes racing with deletion. A late completion must not recreate deleted storage.
@@ -189,7 +203,7 @@ Acceptance:
 **Goal:** let API-backed tools return useful media, not huge text blobs.
 
 Tasks:
-- Add typed image result handling for API binary/Base64 responses: decode natively, validate format/size, save through managed storage, and return a typed image UIMessagePart.
+- Add typed image result handling for API binary/Base64 responses and safely retrievable URL responses: decode/download natively, validate format/size, materialize into conversation-owned managed storage, and return a typed image UIMessagePart.
 - Preserve provider-specific vision behavior and verify the selected model's image modality before promising image understanding.
 - Ensure the image is rendered in the tool result and can be passed to the model using the existing provider adapters.
 - Verify managed local image paths in Markdown without breaking existing image/GIF rendering.
@@ -197,10 +211,12 @@ Tasks:
 - Keep Base64 out of model context when typed media is supported.
 - Add end-to-end tests for binary response -> managed file -> typed part -> renderer/provider handoff, plus invalid/oversized data.
 - Persist chat-generated media under conversation/message ownership, never in tool-owned storage. The producing tool ID may be retained as non-owning provenance metadata, but must not control media lifetime.
+- Treat temporary remote URLs and tool-private output files as inputs to materialization only; after publication the message points to a stable conversation-owned asset, not an expiring URL or tool directory.
 - Ensure the message/media reference is committed atomically enough that the UI cannot show a durable message whose media was never safely stored. Clean temporary files on cancellation/failure.
 - Verify media remains available after tool disable, tool deletion, tool edit, and tool re-import.
 - Verify deleting one conversation removes only its media and references; other conversations remain intact. If deduplicated blobs are used, validate reference counting/ownership and final-owner garbage collection.
-- Verify deleting a message, regenerating a response, or clearing a conversation releases only media no longer referenced by surviving messages.
+- Verify deleting a message, regenerating a response, editing/removing an image from a response, or clearing a conversation releases only media no longer referenced by surviving messages.
+- Verify explicitly saved/exported user-owned copies survive conversation deletion, while temporary thumbnails and chat-only copies are removed.
 - Test a tool deletion racing an active API/media call: committed results survive; uncommitted results are cancelled and cleaned; no late callback recreates tool-owned state or leaks orphaned files.
 
 Acceptance:
@@ -280,10 +296,13 @@ Acceptance:
 
 ## Execution log
 
-### Initial state (2026-11-06)
-- Existing `docs/LASTNAP_PROJECT_PLAN.md` was read from `feature/custom-tool-api-runtime`; this new plan is intentionally separate.
-- The existing plan describes the current feature branch as documentation-only, with no custom-tool runtime source implementation yet.
-- The recorded base is `8e4ac854df5d15d35a9f7853698ebf4dfe8e0653`.
+### Continuation branch established (2026-11-06)
+- The original standalone plan was introduced on `feature/custom-tool-api-runtime`; its initial plan commit was `9e60c14a1d3fd4e2ef67e310c847622515ade148`.
+- Before continuation, the source branch contained the media ownership/lifecycle contract and related deletion/cleanup requirements. Those inherited changes are preserved exactly; this continuation does not rewrite the source branch.
+- Created `feature/custom-tool-api-runtime-next` from source commit `5178056124ba9728f9edb63f5d668bb52117f561`.
+- GitHub comparison verified the new branch and `feature/custom-tool-api-runtime` were identical at creation (zero commits ahead/behind, no file differences).
+- All subsequent edits, commits, tests, and implementation work must occur only on `feature/custom-tool-api-runtime-next`.
+- Protected branches are not targets. No protected branch was modified by creating the continuation branch.
+- The old `docs/LASTNAP_PROJECT_PLAN.md` remains outside this plan's editing scope.
 - The prior architecture notes identify an existing QuickJSFetch bridge, SecretCipher, FilesManager primitives, and typed UIMessagePart media as possible foundations, not completed custom-tool capabilities.
-- No source code has been changed as part of this new plan.
-- Stage 0 plan-file creation is the first intended repository mutation; later stages must be completed and logged individually.
+- Source-code implementation has not yet begun. Stage 1 remains an audit/freeze-contract stage and must be completed before implementation edits.
