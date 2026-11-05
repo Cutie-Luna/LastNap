@@ -418,7 +418,7 @@ At the end of the chat, update this document before presenting the handoff summa
 
 ## 8. Current next action
 
-Stage 0 and Stage 1 are complete. Stage 2 source identity/artwork audit is complete as of 2026-11-05, with the bounded-scan limitation recorded in Section 30. The next stage is Stage 3: inspect the existing assistant/settings/datastore/tool models, then design the assistant-scoped custom-tool persistence model and migrations before any implementation. APK/package-table and Android 13 device proof remain assigned to Stage 8; they are not claimed complete.
+Stages 0 and 1 are complete; Stage 2 source identity/artwork acceptance is closed on the documented bounded-scan basis in Section 30. Stage 3's assistant-scoped custom-tool persistence foundation and its four focused unit-test classes passed on GitHub Actions (run 42028485101, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`). The next stage is Stage 4: inspect and design runtime registration, assistant filtering, schema adaptation, and permission enforcement before implementation. APK/package-table and Android 13 device proof remain assigned to Stage 8; they are not claimed complete.
 
 When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experience while preserving Simple and Advanced and all existing functionality. This is a UI presentation change, not permission to simplify away features.
 
@@ -736,7 +736,7 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 
 - Stage 3 source files: new `CustomExtension.kt`; `Assistant.kt`; `Settings.kt`; `PreferencesStore.kt`; `SettingsFields.kt`; `SettingsNormalization.kt`; focused tests under `app/src/test/.../data/model` and `.../data/datastore`.
 - Do not touch `ChatToolFactory.kt`, `JavascriptTool.kt`, runtime tool filtering, QuickJS execution, permission enforcement, Tool Builder screen, navigation, skills, or locales in Stage 3. Those belong to Stages 4–7.
-- **Acceptance:** Settings/Assistant round-trip, old JSON defaults, default-empty assistant selection, cleanup/deletion, and validation tests are written. No existing Settings key or backup payload shape is renamed. No custom tool becomes callable.
+- **Acceptance:** Settings/Assistant round-trip, old JSON defaults, default-empty assistant selection, cleanup/deletion, and validation tests are written and passed in the focused CI run recorded in Section 35. No existing Settings key or backup payload shape is renamed. No custom tool becomes callable.
 
 ## 32. Stage 3 test-fingerprint correction — 2026-11-05
 
@@ -756,9 +756,9 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 
 ### Branch and repository checkpoint
 
-- Working branch: `lastnap-clean-foundation`. Source/workflow head before this plan update: `1d92cb10dce0d01e9c5407fe4c0c99617334c4f3`.
+- Working branch: `lastnap-clean-foundation`. Source/workflow head verified by the successful Stage 3 CI run: `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c` (plan update follows as a separate commit).
 - Protected branch tips rechecked: `master` remains `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`; historical `feature/extensions-foundation` remains `942c1b49019dbbd55f02606f31b74cc258c14641`. Neither was modified.
-- Complete, non-truncated recursive tree comparison against frozen fork baseline `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`: 1,543 LastNap blobs vs 1,536 baseline blobs; 7 LastNap-only paths; zero baseline paths missing; 58 shared paths differ; 1,478 shared blobs are byte-identical. The 58 comprise the previously reviewed identity/upstream-baseline set, seven Stage 3 existing-file additions/updates, and the release-workflow guard. The three Stage 3 new paths are the custom-tool model and two focused test files.
+- Complete, non-truncated recursive tree comparison rechecked at commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c` against frozen fork baseline `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`: 1,544 LastNap blobs vs 1,536 baseline blobs; 8 LastNap-only paths; zero baseline paths missing; 58 shared paths differ; 1,478 shared blobs are byte-identical. The eight additions are the LastNap artwork/adaptive icon, custom-tool model, two focused test files, focused CI workflow, and this project plan. No baseline path was removed.
 - A separate comparison against current upstream `rikkahub/rikkahub` master shows upstream has continued to move (including two newly added upstream-only assets); do not treat those newer upstream changes as omissions from the frozen fork baseline.
 
 ### Stage 3 source changes
@@ -768,6 +768,7 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - `app/src/main/java/me/rerere/rikkahub/data/datastore/Settings.kt` — adds `customExtensions: List<CustomExtension> = emptyList()`.
 - `app/src/main/java/me/rerere/rikkahub/data/datastore/PreferencesStore.kt` and `SettingsFields.kt` — register the `custom_extensions` JSON preference key and field mapping. No existing preference key is renamed.
 - `SettingsNormalization.kt` — removes blank/duplicate tool IDs, cleans dangling assistant selections, and provides a pure deletion transformation that removes the definition and every assistant assignment together.
+- `.github/workflows/stage3-persistence-tests.yml` — new branch-scoped, non-publishing focused test workflow; JDK 21 / Node 22 / pnpm 11, CI-only dummy Google Services configuration, `contents: read` permission, no signing secrets, no release task, and no artifact publication.
 - Tests added/extended:
   - `CustomExtensionTest.kt`: disabled safe defaults, schema shape/malformed JSON, field limits, enable/test gate, disabled-permission rejection, and schema/code fingerprint invalidation.
   - `SettingsNormalizationTest.kt`: no implicit assignment, duplicate/dangling-reference cleanup, and atomic deletion cleanup.
@@ -792,13 +793,16 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 ### Verification and remaining gate
 
 - Source files and focused test cases were fetched and reviewed after the final edits. The stale implementation-only test fixture was corrected to use the schema-plus-implementation fingerprint.
-- **Tests have been written but not executed.** The available GitHub connection exposes no workflow-dispatch action, the repository has no dedicated unit-test workflow, and the existing manual daily workflow performs a signed release APK build rather than a focused test run. No local checkout/runtime is available here. Do not report these tests as passing; Stage 3 remains open until the focused unit tests (and relevant compile check) are actually run.
-- No Gradle build, lint, APK build, signature check, install, or phone verification was run. No phone action is needed for the current source-only work.
-- **Next action:** establish a focused, non-publishing way to run the Stage 3 unit tests and compile checks; inspect results and fix any failures. Only after Stage 3 passes should implementation begin for Stage 4 runtime registration/permission enforcement.
+- **Focused CI verification passed:** GitHub Actions run [42028485101](https://github.com/Cutie-Luna/LastNap/actions/runs/42028485101), workflow `Stage 3 Persistence Tests`, branch `lastnap-clean-foundation`, head `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`; job `persistence-tests` completed with `success`. The `testGithubDebugUnitTest` Gradle task passed with filters for `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, and `SettingsStoreTest`. The task compiled the GithubDebug app and unit-test sources and executed the focused tests; Gradle reported `BUILD SUCCESSFUL` (228 actionable tasks). No test failure occurred. Existing deprecation/opt-in compiler warnings were non-fatal and were not expanded into unrelated cleanup.
+- The workflow used a temporary CI-only Google Services file and read-only repository token permissions. No signing key/secrets, signed APK task, release task, publication, or artifact upload was involved.
+- The focused `testGithubDebugUnitTest` task and its required source/test compilation passed. No separate lint task, full assemble task, signed APK build, signature check, install, or phone verification was run. No phone action is needed for Stage 3.
+- **Stage 3 disposition:** complete. The acceptance tests and relevant compile path passed in CI. Keep the focused workflow as a reusable regression check.
+- **Next action / Stage 4 entry:** review the live assistant tool-registration path and the historical implementation only as reference; explicitly analyze `ASK_EVERY_TIME` versus `THIS_SESSION` approval resumption, tool-name collisions/normalization, JSON-schema adaptation limits, input/output bounds, and current-assistant selection filtering. Write the Stage 4 design and acceptance criteria into this plan before editing runtime files.
 
-## 35. Focused Stage 3 test-runner plan — 2026-11-05
+## 35. Focused Stage 3 test-runner and successful execution — 2026-11-05
 
-- The Stage 3 regression tests are present but the available GitHub connection cannot dispatch the existing manual workflow, and that workflow is a signed APK build rather than a unit-test job.
-- To execute only the changed persistence/model coverage without touching signing secrets or publishing, add a small branch-scoped GitHub Actions workflow that runs the four focused app unit-test classes on pushes to `lastnap-clean-foundation`.
-- The workflow will set up the same JDK 21 / Node 22 / pnpm 11 toolchain required by the app's Web module, generate a CI-only dummy Google Services file for the debug package, and run `testGithubDebugUnitTest` with filters for the custom-tool model, normalization, settings-field, and SettingsStore tests.
-- It must use read-only repository permissions, no signing secrets, no release tasks, and no artifact publication. The workflow file's initial push will trigger the first run. Keep it as a reusable focused regression check if it behaves as intended.
+- Added `.github/workflows/stage3-persistence-tests.yml` on `lastnap-clean-foundation`. It runs on pushes to that branch (and supports manual dispatch), uses JDK 21 / Node 22 / pnpm 11, creates a CI-only dummy `app/google-services.json`, and runs only the four focused persistence/model test classes through `:app:testGithubDebugUnitTest`.
+- Safety review of the workflow: `permissions: contents: read`; no signing secrets or keystore access; no release/assemble task; no artifact upload or publication. The dummy Google Services file exists only in the ephemeral runner workspace.
+- First run: [GitHub Actions run 42028485101](https://github.com/Cutie-Luna/LastNap/actions/runs/42028485101), event `push`, branch `lastnap-clean-foundation`, commit `9d1cb5a1f0a384ce9fa54c16ce352af9017b659c`, run attempt 1. Overall run and sole `persistence-tests` job both completed successfully.
+- The log confirms all setup steps completed, Gradle compiled the GithubDebug app and unit-test sources, then `:app:testGithubDebugUnitTest` completed with `BUILD SUCCESSFUL` in 4m 43s (228 actionable tasks). The four filters were `CustomExtensionTest`, `SettingsNormalizationTest`, `SettingsFieldsTest`, and `SettingsStoreTest`. The log contains non-fatal existing deprecation/opt-in warnings; no test or compile failure.
+- **Disposition:** Stage 3 acceptance is met and Stage 3 is complete. The focused workflow remains as a reusable non-publishing regression check. This result is not a lint result, full APK build, signing verification, install, or device test.
