@@ -42,6 +42,29 @@ class CustomExtensionTest {
     }
 
     @Test
+    fun `object schema properties and required shapes are validated`() {
+        val invalidProperties = CustomExtension(
+            name = "Lookup",
+            description = "",
+            inputSchema = """{"type":"object","properties":[] }""",
+        )
+        val invalidRequired = CustomExtension(
+            name = "Lookup",
+            description = "",
+            inputSchema = """{"type":"object","properties":{},"required":"value"}""",
+        )
+        val nonStringRequired = CustomExtension(
+            name = "Lookup",
+            description = "",
+            inputSchema = """{"type":"object","properties":{},"required":["value",1]}""",
+        )
+
+        assertTrue(CustomExtensionValidationError.INVALID_INPUT_SCHEMA in invalidProperties.validationErrors())
+        assertTrue(CustomExtensionValidationError.INVALID_INPUT_SCHEMA in invalidRequired.validationErrors())
+        assertTrue(CustomExtensionValidationError.INVALID_INPUT_SCHEMA in nonStringRequired.validationErrors())
+    }
+
+    @Test
     fun `all persisted text limits are enforced`() {
         val invalid = CustomExtension(
             id = "",
