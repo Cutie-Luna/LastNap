@@ -417,7 +417,7 @@
   <string name="extension_builder_page_permission_disabled_help">This tool is not offered to assistants, even if it is selected.</string>
   <string name="extension_builder_page_sandbox_note">JavaScript runs in a fresh, time- and memory-limited sandbox. It has no direct access to Android, your files, the network, the browser or Node.js. Review implementations before enabling them.</string>
   <string name="extension_builder_page_review">Review</string>
-  <string name="extension_builder_page_review_intro">Check the details below before saving. This review does not run the code or change the tool's enabled state.</string>
+  <string name="extension_builder_page_review_intro">Check the details below before saving. This review does not run the code or change whether the tool is enabled.</string>
   <string name="extension_builder_page_edit_draft">Back to edit</string>
   <string name="extension_builder_page_back_to_drafts">Back</string>
   <string name="extension_builder_page_save">Save draft</string>
