@@ -90,7 +90,7 @@ internal fun createCustomExtensionTools(
                     appendLine("Call this tool with the user's JSON object inside the required input field.")
                     appendLine("The implementation runs in an isolated JavaScript runtime.")
                     if (extension.storageEnabled) {
-                        appendLine("Private per-tool storage is available through storage.readText, storage.writeText, storage.delete, and storage.list.")
+                        appendLine("Private per-tool storage is available through storage.readText, storage.writeText, storage.readBase64, storage.writeBase64, storage.delete, and storage.list.")
                     }
                     if (extension.variables.isNotEmpty()) {
                         appendLine("Non-sensitive configuration values are available as globalThis.variables.NAME.")
