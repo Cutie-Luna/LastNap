@@ -1219,7 +1219,7 @@ mDNSアドレス: .localホスト名を使用し、IPを知らなくても同じ
   <string name="setting_asr_configure_step_itn">ITN を有効化</string>
   <string name="setting_asr_configure_step_itn_desc">逆テキスト正規化: 話し言葉の数字を数字表記に変換します（例: 三百 → 300）</string>
   <string name="setting_asr_configure_step_timestamp">タイムスタンプを有効化</string>
-  <string name="setting_asr_configure_step_timestamp_desc">単語単位のタイムスタンプを返します。rikkahub では現在使用していないため、token 節約のため既定では無効です</string>
+  <string name="setting_asr_configure_step_timestamp_desc">単語単位のタイムスタンプを返します。LastNap では現在使用していないため、token 節約のため既定では無効です</string>
   <string name="setting_asr_configure_step_hotwords">ホットワード</string>
   <string name="setting_asr_configure_step_hotwords_desc">固有名詞や専門用語の認識精度を高める、カンマ区切りのホットワード一覧</string>
   <string name="log_page_record_requests">リクエスト記録</string>
