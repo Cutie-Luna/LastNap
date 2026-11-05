@@ -26,8 +26,8 @@ android {
         applicationId = "com.lastnap.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 195
-        versionName = "3.1.2"
+        versionCode = 196
+        versionName = "3.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
