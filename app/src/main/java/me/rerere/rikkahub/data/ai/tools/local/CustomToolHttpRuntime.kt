@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -47,6 +48,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class CustomToolHttpRuntime(
     private val baseClient: OkHttpClient,
     private val secretStore: CustomToolSecretProvider,
+    private val storage: CustomToolStorageProvider,
 ) {
 
     suspend fun evaluate(
@@ -547,6 +549,7 @@ class CustomToolHttpRuntime(
         fun create(
             settingsStore: me.rerere.rikkahub.data.datastore.SettingsStore,
             secretStore: CustomToolSecretStore,
+            storage: CustomToolStorage,
         ): CustomToolHttpRuntime {
             val client = OkHttpClient.Builder()
                 .proxySelector(me.rerere.rikkahub.data.remote.SettingsProxySelector(settingsStore))
@@ -560,7 +563,7 @@ class CustomToolHttpRuntime(
                 .retryOnConnectionFailure(false)
                 // Deliberately no request, body, or header logging interceptors.
                 .build()
-            return CustomToolHttpRuntime(client, secretStore)
+            return CustomToolHttpRuntime(client, secretStore, storage)
         }
 
         private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L
