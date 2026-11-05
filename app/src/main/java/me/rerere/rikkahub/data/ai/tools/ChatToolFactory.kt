@@ -9,6 +9,8 @@ import me.rerere.ai.provider.Model
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.tools.local.LocalTools
+import me.rerere.rikkahub.data.ai.tools.local.CustomExtensionSessionGrant
+import me.rerere.rikkahub.data.ai.tools.local.createCustomExtensionTools
 import me.rerere.rikkahub.data.datastore.Settings
 import me.rerere.rikkahub.data.files.FileFolders
 import me.rerere.rikkahub.data.model.Assistant
@@ -50,6 +52,7 @@ class ChatToolFactory(
         assistant: Assistant,
         model: Model,
         workspaceCwd: String? = null,
+        sessionApprovedCustomExtensions: Set<CustomExtensionSessionGrant> = emptySet(),
     ): List<Tool> {
         val workspaceTools = createWorkspaceToolsIfReady(assistant.workspaceId?.toString(), workspaceCwd)
         val tools = buildList {
@@ -97,7 +100,18 @@ class ChatToolFactory(
         // 文件放在本机, 只有本地 Rootfs 挂载了 /tool_outputs, 远程工作区同样读不到
         val canReadToolOutputs = workspaceTools.isNotEmpty() &&
             assistant.workspaceId?.let { workspaceRepository.getById(it.toString()) }?.capabilities()?.rootfs == true
-        return if (canReadToolOutputs) tools.map(::withOutputTruncation) else tools
+        val customTools = createCustomExtensionTools(
+            extensions = settings.customExtensions,
+            selectedExtensionIds = assistant.selectedCustomExtensionIds,
+            assistantId = assistant.id,
+            sessionApprovedExtensions = sessionApprovedCustomExtensions,
+            reservedToolNames = tools.mapTo(mutableSetOf()) { it.name },
+            onNameCollision = { name ->
+                Log.w(TAG, "Skipping custom tool with colliding name: $name")
+            },
+        )
+        val completeTools = tools + customTools
+        return if (canReadToolOutputs) completeTools.map(::withOutputTruncation) else completeTools
     }
 
     private fun withOutputTruncation(tool: Tool): Tool {
