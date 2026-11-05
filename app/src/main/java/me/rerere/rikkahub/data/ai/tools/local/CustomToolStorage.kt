@@ -17,6 +17,62 @@ interface CustomToolStorageProvider {
     fun deleteToolStorage(toolId: String)
 }
 
+/** Ephemeral storage used by Builder tests so tests never mutate a tool's saved data. */
+class InMemoryCustomToolStorage : CustomToolStorageProvider {
+    private val values = mutableMapOf<Pair<String, String>, ByteArray>()
+
+    @Synchronized
+    override fun readBytes(toolId: String, name: String): ByteArray? {
+        validateName(name)
+        return values[toolId to name]?.copyOf()
+    }
+
+    @Synchronized
+    override fun writeBytes(toolId: String, name: String, bytes: ByteArray) {
+        validateName(name)
+        require(bytes.size <= MAX_FILE_BYTES) { "Stored item exceeds the 1 MiB per-file limit" }
+        val key = toolId to name
+        val oldSize = values[key]?.size ?: 0
+        val total = values.filterKeys { it.first == toolId }.values.sumOf { it.size } - oldSize + bytes.size
+        require(total <= MAX_TOTAL_BYTES) { "Tool storage exceeds the 10 MiB total limit" }
+        if (key !in values) {
+            require(values.keys.count { it.first == toolId } < MAX_FILES_PER_TOOL) {
+                "Tool storage is limited to 100 files"
+            }
+        }
+        values[key] = bytes.copyOf()
+    }
+
+    @Synchronized
+    override fun delete(toolId: String, name: String): Boolean {
+        validateName(name)
+        return values.remove(toolId to name) != null
+    }
+
+    @Synchronized
+    override fun list(toolId: String): List<String> =
+        values.keys.filter { it.first == toolId }.map { it.second }.sorted()
+
+    @Synchronized
+    override fun deleteToolStorage(toolId: String) {
+        values.keys.filter { it.first == toolId }.forEach(values::remove)
+    }
+
+    private fun validateName(name: String) {
+        require(name.length <= MAX_NAME_LENGTH && SAFE_NAME.matches(name)) {
+            "Storage item name is invalid"
+        }
+    }
+
+    companion object {
+        private const val MAX_NAME_LENGTH = 128
+        private const val MAX_FILE_BYTES = 1024 * 1024
+        private const val MAX_TOTAL_BYTES = 10 * 1024 * 1024
+        private const val MAX_FILES_PER_TOOL = 100
+        private val SAFE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+    }
+}
+
 /**
  * Private, no-backup storage owned by one immutable custom-tool ID.
  *
