@@ -21,6 +21,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.CustomExtensionLimits
+import me.rerere.rikkahub.data.model.CustomExtensionValidationError
 import me.rerere.rikkahub.data.model.allowsApiHost
 import me.rerere.rikkahub.data.model.validationErrors
 import okhttp3.Dns
@@ -82,10 +83,21 @@ class CustomToolHttpRuntime(
         require(code.length <= CustomExtensionLimits.MAX_IMPLEMENTATION_LENGTH) {
             "Custom tool implementation exceeds the size limit"
         }
+        val validationErrors = extension.validationErrors()
         if (extension.apiAccessEnabled) {
-            require(extension.validationErrors().isEmpty()) {
+            require(validationErrors.isEmpty()) {
                 "Custom tool API permissions or definition are invalid"
             }
+        }
+        val invalidValueDeclarations = validationErrors.filter {
+            it == CustomExtensionValidationError.TOO_MANY_SECRETS ||
+                it == CustomExtensionValidationError.TOO_MANY_VARIABLES ||
+                it == CustomExtensionValidationError.INVALID_SECRET_DECLARATION ||
+                it == CustomExtensionValidationError.INVALID_VARIABLE_DECLARATION ||
+                it == CustomExtensionValidationError.DUPLICATE_VALUE_NAME
+        }
+        require(invalidValueDeclarations.isEmpty()) {
+            "Custom tool Secret or Variable declarations are invalid"
         }
         if (extension.apiAccessEnabled) {
             val missingSecrets = secretStore.missingRequiredSecrets(extension)
