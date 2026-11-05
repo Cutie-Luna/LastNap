@@ -411,9 +411,14 @@ class CustomToolHttpRuntime(
         require(localAddressCount == 0 || localAddressCount == addresses.size) {
             "HTTP request host resolves to mixed local and public addresses"
         }
-        if (url.scheme == "http") {
-            require(extension.allowLocalNetwork && addresses.all(::isLocalAddress)) {
-                "Unencrypted HTTP is allowed only for explicitly enabled local-network hosts"
+        val isLocalDestination = addresses.all(::isLocalAddress)
+        if (isLocalDestination) {
+            require(extension.allowLocalNetwork) {
+                "Local-network requests require the separate local-network permission"
+            }
+        } else {
+            require(url.scheme == "https" && url.port == 443) {
+                "Public API hosts must use HTTPS on the standard port"
             }
         }
         return addresses
@@ -433,8 +438,7 @@ class CustomToolHttpRuntime(
     }
 
     private fun safeDns(extension: CustomExtension): Dns = Dns { hostname ->
-        // When an explicit proxy is configured OkHttp resolves the proxy host, not the
-        // destination host. Destination validation is performed separately before each call.
+        // The custom-tool client is direct so OkHttp resolves the validated destination host.
         if (!extension.allowsApiHost(hostname)) {
             Dns.SYSTEM.lookup(hostname)
         } else {
