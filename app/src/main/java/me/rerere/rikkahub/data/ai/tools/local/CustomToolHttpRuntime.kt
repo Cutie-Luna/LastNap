@@ -63,9 +63,11 @@ class CustomToolHttpRuntime(
                 "Custom tool API permissions or definition are invalid"
             }
         }
-        val missingSecrets = secretStore.missingRequiredSecrets(extension)
-        require(missingSecrets.isEmpty()) {
-            "Missing required Secrets: ${missingSecrets.joinToString(", ")}"
+        if (extension.apiAccessEnabled) {
+            val missingSecrets = secretStore.missingRequiredSecrets(extension)
+            require(missingSecrets.isEmpty()) {
+                "Missing required Secrets: ${missingSecrets.joinToString(", ")}"
+            }
         }
         val declaredVariableNames = extension.variables.map { it.name }.toSet()
         val safeVariables = variables.filterKeys { it in declaredVariableNames }
@@ -444,6 +446,12 @@ class CustomToolHttpRuntime(
                 }
             }
         }
+        val totalBytes = resolved.entries.sumOf { (name, value) ->
+            name.toByteArray(Charsets.UTF_8).size + value.toByteArray(Charsets.UTF_8).size
+        }
+        require(totalBytes <= MAX_REQUEST_HEADER_BYTES &&
+            resolved.values.all { it.length <= MAX_HEADER_VALUE_CHARS }
+        ) { "Resolved HTTP request headers exceed the size limit" }
         return resolved to usedSecrets.toList()
     }
 
