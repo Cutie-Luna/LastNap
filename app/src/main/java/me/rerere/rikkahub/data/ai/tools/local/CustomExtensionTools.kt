@@ -49,7 +49,9 @@ internal fun createCustomExtensionTools(
         if (!extension.enabled) return@mapNotNull null
         if (extension.validationErrors().isNotEmpty()) return@mapNotNull null
         // Capability-enabled tools must never silently fall back to the legacy evaluator.
-        if ((extension.apiAccessEnabled || extension.variables.isNotEmpty()) && httpRuntime == null) {
+        if ((extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) &&
+            httpRuntime == null
+        ) {
             return@mapNotNull null
         }
 
@@ -110,7 +112,7 @@ internal fun createCustomExtensionTools(
                 val serializedInput = input.toString()
                 val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
                 val code = "const input = JSON.parse($serializedInputLiteral);\n$implementation"
-                val output = if (extension.apiAccessEnabled || extension.variables.isNotEmpty()) {
+                val output = if (extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) {
                     requireNotNull(httpRuntime).evaluate(
                         extension = extension,
                         code = code,
