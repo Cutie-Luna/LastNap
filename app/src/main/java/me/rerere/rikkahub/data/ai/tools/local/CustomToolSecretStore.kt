@@ -82,6 +82,13 @@ class CustomToolSecretStore(context: Context) {
         deleteFile(toolId)
     }
 
+    /** Deletes values whose declarations were removed, after the new tool definition is saved. */
+    fun retainDeclaredSecrets(toolId: String, declaredNames: Set<String>) = synchronized(lock) {
+        validateToolId(toolId)
+        val secrets = readEncryptedValues(toolId).filterKeys { it in declaredNames }
+        if (secrets.isEmpty()) deleteFile(toolId) else writeEncryptedValues(toolId, secrets)
+    }
+
     /**
      * Removes orphaned stores after interrupted tool deletion. Corrupt/unreadable records are
      * retained for safety; cleanup never guesses ownership from an unverified filename.
