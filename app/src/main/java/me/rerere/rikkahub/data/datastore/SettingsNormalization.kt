@@ -48,9 +48,14 @@ internal fun Settings.withoutInvalidReferences(): Settings {
     val validModeInjectionIds = settings.modeInjections.map { it.id }.toSet()
     val validLorebookIds = settings.lorebooks.map { it.id }.toSet()
     val validQuickMessageIds = settings.quickMessages.map { it.id }.toSet()
+    val customExtensions = settings.customExtensions
+        .filter { it.id.isNotBlank() }
+        .distinctBy { it.id }
+    val validCustomExtensionIds = customExtensions.map { it.id }.toSet()
     val validModelIds by lazy { settings.providers.flatMap { it.models }.mapTo(HashSet()) { it.id } }
     val asrProviders = settings.asrProviders.distinctBy { it.id }
     return settings.copy(
+        customExtensions = customExtensions,
         providers = settings.providers.distinctBy { it.id }.map { provider ->
             provider.copyProvider(models = provider.models.distinctBy { model -> model.id })
         },
@@ -71,6 +76,10 @@ internal fun Settings.withoutInvalidReferences(): Settings {
                 // 过滤掉不存在的快捷消息 ID
                 quickMessageIds = assistant.quickMessageIds.filter { id ->
                     id in validQuickMessageIds
+                }.toSet(),
+                // 自定义工具需要助手显式选择，并且引用必须指向现存定义
+                selectedCustomExtensionIds = assistant.selectedCustomExtensionIds.filter { id ->
+                    id in validCustomExtensionIds
                 }.toSet()
             )
         },
@@ -85,6 +94,17 @@ internal fun Settings.withoutInvalidReferences(): Settings {
         quickMessages = settings.quickMessages.distinctBy { it.id },
     )
 }
+
+/**
+ * Deletes one user-level custom-tool definition and removes its assignment from every assistant.
+ * Keep this as one pure Settings transformation so later UI code can persist it atomically.
+ */
+internal fun Settings.removeCustomExtension(id: String): Settings = copy(
+    customExtensions = customExtensions.filterNot { it.id == id },
+    assistants = assistants.map { assistant ->
+        assistant.copy(selectedCustomExtensionIds = assistant.selectedCustomExtensionIds - id)
+    },
+)
 
 // 把取值收回合法范围，比如删掉搜索服务后选中的下标可能越界
 private fun Settings.withValuesInRange(): Settings = copy(
