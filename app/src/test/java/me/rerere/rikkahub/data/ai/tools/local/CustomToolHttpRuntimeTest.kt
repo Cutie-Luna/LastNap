@@ -207,6 +207,35 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun optedInToolCanPersistAndReadItsPrivateTextStorage() = runBlocking {
+        val extension = CustomExtension(
+            name = "Storage test",
+            description = "",
+            storageEnabled = true,
+        )
+        val storage = MemoryStorage()
+        val output = runtime(storage = storage).evaluate(
+            extension,
+            """
+                storage.writeText("cache.json", "{\"value\":42}");
+                JSON.parse(storage.readText("cache.json")).value + ":" + storage.list().join(",")
+            """.trimIndent(),
+        )
+        val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+        assertEquals("42:cache.json", result)
+    }
+
+    @Test
+    fun disabledStorageCapabilityDoesNotInstallStorageApi() = runBlocking {
+        val extension = CustomExtension(name = "No storage", description = "", storageEnabled = false)
+        val output = runtime().evaluate(extension, "typeof storage")
+        val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+        assertEquals("undefined", result)
+    }
+
+    @Test
     fun disabledApiCapabilityDoesNotInstallFetch() = runBlocking {
         val extension = localExtension().copy(
             apiAccessEnabled = false,
