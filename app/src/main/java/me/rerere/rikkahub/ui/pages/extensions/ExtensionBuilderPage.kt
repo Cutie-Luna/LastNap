@@ -616,6 +616,34 @@ fun ExtensionBuilderPage(
                         }
                     }
                     item {
+                        ReviewSection(title = stringResource(R.string.extension_builder_page_secrets)) {
+                            if (secretDeclarations.isEmpty()) {
+                                Text(stringResource(R.string.extension_builder_page_not_set))
+                            } else {
+                                secretDeclarations.forEach { declaration ->
+                                    Text(
+                                        declaration.name + " — " + stringResource(
+                                            if (declaration.name in savedSecretNames) R.string.extension_builder_page_secret_configured
+                                            else R.string.extension_builder_page_secret_not_configured
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        ReviewSection(title = stringResource(R.string.extension_builder_page_variables)) {
+                            if (variableDeclarations.isEmpty()) {
+                                Text(stringResource(R.string.extension_builder_page_not_set))
+                            } else {
+                                variableDeclarations.forEach { declaration ->
+                                    Text(declaration.name + if (declaration.required) " (required)" else " (optional)")
+                                    ReviewCode(variableValues[declaration.name].orEmpty())
+                                }
+                            }
+                        }
+                    }
+                    item {
                         ReviewSection(title = stringResource(R.string.extension_builder_page_permission)) {
                             Text(stringResource(if (needsApproval) R.string.extension_builder_page_approval_on else R.string.extension_builder_page_approval_off))
                         }
@@ -1234,6 +1262,9 @@ fun ExtensionBuilderPage(
                     onClick = {
                         scope.launch {
                             settingsStore.update { it.removeCustomExtension(draftId) }
+                            withContext(Dispatchers.IO) {
+                                secretStore.deleteToolSecrets(draftId)
+                            }
                             showDeleteConfirmation = false
                             clearDraftState()
                         }
