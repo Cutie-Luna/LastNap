@@ -959,3 +959,43 @@ Stage 5 replaces the cramped editor popup with a dedicated page while preserving
 - No separate lint task, full assemble task, signed APK build, signature check, install, screenshot, or device test was run.
 - Stage 7 remains responsible for translated strings and integration/regression polish. Stage 8 remains responsible for full build, package/resource table checks, existing-key signing verification, installation, and Android 13 device checks.
 - **Stage 6 is intentionally not started.** It adds the Tool Creator skill and assistant-specific custom-tool assignment/entry points. Start only after the user has reviewed and accepted the Stage 5 Builder presentation.
+
+
+## 40. User-approved Stage 4/5 alignment and Stage 6 execution plan — 2026-11-05 (pre-edit)
+
+The user approved continuing with corrections to Stages 4 and 5, then proceeding to Stage 6 once the corrections are confirmed by source review and focused CI. This approval supersedes the earlier Stage 5 note that AI assistance was not integrated and the four-mode permission presentation.
+
+### Agreed product behavior
+
+- The AI helps prepare custom tools in BOTH Simple and Advanced Builder modes. Simple mode is plain-language-first; Advanced mode exposes technical fields, but the AI can still draft and revise the schema, instructions, JavaScript implementation, and test input for either mode. The user places/reviews the generated content in the Builder, runs the real sandbox test, and explicitly controls saving, enabling, and assistant assignment. No AI path may mark a test as passed or enable a tool.
+- Replace the four-way ExtensionPermission policy with one persisted boolean, `needsApproval`, shown as a standard app-style on/off switch labelled “Need approval”.
+- A new tool defaults to approval required. When enabled, the custom Tool uses the existing generic `Tool.needsApproval` contract. The existing chat tool-call approval UI and ChatService `handleToolApproval` flow remain the only approval mechanism. No custom approval card, session grant, or second prompt mechanism is to be added.
+- When “Need approval” is off, the existing generic approval system is not invoked for that custom tool. When on, every invocation uses the same existing approval UI/decision path as other approval-requiring tools.
+- Remove the custom-only THIS_SESSION grant system and four permission branches. Keep assistant selection, enabled/current-test validation, schema checks, QuickJS sandbox limits, and versioned tool names unchanged.
+- Legacy serialized `permission` values are ignored by the new model field and `needsApproval` defaults to true, a safe migration that may add an approval prompt to previously always-allowed tools rather than silently preserving an unsafe no-prompt behavior.
+
+### Stage 4/5 correction scope and acceptance
+
+- Update CustomExtension model/validation, runtime registration, ChatService/ChatRequestFactory grant plumbing, Builder switch, English strings, and focused model/runtime/Builder tests.
+- Confirm that no custom approval mechanism remains and the generic chat approval flow is still reached via `Tool.needsApproval`.
+- Update Simple and Advanced Builder guidance to explicitly say the AI can prepare/refine every field in either mode; user pastes/reviews the result and runs the actual test.
+- Keep the existing roomy page, review state, draft persistence, stale-test invalidation, and all unrelated RikkaHub UI unchanged.
+- Focused CI must compile the app and pass the relevant persistence, model, runtime, and Builder tests before Stage 6 begins. Device/phone visual review remains a Stage 8 check; source/CI confirmation is not a claim of device verification.
+
+### Stage 6 — Tool Creator skill and assistant entry points (approved to begin after the above gate)
+
+- Add the existing reviewed historical `tool-creator/SKILL.md` as a built-in skill alongside `skill-creator`; review and adapt its instructions to the corrected one-toggle/existing-approval design and AI-assisted Simple/Advanced workflow.
+- Keep skill opt-in and assistant-scoped through the existing `Assistant.enabledSkills` mechanism. Do not inject instructions globally.
+- Restore only the assistant-specific Custom Tools selector/content and the Custom Tools tab in the assistant Extensions page, reusing the existing `Assistant.selectedCustomExtensionIds` field and cleanup behavior already implemented in Stages 3/4.
+- Add a direct Tool Builder entry point within that assistant-specific Custom Tools area. Keep the global Extensions hub entry and all existing assistant extension tabs intact.
+- Verify an assistant without the skill receives no Tool Creator instructions, and assistants without selected custom tool IDs receive no custom tools.
+- Add focused tests for built-in skill discovery/merge and assistant-specific selection behavior where supported by the existing architecture.
+- Do not port unrelated historical changes, redesign chat approval UI, change global navigation transitions, or modify built-in RikkaHub tools.
+
+### Pre-edit audit for this session
+
+- Working branch: `lastnap-clean-foundation`, starting HEAD `010762c4ed24b302ea6d2fb3425b5471bb43cb5b`.
+- Protected refs rechecked: LastNap `master` remains `903e058b9361bff71d0b79f4ef2d8ac23d6597e6`; historical `feature/extensions-foundation` remains `942c1b49019dbbd55f02606f31b74cc258c14641`.
+- Upstream RikkaHub master rechecked at `f958af6a1a4a16dd8c1ac4138662a838b590e6c5`.
+- Relevant current sources reviewed: CustomExtension model, custom runtime registration, ChatToolFactory, ChatService approval/resumption path, Assistant model, ChatRequestFactory, Builder, SkillManager/BuiltinSkills, and assistant detail view-model. Historical tool-creator skill and assistant Extensions page were inspected as references only.
+- The existing generic approval contract is `Tool.needsApproval`; ChatMessageTools and ChatService already render and handle its approval flow. The custom runtime's extra session-grant mechanism is redundant and is the part to remove.
