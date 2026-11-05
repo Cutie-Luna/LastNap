@@ -102,7 +102,7 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
                                 bodyEncoding = args.getOrNull(4) as? String ?: "text",
                             )
                         }
-                        evaluate<Unit>(FETCH_POLYFILL + "\\nvoid 0;")
+                        evaluate<Unit>(FETCH_POLYFILL + "\nvoid 0;")
                     }
 
                     val result = evaluate<String?>(
@@ -438,6 +438,22 @@ class CustomToolHttpRuntime(private val baseClient: OkHttpClient) {
     }
 
     companion object {
+        fun create(settingsStore: me.rerere.rikkahub.data.datastore.SettingsStore): CustomToolHttpRuntime {
+            val client = OkHttpClient.Builder()
+                .proxySelector(me.rerere.rikkahub.data.remote.SettingsProxySelector(settingsStore))
+                .proxyAuthenticator(me.rerere.rikkahub.data.remote.SettingsProxyAuthenticator(settingsStore))
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .writeTimeout(20, TimeUnit.SECONDS)
+                .callTimeout(25, TimeUnit.SECONDS)
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .retryOnConnectionFailure(false)
+                // Deliberately no request, body, or header logging interceptors.
+                .build()
+            return CustomToolHttpRuntime(client)
+        }
+
         private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L
         private const val JS_MEMORY_LIMIT_BYTES = 64L * 1024 * 1024
         private const val JS_MAX_STACK_BYTES = 256L * 1024
