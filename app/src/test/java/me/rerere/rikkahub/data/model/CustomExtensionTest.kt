@@ -204,7 +204,7 @@ class CustomExtensionTest {
     }
 
     @Test
-    fun `host allowlist rejects URL syntax ports credentials and IP literals`() {
+    fun `host allowlist rejects URL syntax ports credentials and IP literals without local access`() {
         val invalidHosts = listOf(
             "https://api.example.com",
             "api.example.com:443",
