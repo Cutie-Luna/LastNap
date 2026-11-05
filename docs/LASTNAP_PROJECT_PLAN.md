@@ -744,3 +744,10 @@ When Stage 5 arrives, redesign the add-tool popup as a spacious page-like experi
 - **Required correction:** bind the successful-test fingerprint to both the exact input-schema text and implementation text. Rename the not-yet-released field to `testedDefinitionHash`, and compute it from an unambiguous length-prefixed concatenation of schema and implementation before SHA-256 hashing.
 - **Scope:** only the new custom-tool model and its focused unit tests. Do not change existing RikkaHub runtime code, tool registration, permissions, backup format, UI, or assistant behavior.
 - **Acceptance:** tests prove the fingerprint changes when either schema or implementation changes; enabled definitions reject a missing/stale fingerprint; existing default-empty/legacy Settings and Assistant deserialization behavior remains intact. This is a pre-release model correction, so no released-data migration is required.
+
+## 33. Release-workflow safety guard — 2026-11-05
+
+- **Finding:** the only active build workflow, `.github/workflows/daily-build.yml`, scheduled a build twice daily and automatically published a public GitHub prerelease whenever a build succeeded. This contradicted the standing release rule in section 3: never publish a public release automatically.
+- **Minimal safety correction:** remove the scheduled trigger; keep manual `workflow_dispatch`; add an explicit boolean `publish_prerelease` input defaulting to false; gate the public prerelease step on that input. Manual verification builds remain possible without publishing.
+- **Scope:** workflow trigger and publish gate only. Do not change Gradle build tasks, signing setup, secrets, package identity, ABI, or APK configuration.
+- **Acceptance:** no scheduled build or release can run; a manually dispatched build does not publish unless the user explicitly opts in through the workflow input.
