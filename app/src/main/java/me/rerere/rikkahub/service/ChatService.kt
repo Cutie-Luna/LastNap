@@ -326,9 +326,11 @@ class ChatService(
      * If the database cannot confirm ownership, retain the file and let reconciliation retry.
      */
     private suspend fun deleteFilesIfUnreferenced(files: List<Uri>) {
-        val deletable = findUnreferencedChatFiles(files) { uri ->
-            conversationRepo.hasFileReference(uri)
-        }
+        val deletable = findUnreferencedChatFiles(
+            files = files,
+            fileUrl = { it.toString() },
+            hasFileReference = { uri -> conversationRepo.hasFileReference(uri) },
+        )
         if (deletable.isNotEmpty()) filesManager.deleteChatFiles(deletable)
     }
 
