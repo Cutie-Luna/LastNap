@@ -1,7 +1,12 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -17,6 +22,7 @@ import org.junit.Test
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.CountDownLatch
 
 class CustomToolHttpRuntimeTest {
 
@@ -141,6 +147,37 @@ class CustomToolHttpRuntimeTest {
             val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
 
             assertEquals("20", result)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun cancellingDuringResponseBodyReadClosesTheHttpCall() = runBlocking {
+        val bodyStarted = CountDownLatch(1)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/slow-body") { exchange ->
+            exchange.responseHeaders.add("Content-Type", "text/plain")
+            exchange.sendResponseHeaders(200, 10)
+            exchange.responseBody.use { output ->
+                output.write(byteArrayOf('a'.code.toByte()))
+                output.flush()
+                bodyStarted.countDown()
+                Thread.sleep(4_000)
+                runCatching { output.write("123456789".toByteArray()) }
+            }
+        }
+        server.start()
+        try {
+            val task = async {
+                runtime().evaluate(
+                    localExtension(),
+                    """fetch("http://127.0.0.1:${server.address.port}/slow-body").text()""",
+                )
+            }
+            assertTrue(withContext(Dispatchers.IO) { bodyStarted.await(2, TimeUnit.SECONDS) })
+            task.cancel()
+            withTimeout(2_000) { task.join() }
         } finally {
             server.stop(0)
         }
