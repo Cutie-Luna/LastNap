@@ -92,63 +92,64 @@ class FilesManager(
         persist = { onCommitted ->
             withContext(NonCancellable + Dispatchers.IO) {
                 require(conversationId.matches(CONVERSATION_ID_PATTERN)) { "Conversation ID is invalid" }
-        require(bytes.isNotEmpty() && bytes.size <= MAX_CONVERSATION_MEDIA_BYTES) {
-            "Conversation image exceeds the 8 MiB size limit"
-        }
-        val normalizedMime = mimeType.substringBefore(';').trim().lowercase()
-        require(normalizedMime in CONVERSATION_IMAGE_MIMES) { "Unsupported conversation image type" }
+                require(bytes.isNotEmpty() && bytes.size <= MAX_CONVERSATION_MEDIA_BYTES) {
+                    "Conversation image exceeds the 8 MiB size limit"
+                }
+                val normalizedMime = mimeType.substringBefore(';').trim().lowercase()
+                require(normalizedMime in CONVERSATION_IMAGE_MIMES) { "Unsupported conversation image type" }
 
-        val filesRoot = context.filesDir.canonicalFile
-        val root = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
-        require(!Files.isSymbolicLink(root.toPath())) { "Conversation media root cannot be a symbolic link" }
-        if (!root.exists()) check(root.mkdirs()) { "Could not create conversation media storage" }
-        require(root.canonicalFile.parentFile == filesRoot) { "Conversation media root escaped app storage" }
+                val filesRoot = context.filesDir.canonicalFile
+                val root = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
+                require(!Files.isSymbolicLink(root.toPath())) { "Conversation media root cannot be a symbolic link" }
+                if (!root.exists()) check(root.mkdirs()) { "Could not create conversation media storage" }
+                require(root.canonicalFile.parentFile == filesRoot) { "Conversation media root escaped app storage" }
 
-        val directory = File(root, conversationId)
-        require(!Files.isSymbolicLink(directory.toPath())) { "Conversation media directory cannot be a symbolic link" }
-        if (!directory.exists()) check(directory.mkdir()) { "Could not create conversation media directory" }
-        require(directory.canonicalFile.parentFile == root.canonicalFile) {
-            "Conversation media directory escaped its owner"
-        }
+                val directory = File(root, conversationId)
+                require(!Files.isSymbolicLink(directory.toPath())) { "Conversation media directory cannot be a symbolic link" }
+                if (!directory.exists()) check(directory.mkdir()) { "Could not create conversation media directory" }
+                require(directory.canonicalFile.parentFile == root.canonicalFile) {
+                    "Conversation media directory escaped its owner"
+                }
 
-        val file = File(directory, FileUtils.buildUuidFileName(displayName, normalizedMime))
-        val temporary = File(directory, ".${file.name}.${System.nanoTime()}.tmp")
-        try {
-            FileOutputStream(temporary).use { output ->
-                output.write(bytes)
-                output.fd.sync()
-            }
-            try {
-                Files.move(
-                    temporary.toPath(),
-                    file.toPath(),
-                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                )
-            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
-                Files.move(temporary.toPath(), file.toPath())
-            }
-            val relativePath = FileUtils.getRelativePathInFilesDir(context.filesDir, file)
-                ?: error("Conversation media path is outside app storage")
-            val now = System.currentTimeMillis()
-            repository.insert(
-                ManagedFileEntity(
-                    folder = FileFolders.CONVERSATION_MEDIA,
-                    relativePath = relativePath,
-                    displayName = displayName,
-                    mimeType = normalizedMime,
-                    sizeBytes = file.length(),
-                    createdAt = now,
-                    updatedAt = now,
-                )
-            )
-            val uri = file.toUri().toString()
-            onCommitted(uri)
-            uri
-            } catch (error: Exception) {
-                file.delete()
-                throw error
-            } finally {
-                temporary.delete()
+                val file = File(directory, FileUtils.buildUuidFileName(displayName, normalizedMime))
+                val temporary = File(directory, ".${file.name}.${System.nanoTime()}.tmp")
+                try {
+                    FileOutputStream(temporary).use { output ->
+                        output.write(bytes)
+                        output.fd.sync()
+                    }
+                    try {
+                        Files.move(
+                            temporary.toPath(),
+                            file.toPath(),
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        )
+                    } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                        Files.move(temporary.toPath(), file.toPath())
+                    }
+                    val relativePath = FileUtils.getRelativePathInFilesDir(context.filesDir, file)
+                        ?: error("Conversation media path is outside app storage")
+                    val now = System.currentTimeMillis()
+                    repository.insert(
+                        ManagedFileEntity(
+                            folder = FileFolders.CONVERSATION_MEDIA,
+                            relativePath = relativePath,
+                            displayName = displayName,
+                            mimeType = normalizedMime,
+                            sizeBytes = file.length(),
+                            createdAt = now,
+                            updatedAt = now,
+                        )
+                    )
+                    val uri = file.toUri().toString()
+                    onCommitted(uri)
+                    uri
+                } catch (error: Exception) {
+                    file.delete()
+                    throw error
+                } finally {
+                    temporary.delete()
+                }
             }
         }
     ) { uri ->
