@@ -37,8 +37,20 @@ interface CustomToolSecretProvider {
  * Ciphertext lives only under noBackupFilesDir and is never part of Settings, Room or exports.
  * The cipher binds every value to its immutable tool ID and declared name using GCM AAD.
  */
-class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
-    private val root = File(context.noBackupFilesDir, DIRECTORY_NAME)
+class CustomToolSecretStore private constructor(
+    private val root: File,
+    private val cipher: CustomToolSecretCipher,
+) : CustomToolSecretProvider {
+    constructor(context: Context) : this(
+        File(context.noBackupFilesDir, DIRECTORY_NAME),
+        CustomToolSecretCipher(AndroidCustomToolSecretKeyProvider()),
+    )
+
+    internal constructor(rootDirectory: File, keyProvider: CustomToolSecretKeyProvider) : this(
+        File(rootDirectory, DIRECTORY_NAME),
+        CustomToolSecretCipher(keyProvider),
+    )
+
     private val lock = Any()
 
     fun putSecret(toolId: String, name: String, value: String) = synchronized(lock) {
@@ -48,7 +60,7 @@ class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
             "Secret value exceeds the 8 KiB limit"
         }
         val secrets = readEncryptedValues(toolId).toMutableMap()
-        secrets[name] = CustomToolSecretCipher.encrypt(toolId, name, value)
+        secrets[name] = cipher.encrypt(toolId, name, value)
         writeEncryptedValues(toolId, secrets)
     }
 
@@ -56,7 +68,7 @@ class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
         validateReference(toolId, name)
         readEncryptedValues(toolId)[name]?.let { encrypted ->
             try {
-                CustomToolSecretCipher.decrypt(toolId, name, encrypted)
+                cipher.decrypt(toolId, name, encrypted)
             } catch (_: Exception) {
                 throw CustomToolSecretUnavailableException(
                     "The saved Secret '$name' is unavailable on this device. Re-enter it in the tool settings."
@@ -209,38 +221,14 @@ class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
 /** A local device secret could not be read; the user must re-enter it rather than use a fallback. */
 class CustomToolSecretUnavailableException(message: String) : IllegalStateException(message)
 
-private object CustomToolSecretCipher {
-    private const val KEYSTORE = "AndroidKeyStore"
-    private const val KEY_ALIAS = "lastnap_custom_tool_secrets_v1"
-    private const val TRANSFORMATION = "AES/GCM/NoPadding"
-    private const val VERSION_PREFIX = "v1:"
-    private const val IV_SIZE = 12
-    private const val TAG_BITS = 128
+internal interface CustomToolSecretKeyProvider {
+    fun getOrCreateKey(): SecretKey
+}
 
-    fun encrypt(toolId: String, name: String, plaintext: String): String {
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
-        cipher.updateAAD(associatedData(toolId, name))
-        val encrypted = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
-        return VERSION_PREFIX + Base64.getEncoder().encodeToString(cipher.iv + encrypted)
-    }
-
-    fun decrypt(toolId: String, name: String, value: String): String {
-        require(value.startsWith(VERSION_PREFIX)) { "Unsupported custom tool Secret version" }
-        val bytes = Base64.getDecoder().decode(value.removePrefix(VERSION_PREFIX))
-        require(bytes.size > IV_SIZE + TAG_BITS / 8) { "Custom tool Secret is incomplete" }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(
-            Cipher.DECRYPT_MODE,
-            secretKey(),
-            GCMParameterSpec(TAG_BITS, bytes, 0, IV_SIZE),
-        )
-        cipher.updateAAD(associatedData(toolId, name))
-        return cipher.doFinal(bytes, IV_SIZE, bytes.size - IV_SIZE).toString(Charsets.UTF_8)
-    }
-
+/** Android Keystore-backed key provider used only by the production custom-tool Secret store. */
+private class AndroidCustomToolSecretKeyProvider : CustomToolSecretKeyProvider {
     @Synchronized
-    private fun secretKey(): SecretKey {
+    override fun getOrCreateKey(): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
         (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE).apply {
@@ -257,6 +245,45 @@ private object CustomToolSecretCipher {
         }.generateKey()
     }
 
+    private companion object {
+        const val KEYSTORE = "AndroidKeyStore"
+        const val KEY_ALIAS = "lastnap_custom_tool_secrets_v1"
+    }
+}
+
+/** AES-GCM cipher with immutable tool ID and Secret name authenticated as associated data. */
+internal class CustomToolSecretCipher(
+    private val keyProvider: CustomToolSecretKeyProvider,
+) {
+    fun encrypt(toolId: String, name: String, plaintext: String): String {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, keyProvider.getOrCreateKey())
+        cipher.updateAAD(associatedData(toolId, name))
+        val encrypted = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
+        return VERSION_PREFIX + Base64.getEncoder().encodeToString(cipher.iv + encrypted)
+    }
+
+    fun decrypt(toolId: String, name: String, value: String): String {
+        require(value.startsWith(VERSION_PREFIX)) { "Unsupported custom tool Secret version" }
+        val bytes = Base64.getDecoder().decode(value.removePrefix(VERSION_PREFIX))
+        require(bytes.size > IV_SIZE + TAG_BITS / 8) { "Custom tool Secret is incomplete" }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            keyProvider.getOrCreateKey(),
+            GCMParameterSpec(TAG_BITS, bytes, 0, IV_SIZE),
+        )
+        cipher.updateAAD(associatedData(toolId, name))
+        return cipher.doFinal(bytes, IV_SIZE, bytes.size - IV_SIZE).toString(Charsets.UTF_8)
+    }
+
     private fun associatedData(toolId: String, name: String): ByteArray =
         "LastNap/custom-tool-secret/v1\u0000$toolId\u0000$name".toByteArray(Charsets.UTF_8)
+
+    private companion object {
+        const val TRANSFORMATION = "AES/GCM/NoPadding"
+        const val VERSION_PREFIX = "v1:"
+        const val IV_SIZE = 12
+        const val TAG_BITS = 128
+    }
 }
