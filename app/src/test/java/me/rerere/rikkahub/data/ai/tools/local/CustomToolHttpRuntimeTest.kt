@@ -80,6 +80,13 @@ class CustomToolHttpRuntimeTest {
                     exchange.sendResponseHeaders(200, body.size.toLong())
                     exchange.responseBody.use { it.write(body) }
                 }
+                "/escaped-json" -> {
+                    val reply = """{"secret":"never${'\\'}u002dreturn-this-secret"}"""
+                        .toByteArray(StandardCharsets.UTF_8)
+                    exchange.responseHeaders.add("Content-Type", "application/json")
+                    exchange.sendResponseHeaders(200, reply.size.toLong())
+                    exchange.responseBody.use { it.write(reply) }
+                }
                 "/redirect" -> {
                     exchange.responseHeaders.add(
                         "Location",
@@ -245,6 +252,30 @@ class CustomToolHttpRuntimeTest {
 
             assertFalse(output.contains(secret))
             assertTrue(result.contains("[REDACTED]"))
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun escapedJsonCannotBypassSecretRedaction() = runBlocking {
+        val server = startServer()
+        val secret = "never-return-this-secret"
+        try {
+            val extension = localExtension().copy(
+                secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
+            )
+            val code = """
+                fetch("http://127.0.0.1:${server.address.port}/escaped-json", {
+                    headers: { "X-Test": "{{secret:API_KEY}}" }
+                }).json().secret
+            """.trimIndent()
+
+            val output = runtime(mapOf("API_KEY" to secret)).evaluate(extension, code)
+            val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+            assertEquals("[REDACTED]", result)
+            assertFalse(output.contains(secret))
         } finally {
             server.stop(0)
         }
