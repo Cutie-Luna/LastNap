@@ -1117,7 +1117,16 @@ class ChatService(
         val session = sessionManager.getOrCreate(conversationId)
         discardQueuedMessages(session)
         session.replace(newConversation(conversationId), existsInDatabase = false) { previous ->
-            conversationRepo.getConversationById(conversationId)?.let { conversationRepo.deleteConversation(it) }
+            val otherSessionReferences = sessionManager.snapshot()
+                .filter { it.id != conversationId }
+                .flatMap { active ->
+                    val queued = active.messageQueue.state.value.messages + listOfNotNull(active.submittingMessage)
+                    active.state.value.files + queued.flatMap { it.parts }.localFileUrls().map { it.toUri() }
+                }
+                .mapTo(mutableSetOf()) { it.toString() }
+            conversationRepo.getConversationById(conversationId)?.let {
+                conversationRepo.deleteConversation(it, retainedFileUrls = otherSessionReferences)
+            }
             // 数据库那份不知道只在内存里出现过的附件
             previous?.let {
                 deleteFilesIfUnreferenced(it.files, excludingConversationId = it.id)
