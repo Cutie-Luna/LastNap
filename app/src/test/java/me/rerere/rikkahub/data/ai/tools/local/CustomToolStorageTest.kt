@@ -32,6 +32,23 @@ class CustomToolStorageTest {
     }
 
     @Test
+    fun globalQuotaIsSharedAcrossDifferentTools() {
+        val parent = Files.createTempDirectory("lastnap-global-storage-test").toFile()
+        val storage = CustomToolStorage(File(parent, "private-tool-data"), maxGlobalBytes = 1_024)
+        try {
+            storage.writeBytes("tool-a", "first.bin", ByteArray(700))
+
+            assertTrue(runCatching {
+                storage.writeBytes("tool-b", "second.bin", ByteArray(400))
+            }.isFailure)
+            assertNull(storage.readBytes("tool-b", "second.bin"))
+            assertEquals(700, storage.readBytes("tool-a", "first.bin")!!.size)
+        } finally {
+            parent.deleteRecursively()
+        }
+    }
+
+    @Test
     fun deletingOneToolDoesNotTouchAnotherToolsData() {
         val (parent, storage) = newStorage()
         try {
