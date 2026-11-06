@@ -216,23 +216,15 @@ class FilesManager(
             if (!path.startsWith("${FileFolders.UPLOAD}/") || Files.isSymbolicLink(file.toPath())) {
                 return@mapNotNull null
             }
+            val isMissing = !file.exists()
+            if (!isMissing && (!file.isFile || !file.delete())) return@mapNotNull null
             path
         }.toSet()
         if (relativePaths.isEmpty()) return
 
+        // Disk cleanup stays immediate as before; managed-file metadata is removed off-thread.
         appScope.launch(Dispatchers.IO) {
-            relativePaths.forEach { path ->
-                // The managed-file record is the ownership proof. If it is missing or the
-                // physical delete fails, retain the metadata so cleanup can be retried safely.
-                if (repository.getByPath(path) == null) return@forEach
-                val file = File(context.filesDir, path)
-                if (Files.isSymbolicLink(file.toPath()) || (file.exists() && !file.isFile)) {
-                    return@forEach
-                }
-                if (!file.exists() || file.delete()) {
-                    repository.deleteByPath(path)
-                }
-            }
+            relativePaths.forEach { path -> repository.deleteByPath(path) }
         }
     }
 
