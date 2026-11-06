@@ -54,6 +54,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * Dedicated, policy-enforced HTTP bridge for custom tools. It deliberately does not use
  * SearchService's shared client, which has application request logging interceptors.
  */
+private data class CustomToolImagePayload(
+    val bytes: ByteArray,
+    val mimeType: String,
+    val displayName: String,
+)
+
 class CustomToolHttpRuntime(
     private val baseClient: OkHttpClient,
     private val secretStore: CustomToolSecretProvider,
@@ -62,6 +68,34 @@ class CustomToolHttpRuntime(
 ) {
     private val activeExecutions = ConcurrentHashMap<String, MutableSet<Job>>()
     private val revokedToolIds = ConcurrentHashMap.newKeySet<String>()
+
+    /**
+     * Keeps the entire Tool.execute operation registered, including result conversion after
+     * JavaScript evaluation. Deletion can therefore cancel and join before removing tool data.
+     */
+    suspend fun <T> runToolExecution(toolId: String, block: suspend () -> T): T {
+        require(toolId.isNotBlank())
+        if (toolId in revokedToolIds) throw CancellationException("Custom tool was deleted")
+        val executionJob = currentCoroutineContext().job
+        val jobs = activeExecutions.computeIfAbsent(toolId) { ConcurrentHashMap.newKeySet<Job>() }
+        val added = jobs.add(executionJob)
+        if (toolId in revokedToolIds) {
+            if (added) jobs.remove(executionJob)
+            if (jobs.isEmpty()) activeExecutions.remove(toolId, jobs)
+            throw CancellationException("Custom tool was deleted")
+        }
+        try {
+            return block()
+        } finally {
+            if (added) jobs.remove(executionJob)
+            if (jobs.isEmpty()) activeExecutions.remove(toolId, jobs)
+        }
+    }
+
+    /** Remove an image saved by an invocation that was cancelled before returning its tool part. */
+    fun discardConversationMedia(uri: String) {
+        filesManager?.deleteChatFiles(listOf(Uri.parse(uri)))
+    }
 
     /** Permanently invalidates this immutable tool ID and cancels any work already running. */
     fun revokeTool(toolId: String) {
