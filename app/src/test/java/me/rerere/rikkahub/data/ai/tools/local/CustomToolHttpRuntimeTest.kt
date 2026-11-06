@@ -2,7 +2,6 @@ package me.rerere.rikkahub.data.ai.tools.local
 
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
