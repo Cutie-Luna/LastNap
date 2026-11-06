@@ -34,7 +34,9 @@ class InMemoryCustomToolStorage : CustomToolStorageProvider {
         val key = toolId to name
         val oldSize = values[key]?.size ?: 0
         val total = values.filterKeys { it.first == toolId }.values.sumOf { it.size } - oldSize + bytes.size
-        require(total <= MAX_TOTAL_BYTES) { "Tool storage exceeds the 10 MiB total limit" }
+        require(total <= MAX_TOTAL_BYTES) { "Tool storage exceeds the 10 MiB per-tool limit" }
+        val globalTotal = values.values.sumOf { it.size } - oldSize + bytes.size
+        require(globalTotal <= MAX_GLOBAL_BYTES) { "Custom-tool storage exceeds the 100 MiB global limit" }
         if (key !in values) {
             require(values.keys.count { it.first == toolId } < MAX_FILES_PER_TOOL) {
                 "Tool storage is limited to 100 files"
@@ -68,6 +70,7 @@ class InMemoryCustomToolStorage : CustomToolStorageProvider {
         private const val MAX_NAME_LENGTH = 128
         private const val MAX_FILE_BYTES = 1024 * 1024
         private const val MAX_TOTAL_BYTES = 10 * 1024 * 1024
+        private const val MAX_GLOBAL_BYTES = 100L * 1024 * 1024
         private const val MAX_FILES_PER_TOOL = 100
         private val SAFE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
     }
@@ -79,7 +82,10 @@ class InMemoryCustomToolStorage : CustomToolStorageProvider {
  * The API accepts one safe filename, never a path. It is intentionally separate from managed
  * conversation media: chat outputs survive tool deletion, while this private working data does not.
  */
-class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
+class CustomToolStorage(
+    private val root: File,
+    private val maxGlobalBytes: Long = MAX_GLOBAL_BYTES,
+) : CustomToolStorageProvider {
     private val lock = Any()
 
     override fun readBytes(toolId: String, name: String): ByteArray? = synchronized(lock) {
@@ -115,7 +121,29 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
             require(existingFiles.size < MAX_FILES_PER_TOOL) { "Tool storage is limited to 100 files" }
         }
         val totalSize = existingFiles.sumOf { it.length() } - oldSize + bytes.size
-        require(totalSize <= MAX_TOTAL_BYTES) { "Tool storage exceeds the 10 MiB total limit" }
+        require(totalSize <= MAX_TOTAL_BYTES) { "Tool storage exceeds the 10 MiB per-tool limit" }
+        val globalSize = if (root.isDirectory) {
+            root.listFiles().orEmpty().filter { it.isDirectory && !Files.isSymbolicLink(it.toPath()) }.sumOf { owned ->
+                val marker = File(owned, OWNER_FILE)
+                if (!marker.exists() && owned.listFiles().isNullOrEmpty()) {
+                    0L
+                } else {
+                    require(marker.isFile && !Files.isSymbolicLink(marker.toPath())) {
+                        "Custom-tool storage contains an unrecognized directory"
+                    }
+                    val ownerId = marker.readText()
+                    validateToolId(ownerId)
+                    require(owned.canonicalFile.parentFile == root.canonicalFile &&
+                        owned.name == ownerId.sha256()
+                    ) { "Custom-tool storage ownership metadata is invalid" }
+                    listOwnedFiles(ownerId, owned).sumOf { it.length() }
+                }
+            }
+        } else {
+            0L
+        }
+        val globalTotal = globalSize - oldSize + bytes.size
+        require(globalTotal <= maxGlobalBytes) { "Custom-tool storage exceeds the global size limit" }
 
         val createdDirectory = !directory.exists()
         if (createdDirectory) {
@@ -284,6 +312,7 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         private const val MAX_NAME_LENGTH = 128
         private const val MAX_FILE_BYTES = 1024 * 1024
         private const val MAX_TOTAL_BYTES = 10 * 1024 * 1024
+        private const val MAX_GLOBAL_BYTES = 100L * 1024 * 1024
         private const val MAX_FILES_PER_TOOL = 100
         private val SAFE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
