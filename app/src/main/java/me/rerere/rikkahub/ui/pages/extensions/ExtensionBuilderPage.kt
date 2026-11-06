@@ -975,6 +975,20 @@ fun ExtensionBuilderPage(
                                             scope.launch {
                                                 try {
                                                     withContext(Dispatchers.IO) {
+                                                        // A Secret change invalidates the previous real API test.
+                                                        // Persist the disable first so leaving this draft cannot
+                                                        // accidentally leave the old tool enabled with new credentials.
+                                                        settingsStore.update { current ->
+                                                            current.copy(
+                                                                customExtensions = current.customExtensions.map { saved ->
+                                                                    if (saved.id == draftId) {
+                                                                        saved.copy(enabled = false, testedDefinitionHash = null)
+                                                                    } else {
+                                                                        saved
+                                                                    }
+                                                                }
+                                                            )
+                                                        }
                                                         secretStore.putSecret(draftId, declaration.name, value)
                                                     }
                                                     savedSecretNames = savedSecretNames + declaration.name
