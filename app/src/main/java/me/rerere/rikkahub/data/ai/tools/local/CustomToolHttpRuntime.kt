@@ -787,18 +787,18 @@ class CustomToolHttpRuntime(
                 (bytes[2].toInt() and 0xff) == 0x0d &&
                 (bytes[3].toInt() and 0xff) == 0xb8
             val isCloudMetadata =
-                (bytes[0].toInt() and 0xff) == 0xfd &&
-                    (bytes[1].toInt() and 0xff) == 0x00 &&
-                    (bytes[2].toInt() and 0xff) == 0x0e &&
-                    (bytes[3].toInt() and 0xff) == 0xc2 &&
-                    bytes.drop(4).take(11).all { it == 0.toByte() } &&
-                    (bytes[15].toInt() and 0xff) == 0xfe ||
-                (bytes[0].toInt() and 0xff) == 0xfd &&
-                    (bytes[1].toInt() and 0xff) == 0x20 &&
-                    (bytes[2].toInt() and 0xff) == 0x00 &&
-                    (bytes[3].toInt() and 0xff) == 0xce &&
-                    bytes.drop(4).take(11).all { it == 0.toByte() } &&
-                    (bytes[15].toInt() and 0xff) == 0xfe
+                bytes.contentEquals(
+                    byteArrayOf(
+                        0xfd.toByte(), 0x00, 0x0e, 0xc2.toByte(),
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02, 0x54,
+                    )
+                ) ||
+                    bytes.contentEquals(
+                        byteArrayOf(
+                            0xfd.toByte(), 0x20, 0x00, 0xce.toByte(),
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02, 0x54,
+                        )
+                    )
             if (isDocumentation || isCloudMetadata) return false
             if (isLoopback || isLinkLocal || isSiteLocal || isUniqueLocal) return allowLocalNetwork
         }
@@ -816,7 +816,8 @@ class CustomToolHttpRuntime(
                 (first == 169 && second == 254)
         }
         if (address is java.net.Inet6Address) {
-            return address.isLoopbackAddress || (bytes[0].toInt() and 0xfe) == 0xfc
+            return address.isLoopbackAddress || address.isLinkLocalAddress ||
+                address.isSiteLocalAddress || (bytes[0].toInt() and 0xfe) == 0xfc
         }
         return false
     }
