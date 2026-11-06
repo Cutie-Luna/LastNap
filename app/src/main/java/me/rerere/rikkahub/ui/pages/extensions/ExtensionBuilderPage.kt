@@ -425,7 +425,7 @@ fun ExtensionBuilderPage(
                     if (isEditor) {
                         FilledTonalIconButton(
                             onClick = { if (isReviewing) isReviewing = false else leaveEditor() },
-                            enabled = !isTesting && !isSavingSecret,
+                            enabled = !isTesting && !isSavingSecret && !isDeleting,
                         ) {
                             Icon(HugeIcons.ArrowLeft01, contentDescription = stringResource(R.string.back))
                         }
@@ -452,7 +452,7 @@ fun ExtensionBuilderPage(
                         TextButton(
                             modifier = Modifier.weight(0.8f),
                             onClick = ::leaveEditor,
-                            enabled = !isTesting,
+                            enabled = !isTesting && !isDeleting && !isSavingSecret,
                         ) {
                             Text(stringResource(R.string.extension_builder_page_back_to_drafts))
                         }
@@ -1330,7 +1330,7 @@ fun ExtensionBuilderPage(
 
     if (showDeleteConfirmation) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
+            onDismissRequest = { if (!isDeleting) showDeleteConfirmation = false },
             title = { Text(stringResource(R.string.extension_builder_page_delete_title)) },
             text = { Text(stringResource(R.string.extension_builder_page_delete_message, name)) },
             confirmButton = {
@@ -1373,7 +1373,10 @@ fun ExtensionBuilderPage(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
+                TextButton(
+                    onClick = { showDeleteConfirmation = false },
+                    enabled = !isDeleting,
+                ) {
                     Text(stringResource(R.string.cancel))
                 }
             },
