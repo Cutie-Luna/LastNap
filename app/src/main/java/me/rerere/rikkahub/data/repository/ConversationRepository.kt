@@ -351,7 +351,18 @@ class ConversationRepository(
                 conversationToConversationEntity(conversation)
             )
         }
-        filesManager.deleteChatFiles(fullConversation.files)
+        // The same managed file can be referenced by another conversation or branch.
+        // Check the persisted message-node index after deleting this conversation's rows.
+        val unreferencedFiles = fullConversation.files.filter { uri ->
+            try {
+                !hasFileReference(uri.toString())
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                false
+            }
+        }
+        filesManager.deleteChatFiles(unreferencedFiles)
     }
 
     suspend fun searchMessages(
