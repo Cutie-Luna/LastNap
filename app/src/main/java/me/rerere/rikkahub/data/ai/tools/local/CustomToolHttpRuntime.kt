@@ -99,7 +99,9 @@ class CustomToolHttpRuntime(
             }
         }
         val invalidValueDeclarations = validationErrors.filter {
-            it == CustomExtensionValidationError.TOO_MANY_SECRETS ||
+            it == CustomExtensionValidationError.LOCAL_NETWORK_WITHOUT_API_ACCESS ||
+                it == CustomExtensionValidationError.SECRETS_WITHOUT_API_ACCESS ||
+                it == CustomExtensionValidationError.TOO_MANY_SECRETS ||
                 it == CustomExtensionValidationError.TOO_MANY_VARIABLES ||
                 it == CustomExtensionValidationError.INVALID_SECRET_DECLARATION ||
                 it == CustomExtensionValidationError.INVALID_VARIABLE_DECLARATION ||
