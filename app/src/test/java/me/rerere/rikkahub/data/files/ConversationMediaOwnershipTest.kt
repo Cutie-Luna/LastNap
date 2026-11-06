@@ -51,6 +51,25 @@ class ConversationMediaOwnershipTest {
     }
 
     @Test
+    fun committedMediaIsDiscardedWhenCancellationWinsBeforeTheUriReturns() = runBlocking {
+        val uri = "file:///conversation_media/chat-a/generated.png"
+        val discarded = mutableListOf<String>()
+
+        val failure = runCatching {
+            withConversationMediaCancellationCleanup(
+                persist = { onCommitted ->
+                    onCommitted(uri)
+                    throw CancellationException("caller cancelled after durable commit")
+                },
+                discard = { discarded += it },
+            )
+        }.exceptionOrNull()
+
+        assertTrue(failure is CancellationException)
+        assertEquals(listOf(uri), discarded)
+    }
+
+    @Test
     fun mediaIsRetainedWhenReferenceLookupFails() = runBlocking {
         val file = "file:///conversation_media/chat-a/unknown.png"
 

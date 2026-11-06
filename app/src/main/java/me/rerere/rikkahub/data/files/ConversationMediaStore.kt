@@ -14,3 +14,21 @@ interface ConversationMediaStore {
 
     fun discardConversationMedia(uri: String)
 }
+
+
+/**
+ * Covers the cancellation window where durable storage commits a file but withContext cannot
+ * deliver its URI back to the cancelled caller. The commit callback lets the owner clean it up.
+ */
+internal suspend fun <T> withConversationMediaCancellationCleanup(
+    persist: suspend (onCommitted: (String) -> Unit) -> T,
+    discard: (String) -> Unit,
+): T {
+    var committedUri: String? = null
+    return try {
+        persist { committedUri = it }
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        committedUri?.let { uri -> runCatching { discard(uri) } }
+        throw cancelled
+    }
+}

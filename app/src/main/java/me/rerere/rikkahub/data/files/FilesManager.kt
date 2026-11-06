@@ -88,8 +88,10 @@ class FilesManager(
         bytes: ByteArray,
         displayName: String,
         mimeType: String,
-    ): String = withContext(NonCancellable + Dispatchers.IO) {
-        require(conversationId.matches(CONVERSATION_ID_PATTERN)) { "Conversation ID is invalid" }
+    ): String = withConversationMediaCancellationCleanup(
+        persist = { onCommitted ->
+            withContext(NonCancellable + Dispatchers.IO) {
+                require(conversationId.matches(CONVERSATION_ID_PATTERN)) { "Conversation ID is invalid" }
         require(bytes.isNotEmpty() && bytes.size <= MAX_CONVERSATION_MEDIA_BYTES) {
             "Conversation image exceeds the 8 MiB size limit"
         }
@@ -139,13 +141,18 @@ class FilesManager(
                     updatedAt = now,
                 )
             )
-            file.toUri().toString()
-        } catch (error: Exception) {
-            file.delete()
-            throw error
-        } finally {
-            temporary.delete()
+            val uri = file.toUri().toString()
+            onCommitted(uri)
+            uri
+            } catch (error: Exception) {
+                file.delete()
+                throw error
+            } finally {
+                temporary.delete()
+            }
         }
+    ) { uri ->
+        discardConversationMedia(uri)
     }
 
     /**
