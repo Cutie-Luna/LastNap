@@ -1336,6 +1336,8 @@ fun ExtensionBuilderPage(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        if (isDeleting) return@TextButton
+                        isDeleting = true
                         scope.launch {
                             var definitionRemoved = false
                             try {
@@ -1352,6 +1354,12 @@ fun ExtensionBuilderPage(
                                 showDeleteConfirmation = false
                                 clearDraftState()
                             } catch (cancelled: CancellationException) {
+                                if (definitionRemoved) {
+                                    showDeleteConfirmation = false
+                                    clearDraftState()
+                                } else {
+                                    httpRuntime.restoreToolAfterFailedDeletion(draftId)
+                                }
                                 throw cancelled
                             } catch (error: Exception) {
                                 if (definitionRemoved) {
@@ -1365,6 +1373,8 @@ fun ExtensionBuilderPage(
                                     testPassed = false
                                     testResult = (error.message ?: "Could not delete this tool").take(6_000)
                                 }
+                            } finally {
+                                isDeleting = false
                             }
                         }
                     },
