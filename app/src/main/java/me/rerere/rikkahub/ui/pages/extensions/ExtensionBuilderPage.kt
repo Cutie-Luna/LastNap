@@ -155,6 +155,7 @@ fun ExtensionBuilderPage(
 
     var isTesting by remember { mutableStateOf(false) }
     var isSavingSecret by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
     var testPassed by remember { mutableStateOf<Boolean?>(null) }
     var testResult by remember { mutableStateOf("") }
     var showDeleteConfirmation by rememberSaveable { mutableStateOf(false) }
@@ -196,7 +197,7 @@ fun ExtensionBuilderPage(
     val inputError = remember(testInput) {
         runCatching { buildCustomExtensionTestCode(testInput, "0") }.exceptionOrNull()?.message
     }
-    val canTest = !isTesting && !isSavingSecret && implementation.isNotBlank() &&
+    val canTest = !isTesting && !isSavingSecret && !isDeleting && implementation.isNotBlank() &&
         implementationIsWithinLimit && schemaIsValid && apiPolicyIsValid && inputError == null &&
         pendingSecretValues.values.none { it.isNotEmpty() }
     val missingRequiredSecrets = if (apiAccessEnabled) {
@@ -205,7 +206,7 @@ fun ExtensionBuilderPage(
     val missingRequiredVariables = variableDeclarations.filter {
         it.required && variableValues[it.name].isNullOrBlank()
     }
-    val canEnable = !isSavingSecret && draft.canBeEnabledFromBuilder() &&
+    val canEnable = !isSavingSecret && !isDeleting && draft.canBeEnabledFromBuilder() &&
         missingRequiredSecrets.isEmpty() && missingRequiredVariables.isEmpty() &&
         pendingSecretValues.values.none { it.isNotEmpty() }
     val hasCurrentTest = draft.hasCurrentBuilderTest()
@@ -292,6 +293,7 @@ fun ExtensionBuilderPage(
     }
 
     fun leaveEditor() {
+        if (isSavingSecret || isDeleting) return
         val persistedNames = settings.customExtensions
             .firstOrNull { it.id == draftId }
             ?.secrets
@@ -305,7 +307,7 @@ fun ExtensionBuilderPage(
     }
 
     fun saveDraft() {
-        if (isSavingSecret) return
+        if (isSavingSecret || isDeleting) return
         val saved = draft.copy(
             name = name.trim(),
             description = description.trim(),
@@ -396,7 +398,7 @@ fun ExtensionBuilderPage(
         }
     }
 
-    BackHandler(enabled = isEditor && !isSavingSecret) {
+    BackHandler(enabled = isEditor && !isSavingSecret && !isDeleting) {
         if (isTesting) {
             // Do not leave while the sandbox test is still resolving its result.
         } else if (isReviewing) {
