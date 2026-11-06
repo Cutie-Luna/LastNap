@@ -4,6 +4,13 @@ import com.google.firebase.Firebase
 import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.crashlytics
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStore
+import me.rerere.rikkahub.data.ai.tools.local.CustomToolStorage
+import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.AppScope
 import me.rerere.rikkahub.data.ai.ChatRequestFactory
 import me.rerere.rikkahub.data.ai.tools.ChatToolFactory
@@ -44,6 +51,28 @@ val appModule = module {
 
     single {
         AppScope()
+    }
+
+    // Recover tool-owned files after a process dies during tool deletion. Conversation media
+    // is deliberately outside these stores and is never part of this cleanup.
+    single(createdAtStart = true) {
+        val settingsStore = get<SettingsStore>()
+        val secretStore = get<CustomToolSecretStore>()
+        val storage = get<CustomToolStorage>()
+        get<AppScope>().launch {
+            val settings = settingsStore.awaitLoaded()
+            try {
+                withContext(Dispatchers.IO) {
+                    val declaredSecretsByTool = settings.customExtensions.associate { extension ->
+                        extension.id to extension.secrets.mapTo(mutableSetOf()) { it.name }
+                    }
+                    secretStore.reconcile(declaredSecretsByTool)
+                    storage.reconcile(declaredSecretsByTool.keys)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            }
+        }
     }
 
     single<EmojiData> {
