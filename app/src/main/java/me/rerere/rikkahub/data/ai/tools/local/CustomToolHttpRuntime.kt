@@ -197,7 +197,30 @@ class CustomToolHttpRuntime(
                                 bodyEncoding = args.getOrNull(4) as? String ?: "text",
                             )
                         }
-                        evaluate<Unit>(FETCH_POLYFILL + "\nvoid 0;")
+                        function("__customToolSetImage") { args ->
+                            require(pendingImage == null) {
+                                "A custom tool can publish only one image per invocation"
+                            }
+                            val encodedInput = args.getOrNull(0) as? String
+                                ?: error("Image data must be Base64 or an ArrayBuffer")
+                            val encoded = encodedInput.substringAfter("base64,", encodedInput)
+                            require(encoded.length <= MAX_IMAGE_BASE64_CHARS) {
+                                "Image output exceeds the 8 MiB size limit"
+                            }
+                            val bytes = runCatching { Base64.getDecoder().decode(encoded) }
+                                .getOrElse { throw IllegalArgumentException("Image data is not valid Base64") }
+                            val mimeType = args.getOrNull(1) as? String
+                                ?: error("Image content type is required")
+                            val detectedMimeType = CustomToolImageValidator.validate(bytes, mimeType)
+                            val requestedName = (args.getOrNull(2) as? String).orEmpty()
+                            val displayName = requestedName
+                                .filter { it.isLetterOrDigit() || it in " ._-" }
+                                .take(120)
+                                .ifBlank { "generated-image" }
+                            pendingImage = CustomToolImagePayload(bytes, detectedMimeType, displayName)
+                            true
+                        }
+                        evaluate<Unit>(FETCH_POLYFILL + "\n" + MEDIA_POLYFILL + "\nvoid 0;")
                     }
                     if (extension.storageEnabled) {
                         var storageOperationCount = 0
