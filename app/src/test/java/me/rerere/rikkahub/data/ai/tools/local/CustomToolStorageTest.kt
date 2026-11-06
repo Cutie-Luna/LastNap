@@ -81,6 +81,22 @@ class CustomToolStorageTest {
     }
 
     @Test
+    fun reconciliationRemovesInterruptedTemporaryWritesForLiveTools() {
+        val (parent, storage) = newStorage()
+        try {
+            storage.writeBytes("tool-a", "saved.txt", "safe".toByteArray())
+            val toolDirectory = File(File(parent, "private-tool-data").listFiles()!!.single(), ".crash.tmp")
+            toolDirectory.writeBytes(byteArrayOf(1, 2, 3))
+
+            assertEquals(1, storage.reconcile(setOf("tool-a")))
+            assertFalse(toolDirectory.exists())
+            assertEquals("safe", storage.readBytes("tool-a", "saved.txt")!!.decodeToString())
+        } finally {
+            parent.deleteRecursively()
+        }
+    }
+
+    @Test
     fun unsafeNamesAndOversizedFilesAreRejected() {
         val (parent, storage) = newStorage()
         try {
