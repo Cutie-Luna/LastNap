@@ -94,9 +94,10 @@ jobs:
             --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomToolHttpRuntimeTest' \
             --tests 'me.rerere.rikkahub.ui.pages.extensions.ExtensionBuilderStateTest' \
             --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomToolStorageTest' \
+            --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStoreTest' \
+            --tests 'me.rerere.rikkahub.data.ai.tools.local.CustomToolImageValidatorTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsFieldsTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsNormalizationTest' \
-            --tests 'me.rerere.rikkahub.data.files.ConversationMediaOwnershipTest' \
             --tests 'me.rerere.rikkahub.data.files.ConversationMediaOwnershipTest' \
             :app:lintGithubDebug \
             :app:assembleGithubDebug
