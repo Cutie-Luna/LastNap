@@ -446,7 +446,7 @@
   <string name="extension_builder_page_local_network_off">Local-network access disabled</string>
   <string name="extension_builder_page_storage">Private tool storage</string>
   <string name="extension_builder_page_storage_enable">Allow this tool to save data</string>
-  <string name="extension_builder_page_storage_help">Optional private storage shared by assistants using this tool. It is not backed up, stays when disabled, and is permanently deleted with the tool. It is limited to 100 files, 1 MiB per file and 10 MiB total. JavaScript uses storage.readText, writeText, readBase64, writeBase64, delete and list.</string>
+  <string name="extension_builder_page_storage_help">Optional private storage shared by assistants using this tool. It is not backed up, stays when disabled, and is permanently deleted with the tool. It is limited to 100 files, 1 MiB per file, 10 MiB per tool and 100 MiB shared across all custom tools. JavaScript uses storage.readText, writeText, readBase64, writeBase64, delete and list.</string>
   <string name="extension_builder_page_storage_on">Private storage enabled</string>
   <string name="extension_builder_page_storage_off">Private storage disabled</string>
   <string name="extension_builder_page_secrets">Secrets</string>
