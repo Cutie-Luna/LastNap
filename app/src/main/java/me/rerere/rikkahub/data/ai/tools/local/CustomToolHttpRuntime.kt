@@ -810,6 +810,7 @@ class CustomToolHttpRuntime(
         fun create(
             secretStore: CustomToolSecretStore,
             storage: CustomToolStorage,
+            filesManager: FilesManager? = null,
         ): CustomToolHttpRuntime {
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
@@ -821,7 +822,7 @@ class CustomToolHttpRuntime(
                 .retryOnConnectionFailure(false)
                 // Deliberately no request, body, or header logging interceptors.
                 .build()
-            return CustomToolHttpRuntime(client, secretStore, storage)
+            return CustomToolHttpRuntime(client, secretStore, storage, filesManager)
         }
 
         private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L
