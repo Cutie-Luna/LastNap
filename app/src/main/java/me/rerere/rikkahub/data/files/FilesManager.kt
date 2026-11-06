@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import java.io.File
+import java.io.FileOutputStream
 import java.nio.file.Files
 import java.net.HttpURLConnection
 import java.net.URL
@@ -208,7 +209,7 @@ class FilesManager(
         if (root.isDirectory && !Files.isSymbolicLink(root.toPath())) {
             root.listFiles().orEmpty()
                 .filter { it.isDirectory && it.name.matches(CONVERSATION_ID_PATTERN) && !Files.isSymbolicLink(it.toPath()) }
-                .forEach directoryLoop@ { directory ->
+                .forEach { directory ->
                     directory.listFiles().orEmpty()
                         .filter { it.isFile && !Files.isSymbolicLink(it.toPath()) }
                         .forEach fileLoop@ { file ->
