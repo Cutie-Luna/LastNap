@@ -282,6 +282,19 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun SecretsCannotBeDeclaredWithoutApiAccess() = runBlocking {
+        val extension = CustomExtension(
+            name = "No API",
+            description = "",
+            secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY")),
+        )
+
+        val error = runCatching { runtime().evaluate(extension, "1") }.exceptionOrNull()
+
+        assertTrue(error?.message.orEmpty().contains("Secret or Variable declarations are invalid"))
+    }
+
+    @Test
     fun requiredSecretMustExistBeforeApiToolRuns() = runBlocking {
         val extension = localExtension().copy(
             secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
