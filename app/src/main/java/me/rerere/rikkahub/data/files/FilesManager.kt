@@ -192,17 +192,28 @@ class FilesManager(
             } catch (_: Exception) {
                 true
             }
-            if (!referenced && deleteConversationMedia(entity)) removed += 1
+            if (!referenced) {
+                val deleted = try {
+                    deleteConversationMedia(entity)
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    false
+                }
+                if (deleted) removed += 1
+            }
         }
 
         val root = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
         if (root.isDirectory && !Files.isSymbolicLink(root.toPath())) {
             root.listFiles().orEmpty()
                 .filter { it.isDirectory && it.name.matches(CONVERSATION_ID_PATTERN) && !Files.isSymbolicLink(it.toPath()) }
-                .forEach { directory ->
-                    directory.listFiles().orEmpty().filter { it.isFile && !Files.isSymbolicLink(it.toPath()) }.forEach { file ->
-                        val relativePath = FileUtils.getRelativePathInFilesDir(context.filesDir, file) ?: return@forEach
-                        if (relativePath in trackedPaths) return@forEach
+                .forEach directoryLoop@ { directory ->
+                    directory.listFiles().orEmpty()
+                        .filter { it.isFile && !Files.isSymbolicLink(it.toPath()) }
+                        .forEach fileLoop@ { file ->
+                        val relativePath = FileUtils.getRelativePathInFilesDir(context.filesDir, file) ?: return@fileLoop
+                        if (relativePath in trackedPaths) return@fileLoop
                         val referenced = try {
                             hasFileReference(file.toUri().toString())
                         } catch (cancelled: kotlinx.coroutines.CancellationException) {
