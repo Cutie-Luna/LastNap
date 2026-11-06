@@ -354,9 +354,11 @@ class ConversationRepository(
         }
         // The same managed file can be referenced by another conversation or branch.
         // Check the persisted message-node index after deleting this conversation's rows.
-        val unreferencedFiles = findUnreferencedChatFiles(fullConversation.files) { uri ->
-            hasFileReference(uri)
-        }
+        val unreferencedFiles = findUnreferencedChatFiles(
+            files = fullConversation.files,
+            fileUrl = { it.toString() },
+            hasFileReference = { uri -> hasFileReference(uri) },
+        )
         filesManager.deleteChatFiles(unreferencedFiles)
     }
 
