@@ -282,7 +282,7 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
-    fun SecretsCannotBeDeclaredWithoutApiAccess() = runBlocking {
+    fun secretsCannotBeDeclaredWithoutApiAccess() = runBlocking {
         val extension = CustomExtension(
             name = "No API",
             description = "",
