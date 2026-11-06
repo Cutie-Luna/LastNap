@@ -70,6 +70,11 @@ class CustomToolHttpRuntimeTest {
                     exchange.sendResponseHeaders(200, body.size.toLong())
                     exchange.responseBody.use { it.write(body) }
                 }
+                "/binary-no-type" -> {
+                    val body = byteArrayOf(0, 20, 30)
+                    exchange.sendResponseHeaders(200, body.size.toLong())
+                    exchange.responseBody.use { it.write(body) }
+                }
                 "/redirect" -> {
                     exchange.responseHeaders.add(
                         "Location",
@@ -88,6 +93,7 @@ class CustomToolHttpRuntimeTest {
                     }.toString().toByteArray(StandardCharsets.UTF_8)
                     exchange.responseHeaders.add("Content-Type", "application/json; charset=utf-8")
                     exchange.responseHeaders.add("X-Reply", "local-test")
+                    exchange.responseHeaders.add("Set-Cookie", "session=must-not-reach-model")
                     exchange.sendResponseHeaders(200, reply.size.toLong())
                     exchange.responseBody.use { it.write(reply) }
                 }
@@ -108,14 +114,15 @@ class CustomToolHttpRuntimeTest {
                     body: "payload"
                 });
                 const data = response.json();
-                response.status + ":" + response.headers.get("x-reply") + ":" +
-                    data.method + ":" + data.header + ":" + data.body
+                response.status + ":" + response.headers.has("set-cookie") + ":" +
+                    response.headers.get("x-reply") + ":" + data.method + ":" +
+                    data.header + ":" + data.body
             """.trimIndent()
 
             val output = runtime().evaluate(localExtension(), code)
             val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
 
-            assertEquals("200:local-test:POST:hello:payload", result)
+            assertEquals("200:false:local-test:POST:hello:payload", result)
         } finally {
             server.stop(0)
         }
@@ -131,6 +138,22 @@ class CustomToolHttpRuntimeTest {
             """.trimIndent()
 
             val output = runtime().evaluate(localExtension(), code)
+            val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
+
+            assertEquals("20", result)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun responseWithoutContentTypeIsPreservedAsBinary() = runBlocking {
+        val server = startServer()
+        try {
+            val output = runtime().evaluate(
+                localExtension(),
+                """new Uint8Array(fetch("http://127.0.0.1:${server.address.port}/binary-no-type").arrayBuffer())[1]""",
+            )
             val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
 
             assertEquals("20", result)
