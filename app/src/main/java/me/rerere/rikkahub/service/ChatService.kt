@@ -53,6 +53,7 @@ import me.rerere.rikkahub.data.datastore.getCurrentAssistant
 import me.rerere.rikkahub.data.event.AppEvent
 import me.rerere.rikkahub.data.event.AppEventBus
 import me.rerere.rikkahub.data.files.FilesManager
+import me.rerere.rikkahub.data.files.findUnreferencedChatFiles
 import me.rerere.rikkahub.data.model.Assistant
 import me.rerere.rikkahub.data.model.Conversation
 import me.rerere.rikkahub.data.model.bindConfig
@@ -325,15 +326,8 @@ class ChatService(
      * If the database cannot confirm ownership, retain the file and let reconciliation retry.
      */
     private suspend fun deleteFilesIfUnreferenced(files: List<Uri>) {
-        val deletable = files.distinct().filter { uri ->
-            try {
-                !conversationRepo.hasFileReference(uri.toString())
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Log.w(TAG, "Could not verify a chat media reference; retaining the file", error)
-                false
-            }
+        val deletable = findUnreferencedChatFiles(files) { uri ->
+            conversationRepo.hasFileReference(uri)
         }
         if (deletable.isNotEmpty()) filesManager.deleteChatFiles(deletable)
     }
