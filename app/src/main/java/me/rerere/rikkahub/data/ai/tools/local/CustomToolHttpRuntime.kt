@@ -512,11 +512,18 @@ class CustomToolHttpRuntime(
         val charset: Charset = mediaType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
         val responseText = if (isText) redactSecrets(bytes.toString(charset), secretsUsed) else ""
         if (!isText && secretsUsed.any { secret ->
-                secret.toByteArray(Charsets.UTF_8).let { needle -> needle.isNotEmpty() && bytes.containsBytes(needle) }
+                secret.toByteArray(Charsets.UTF_8).let { needle ->
+                    needle.isNotEmpty() && (
+                        bytes.containsBytes(needle) ||
+                            bytes.containsBytes(Base64.getEncoder().encode(needle))
+                        )
+                }
             }
         ) {
             throw IllegalStateException("The API response contained a configured Secret and was blocked")
         }
+        // Keep every response view consistent: arrayBuffer() must not bypass text redaction.
+        val safeBodyBytes = if (isText) responseText.toByteArray(charset) else bytes
         val headerObject = buildJsonObject {
             response.headers.names().forEach { name ->
                 val values = response.headers.values(name).map { redactSecrets(it, secretsUsed) }
@@ -526,12 +533,12 @@ class CustomToolHttpRuntime(
         return buildJsonObject {
             put("status", response.code)
             put("ok", response.isSuccessful)
-            put("statusText", response.message)
+            put("statusText", redactSecrets(response.message, secretsUsed))
             put("url", url.newBuilder().query(null).fragment(null).build().toString())
             put("headers", headerObject)
             put("isText", isText)
             put("body", responseText)
-            put("bodyBase64", Base64.getEncoder().encodeToString(bytes))
+            put("bodyBase64", Base64.getEncoder().encodeToString(safeBodyBytes))
         }.toString()
     }
 
