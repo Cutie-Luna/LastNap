@@ -1,5 +1,6 @@
 package me.rerere.rikkahub.service
 
+import android.net.Uri
 import android.app.Application
 import android.util.Log
 import androidx.annotation.StringRes
@@ -309,17 +310,32 @@ class ChatService(
         }
 
     // 只删上次落库时引用、这次落库不再引用的文件；只在内存里出现过的文件宁可漏删也不误删
-    private fun deleteUnreferencedFiles(previous: Conversation, current: Conversation) {
+    private suspend fun deleteUnreferencedFiles(previous: Conversation, current: Conversation) {
         val session = sessionManager.get(current.id)
         val queuedFiles = (session?.messageQueue?.state?.value?.messages.orEmpty() +
             listOfNotNull(session?.submittingMessage))
             .flatMap { it.parts }.localFileUrls().map { it.toUri() }
         val retainedFiles = (current.files + queuedFiles).toSet()
-        val deletedFiles = previous.files.filter { it !in retainedFiles }
-        if (deletedFiles.isNotEmpty()) {
-            filesManager.deleteChatFiles(deletedFiles)
-            Log.w(TAG, "deleteUnreferencedFiles: $deletedFiles")
+        deleteFilesIfUnreferenced(previous.files.filter { it !in retainedFiles })
+    }
+
+    /**
+     * A file URL may be referenced by another conversation or an unselected message branch.
+     * Only delete after the persisted message-node index confirms that no owner remains.
+     * If the database cannot confirm ownership, retain the file and let reconciliation retry.
+     */
+    private suspend fun deleteFilesIfUnreferenced(files: List<Uri>) {
+        val deletable = files.distinct().filter { uri ->
+            try {
+                !conversationRepo.hasFileReference(uri.toString())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "Could not verify a chat media reference; retaining the file", error)
+                false
+            }
         }
+        if (deletable.isNotEmpty()) filesManager.deleteChatFiles(deletable)
     }
 
     // ---- 发送消息 ----
@@ -1095,7 +1111,7 @@ class ChatService(
         session.replace(newConversation(conversationId), existsInDatabase = false) { previous ->
             conversationRepo.getConversationById(conversationId)?.let { conversationRepo.deleteConversation(it) }
             // 数据库那份不知道只在内存里出现过的附件
-            previous?.let { filesManager.deleteChatFiles(it.files) }
+            previous?.let { deleteFilesIfUnreferenced(it.files) }
         }
         sessionManager.removeIfIdle(session)
     }
