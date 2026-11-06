@@ -559,6 +559,16 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun ipv4MappedIpv6AddressesRemainClassifiedAsLocalForMixedDnsChecks() {
+        val runtime = runtime()
+        val mappedPrivate = InetAddress.getByName("::ffff:192.168.1.10")
+
+        assertTrue(runtime.isLocalAddress(mappedPrivate))
+        assertFalse(runtime.isSafeAddress(mappedPrivate, allowLocalNetwork = false))
+        assertTrue(runtime.isSafeAddress(mappedPrivate, allowLocalNetwork = true))
+    }
+
+    @Test
     fun ipv6CloudMetadataDestinationsRemainBlockedWithLocalNetworkEnabled() {
         val runtime = runtime()
         val awsMetadata = InetAddress.getByName("fd00:ec2::254")

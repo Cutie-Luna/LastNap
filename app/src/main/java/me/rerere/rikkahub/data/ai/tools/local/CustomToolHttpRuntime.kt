@@ -807,15 +807,22 @@ class CustomToolHttpRuntime(
 
     internal fun isLocalAddress(address: InetAddress): Boolean {
         val bytes = address.address
-        if (address is Inet4Address) {
-            val first = bytes[0].toInt() and 0xff
-            val second = bytes[1].toInt() and 0xff
+
+        fun isLocalIpv4(ipv4: ByteArray): Boolean {
+            val first = ipv4[0].toInt() and 0xff
+            val second = ipv4[1].toInt() and 0xff
             return first == 10 || first == 127 ||
                 (first == 172 && second in 16..31) ||
                 (first == 192 && second == 168) ||
                 (first == 169 && second == 254)
         }
+
+        if (address is Inet4Address) return isLocalIpv4(bytes)
         if (address is java.net.Inet6Address) {
+            val isIpv4Mapped = bytes.size == 16 &&
+                bytes.take(10).all { it == 0.toByte() } &&
+                bytes[10] == 0xff.toByte() && bytes[11] == 0xff.toByte()
+            if (isIpv4Mapped) return isLocalIpv4(bytes.copyOfRange(12, 16))
             return address.isLoopbackAddress || address.isLinkLocalAddress ||
                 address.isSiteLocalAddress || (bytes[0].toInt() and 0xfe) == 0xfc
         }
