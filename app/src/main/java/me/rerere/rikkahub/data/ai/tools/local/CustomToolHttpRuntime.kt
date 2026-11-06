@@ -14,6 +14,9 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -527,7 +530,12 @@ class CustomToolHttpRuntime(
         }
 
         val charset: Charset = mediaType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
-        val responseText = if (isText) redactSecrets(bytes.toString(charset), secretsUsed) else ""
+        val decodedText = if (isText) bytes.toString(charset) else ""
+        val responseText = when {
+            !isText -> ""
+            mediaType?.subtype?.contains("json") == true -> redactJsonSecrets(decodedText, secretsUsed)
+            else -> redactSecrets(decodedText, secretsUsed)
+        }
         if (!isText && secretsUsed.any { secret ->
                 secret.toByteArray(Charsets.UTF_8).let { needle ->
                     needle.isNotEmpty() && (
@@ -596,6 +604,25 @@ class CustomToolHttpRuntime(
         secrets.filter { it.isNotEmpty() }.fold(value) { text, secret ->
             text.replace(secret, REDACTED_SECRET, ignoreCase = false)
         }
+
+    /** Parse JSON before redaction so escaped spellings cannot bypass secret filtering. */
+    private fun redactJsonSecrets(value: String, secrets: List<String>): String {
+        val parsed = runCatching { Json.parseToJsonElement(value) }.getOrNull()
+            ?: return redactSecrets(value, secrets)
+        fun sanitize(element: JsonElement): JsonElement = when (element) {
+            is JsonObject -> JsonObject(element.entries.associate { (key, child) ->
+                redactSecrets(key, secrets) to sanitize(child)
+            })
+            is JsonArray -> JsonArray(element.map(::sanitize))
+            is JsonPrimitive -> if (element.isString) {
+                JsonPrimitive(redactSecrets(element.content, secrets))
+            } else {
+                element
+            }
+            else -> element
+        }
+        return sanitize(parsed).toString()
+    }
 
     private fun ByteArray.containsBytes(needle: ByteArray): Boolean {
         if (needle.isEmpty() || needle.size > size) return false
