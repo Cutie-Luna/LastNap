@@ -838,6 +838,7 @@ class CustomToolHttpRuntime(
         private const val MAX_REQUEST_HEADER_BYTES = 32 * 1024
         private const val MAX_TEXT_RESPONSE_BYTES = 1024 * 1024
         private const val MAX_BINARY_RESPONSE_BYTES = 8 * 1024 * 1024
+        private const val MAX_IMAGE_BASE64_CHARS = ((CustomToolImageValidator.MAX_IMAGE_BYTES + 2) / 3) * 4
         private const val MAX_REDIRECTS = 5
         private const val MAX_REQUESTS_PER_EXECUTION = 20
         private const val MAX_STORAGE_OPERATIONS_PER_EXECUTION = 100
@@ -853,6 +854,52 @@ class CustomToolHttpRuntime(
             "set-cookie", "set-cookie2", "www-authenticate", "proxy-authenticate",
             "authentication-info", "proxy-authentication-info",
         )
+        private const val MEDIA_POLYFILL = """
+const imageBytesToBase64 = bytes => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    let output = '';
+    for (let index = 0; index < bytes.length; index += 3) {
+        const a = bytes[index];
+        const hasB = index + 1 < bytes.length;
+        const hasC = index + 2 < bytes.length;
+        const b = hasB ? bytes[index + 1] : 0;
+        const c = hasC ? bytes[index + 2] : 0;
+        output += chars[a >> 2];
+        output += chars[((a & 3) << 4) | (b >> 4)];
+        output += hasB ? chars[((b & 15) << 2) | (c >> 6)] : '=';
+        output += hasC ? chars[c & 63] : '=';
+    }
+    return output;
+};
+const imageToBase64 = data => {
+    if (typeof data === 'string') return data;
+    if (data instanceof ArrayBuffer) return imageBytesToBase64(new Uint8Array(data));
+    if (ArrayBuffer.isView(data)) {
+        return imageBytesToBase64(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    }
+    throw new Error('Image data must be Base64, an ArrayBuffer, or a typed array');
+};
+const publishImage = (data, mimeType, fileName) => {
+    const encoded = imageToBase64(data);
+    if (encoded.length > 11184813.333333334) {
+        throw new Error('Image output exceeds the 8 MiB size limit');
+    }
+    return __customToolSetImage(encoded, String(mimeType || ''), String(fileName || ''));
+};
+globalThis.media = Object.freeze({
+    image: publishImage,
+    imageFromResponse(response, fileName) {
+        if (!response || typeof response.arrayBuffer !== 'function') {
+            throw new Error('imageFromResponse expects a fetch response');
+        }
+        const mimeType = response.headers.get('content-type') || 'application/octet-stream';
+        return publishImage(response.arrayBuffer(), mimeType, fileName);
+    },
+    imageFromUrl(url, options, fileName) {
+        return this.imageFromResponse(fetch(url, options), fileName);
+    }
+});
+"""
         private const val STORAGE_POLYFILL = """
 globalThis.storage = Object.freeze({
     readText(name) {
