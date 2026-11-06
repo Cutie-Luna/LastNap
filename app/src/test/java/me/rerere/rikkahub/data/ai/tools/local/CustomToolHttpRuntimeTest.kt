@@ -1,8 +1,8 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
 import com.sun.net.httpserver.HttpServer
-import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -20,8 +20,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class CustomToolHttpRuntimeTest {
 
