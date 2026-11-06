@@ -338,7 +338,10 @@ class ConversationRepository(
         messageFtsManager.indexConversation(conversation)
     }
 
-    suspend fun deleteConversation(conversation: Conversation) {
+    suspend fun deleteConversation(
+        conversation: Conversation,
+        retainedFileUrls: Set<String> = emptySet(),
+    ) {
         // 获取完整的 Conversation（包含 messageNodes）以正确清理文件
         val fullConversation = if (conversation.messageNodes.isEmpty()) {
             getConversationById(conversation.id) ?: conversation
@@ -355,7 +358,7 @@ class ConversationRepository(
         // The same managed file can be referenced by another conversation or branch.
         // Check the persisted message-node index after deleting this conversation's rows.
         val unreferencedFiles = findUnreferencedChatFiles(
-            files = fullConversation.files,
+            files = fullConversation.files.filterNot { it.toString() in retainedFileUrls },
             fileUrl = { it.toString() },
             hasFileReference = { uri -> hasFileReference(uri) },
         )
