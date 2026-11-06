@@ -41,7 +41,6 @@ import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.Proxy
-import java.net.Proxy
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.Base64
