@@ -166,6 +166,32 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun arrayBufferCannotBypassSecretRedactionForTextResponses() = runBlocking {
+        val server = startServer()
+        val secret = "never-return-this-secret"
+        try {
+            val extension = localExtension().copy(
+                secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
+            )
+            val code = """
+                const response = fetch("http://127.0.0.1:${server.address.port}/echo", {
+                    headers: { "X-Test": "{{secret:API_KEY}}" }
+                });
+                Array.from(new Uint8Array(response.arrayBuffer()))
+                    .map(value => String.fromCharCode(value)).join("")
+            """.trimIndent()
+
+            val output = runtime(mapOf("API_KEY" to secret)).evaluate(extension, code)
+            val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content.orEmpty()
+
+            assertFalse(output.contains(secret))
+            assertTrue(result.contains("[REDACTED]"))
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
     fun requiredSecretMustExistBeforeApiToolRuns() = runBlocking {
         val extension = localExtension().copy(
             secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
