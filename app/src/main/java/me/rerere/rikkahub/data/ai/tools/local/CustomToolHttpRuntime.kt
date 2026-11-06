@@ -225,6 +225,9 @@ class CustomToolHttpRuntime(
                             requireStorageOperation()
                             val name = args.getOrNull(0) as? String ?: error("Storage item name is required")
                             val value = args.getOrNull(1) as? String ?: error("Storage binary value is required")
+                            require(value.length <= MAX_BASE64_STORAGE_CHARS) {
+                                "Stored item exceeds the 1 MiB per-file limit"
+                            }
                             val bytes = runCatching { Base64.getDecoder().decode(value) }
                                 .getOrElse { throw IllegalArgumentException("Storage binary value is invalid Base64") }
                             executionStorage.writeBytes(extension.id, name, bytes)
@@ -322,8 +325,14 @@ class CustomToolHttpRuntime(
         val rawHeaders = parseRequestHeaders(headersJson)
         val requestBytes = when (bodyEncoding) {
             "text" -> body?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
-            "base64" -> runCatching { Base64.getDecoder().decode(body.orEmpty()) }
-                .getOrElse { throw IllegalArgumentException("HTTP request body encoding is invalid") }
+            "base64" -> {
+                val encoded = body.orEmpty()
+                require(encoded.length <= MAX_BASE64_REQUEST_CHARS) {
+                    "HTTP request body exceeds the size limit"
+                }
+                runCatching { Base64.getDecoder().decode(encoded) }
+                    .getOrElse { throw IllegalArgumentException("HTTP request body encoding is invalid") }
+            }
             else -> throw IllegalArgumentException("HTTP request body encoding is not supported")
         }
         require(requestBytes.size <= MAX_REQUEST_BODY_BYTES) { "HTTP request body exceeds the size limit" }
@@ -698,6 +707,8 @@ class CustomToolHttpRuntime(
         private const val MAX_RESULT_CHARS = 1024 * 1024
         private const val MAX_URL_LENGTH = 2_048
         private const val MAX_REQUEST_BODY_BYTES = 1024 * 1024
+        private const val MAX_BASE64_REQUEST_CHARS = ((MAX_REQUEST_BODY_BYTES + 2) / 3) * 4
+        private const val MAX_BASE64_STORAGE_CHARS = ((1024 * 1024 + 2) / 3) * 4
         private const val MAX_REQUEST_HEADERS = 40
         private const val MAX_HEADER_VALUE_CHARS = 8 * 1024
         private const val MAX_REQUEST_HEADER_BYTES = 32 * 1024
