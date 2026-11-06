@@ -74,6 +74,45 @@ class FilesManager(
         )
     }
 
+    /**
+     * Persist an image produced by a tool as conversation-owned media, never in tool storage.
+     * The returned URI is safe to attach to a message and is included in chat backups.
+     */
+    suspend fun saveConversationMedia(
+        bytes: ByteArray,
+        displayName: String,
+        mimeType: String,
+    ): Uri {
+        val entity = saveManagedFromBytes(
+            folder = FileFolders.CONVERSATION_MEDIA,
+            bytes = bytes,
+            displayName = displayName,
+            mimeType = mimeType,
+        )
+        return getFile(entity).toUri()
+    }
+
+    /**
+     * Delete one managed conversation-media file only after its owning messages are gone.
+     * A failed disk delete keeps its database row so startup reconciliation can retry.
+     */
+    suspend fun deleteConversationMedia(entity: ManagedFileEntity): Boolean = withContext(Dispatchers.IO) {
+        require(entity.folder == FileFolders.CONVERSATION_MEDIA) {
+            "Only conversation-owned media can be deleted by this operation"
+        }
+        val folder = File(context.filesDir, FileFolders.CONVERSATION_MEDIA).canonicalFile
+        val file = getFile(entity)
+        require(file.canonicalFile.parentFile == folder && !Files.isSymbolicLink(file.toPath())) {
+            "Conversation media path is invalid"
+        }
+        if (file.exists()) {
+            require(file.isFile) { "Conversation media is not a regular file" }
+            if (!file.delete()) return@withContext false
+        }
+        repository.deleteByPath(entity.relativePath)
+        true
+    }
+
     suspend fun saveManagedText(
         folder: String,
         text: String,
