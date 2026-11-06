@@ -101,6 +101,12 @@ class CustomToolSecretStore(context: Context) : CustomToolSecretProvider {
     fun reconcile(declaredSecretsByTool: Map<String, Set<String>>): Int = synchronized(lock) {
         if (!root.isDirectory) return@synchronized 0
         var changedStores = 0
+        root.listFiles().orEmpty()
+            .filter {
+                it.isFile && it.name.endsWith(".tmp") && !Files.isSymbolicLink(it.toPath()) &&
+                    it.canonicalFile.parentFile == root.canonicalFile
+            }
+            .forEach { if (it.delete()) changedStores += 1 }
         root.listFiles().orEmpty().filter { it.isFile && it.extension == "json" }.forEach { file ->
             val owner = runCatching {
                 Json.parseToJsonElement(file.readText()).jsonObject["toolId"]?.jsonPrimitive?.contentOrNull
