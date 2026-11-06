@@ -173,7 +173,7 @@ class CustomToolHttpRuntime(
                     .dns(safeDns(extension))
                     .build()
 
-                quickJs(Dispatchers.Default) {
+                val executionOutput = quickJs(Dispatchers.Default) {
                     memoryLimit = JS_MEMORY_LIMIT_BYTES
                     maxStackSize = JS_MAX_STACK_BYTES
                     evaluationTimeoutMillis = timeoutMillis
@@ -328,14 +328,43 @@ class CustomToolHttpRuntime(
                         put("result", result?.let(::JsonPrimitive) ?: kotlinx.serialization.json.JsonNull)
                     }.toString()
                 }
-            } ?: errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
+                val image = pendingImage
+                val mediaUri = if (image != null && conversationId != null) {
+                    val manager = filesManager ?: error("Conversation media storage is unavailable")
+                    manager.saveConversationMedia(
+                        conversationId = conversationId,
+                        bytes = image.bytes,
+                        displayName = image.displayName,
+                        mimeType = image.mimeType,
+                    )
+                } else {
+                    null
+                }
+                savedMediaUri = mediaUri
+                val executionObject = Json.parseToJsonElement(executionOutput).jsonObject
+                buildJsonObject {
+                    executionObject.forEach { (key, value) -> put(key, value) }
+                    if (image != null) {
+                        put("mediaMimeType", image.mimeType)
+                        if (mediaUri != null) put("mediaUri", mediaUri.toString())
+                        else put("mediaPending", true)
+                    }
+                }.toString()
+            } ?: run {
+                savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
+                errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
+            }
         } catch (cancelled: CancellationException) {
+            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
             throw cancelled
         } catch (_: QuickJsInterruptedException) {
+            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
             errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
         } catch (error: QuickJsException) {
+            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
         } catch (error: Exception) {
+            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
         } finally {
             jobs.remove(executionJob)
