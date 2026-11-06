@@ -41,6 +41,7 @@ import java.io.IOException
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.Proxy
+import java.net.Proxy
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.Base64
@@ -827,8 +828,13 @@ class CustomToolHttpRuntime(
             secretStore: CustomToolSecretStore,
             storage: CustomToolStorage,
             mediaStore: ConversationMediaStore? = null,
-        ): CustomToolHttpRuntime {
-            val client = OkHttpClient.Builder()
+        ): CustomToolHttpRuntime =
+            CustomToolHttpRuntime(createHttpClient(), secretStore, storage, mediaStore)
+
+        /** A direct client prevents system/app proxies from bypassing destination DNS validation. */
+        internal fun createHttpClient(): OkHttpClient =
+            OkHttpClient.Builder()
+                .proxy(Proxy.NO_PROXY)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
                 .writeTimeout(20, TimeUnit.SECONDS)
@@ -838,8 +844,6 @@ class CustomToolHttpRuntime(
                 .retryOnConnectionFailure(false)
                 // Deliberately no request, body, or header logging interceptors.
                 .build()
-            return CustomToolHttpRuntime(client, secretStore, storage, mediaStore)
-        }
 
         private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L
         private const val JS_MEMORY_LIMIT_BYTES = 64L * 1024 * 1024

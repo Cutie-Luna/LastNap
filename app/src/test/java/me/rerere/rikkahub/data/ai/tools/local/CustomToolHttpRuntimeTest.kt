@@ -536,6 +536,15 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun customToolHttpClientCannotInheritAProxyOrLoggingInterceptors() {
+        val client = CustomToolHttpRuntime.createHttpClient()
+
+        assertEquals(java.net.Proxy.NO_PROXY, client.proxy)
+        assertTrue(client.interceptors.isEmpty())
+        assertTrue(client.networkInterceptors.isEmpty())
+    }
+
+    @Test
     fun ipv6LinkLocalAndSiteLocalRequireTheExplicitLocalNetworkCapability() {
         val runtime = runtime()
         val linkLocal = InetAddress.getByName("fe80::1")
