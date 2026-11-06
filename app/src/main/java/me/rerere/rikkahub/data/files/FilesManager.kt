@@ -351,22 +351,41 @@ class FilesManager(
         }
 
     fun deleteChatFiles(uris: List<Uri>) {
-        // Only delete managed chat-upload files. A file:// URL may also point to a workspace,
-        // skill, or another app-owned asset that this conversation does not own.
+        // A conversation may own uploaded attachments or generated media. Never delete an
+        // arbitrary file:// URL from a workspace, skill, or unrelated app-owned folder.
         val relativePaths = uris.mapNotNull { uri ->
             if (uri.scheme != "file") return@mapNotNull null
             val file = runCatching { uri.toFile() }.getOrNull() ?: return@mapNotNull null
             val path = getRelativePathInFilesDir(file) ?: return@mapNotNull null
-            if (!path.startsWith("${FileFolders.UPLOAD}/") || Files.isSymbolicLink(file.toPath())) {
-                return@mapNotNull null
+            if (Files.isSymbolicLink(file.toPath())) return@mapNotNull null
+
+            val segments = path.split('/')
+            val isUpload = segments.size == 2 && segments[0] == FileFolders.UPLOAD
+            val isConversationMedia = segments.size == 3 &&
+                segments[0] == FileFolders.CONVERSATION_MEDIA &&
+                segments[1].matches(CONVERSATION_ID_PATTERN)
+            if (!isUpload && !isConversationMedia) return@mapNotNull null
+
+            if (isConversationMedia) {
+                val mediaRoot = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
+                val ownerDirectory = file.canonicalFile.parentFile
+                if (Files.isSymbolicLink(mediaRoot.toPath()) ||
+                    ownerDirectory == null ||
+                    Files.isSymbolicLink(ownerDirectory.toPath()) ||
+                    ownerDirectory.parentFile != mediaRoot.canonicalFile
+                ) {
+                    return@mapNotNull null
+                }
             }
+
             val isMissing = !file.exists()
             if (!isMissing && (!file.isFile || !file.delete())) return@mapNotNull null
+            if (isConversationMedia) file.parentFile?.delete()
             path
         }.toSet()
         if (relativePaths.isEmpty()) return
 
-        // Disk cleanup stays immediate as before; managed-file metadata is removed off-thread.
+        // Keep metadata when disk deletion fails; startup reconciliation can retry safely.
         appScope.launch(Dispatchers.IO) {
             relativePaths.forEach { path -> repository.deleteByPath(path) }
         }
