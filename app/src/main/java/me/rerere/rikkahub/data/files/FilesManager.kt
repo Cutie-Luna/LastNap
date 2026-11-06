@@ -11,6 +11,7 @@ import java.nio.file.Files
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -34,6 +35,9 @@ class FilesManager(
 ) {
     companion object {
         private const val TAG = "FilesManager"
+        private const val MAX_CONVERSATION_MEDIA_BYTES = 8 * 1024 * 1024
+        private val CONVERSATION_ID_PATTERN = Regex("[0-9a-fA-F-]{36}")
+        private val CONVERSATION_IMAGE_MIMES = setOf("image/png", "image/jpeg", "image/webp", "image/gif")
     }
 
     suspend fun saveManagedFromUri(
@@ -79,17 +83,68 @@ class FilesManager(
      * The returned URI is safe to attach to a message and is included in chat backups.
      */
     suspend fun saveConversationMedia(
+        conversationId: String,
         bytes: ByteArray,
         displayName: String,
         mimeType: String,
-    ): Uri {
-        val entity = saveManagedFromBytes(
-            folder = FileFolders.CONVERSATION_MEDIA,
-            bytes = bytes,
-            displayName = displayName,
-            mimeType = mimeType,
-        )
-        return getFile(entity).toUri()
+    ): Uri = withContext(NonCancellable + Dispatchers.IO) {
+        require(conversationId.matches(CONVERSATION_ID_PATTERN)) { "Conversation ID is invalid" }
+        require(bytes.isNotEmpty() && bytes.size <= MAX_CONVERSATION_MEDIA_BYTES) {
+            "Conversation image exceeds the 8 MiB size limit"
+        }
+        val normalizedMime = mimeType.substringBefore(';').trim().lowercase()
+        require(normalizedMime in CONVERSATION_IMAGE_MIMES) { "Unsupported conversation image type" }
+
+        val filesRoot = context.filesDir.canonicalFile
+        val root = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
+        require(!Files.isSymbolicLink(root.toPath())) { "Conversation media root cannot be a symbolic link" }
+        if (!root.exists()) check(root.mkdirs()) { "Could not create conversation media storage" }
+        require(root.canonicalFile.parentFile == filesRoot) { "Conversation media root escaped app storage" }
+
+        val directory = File(root, conversationId)
+        require(!Files.isSymbolicLink(directory.toPath())) { "Conversation media directory cannot be a symbolic link" }
+        if (!directory.exists()) check(directory.mkdir()) { "Could not create conversation media directory" }
+        require(directory.canonicalFile.parentFile == root.canonicalFile) {
+            "Conversation media directory escaped its owner"
+        }
+
+        val file = File(directory, FileUtils.buildUuidFileName(displayName, normalizedMime))
+        val temporary = File(directory, ".${file.name}.${System.nanoTime()}.tmp")
+        try {
+            FileOutputStream(temporary).use { output ->
+                output.write(bytes)
+                output.fd.sync()
+            }
+            try {
+                Files.move(
+                    temporary.toPath(),
+                    file.toPath(),
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                )
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                Files.move(temporary.toPath(), file.toPath())
+            }
+            val relativePath = FileUtils.getRelativePathInFilesDir(context.filesDir, file)
+                ?: error("Conversation media path is outside app storage")
+            val now = System.currentTimeMillis()
+            repository.insert(
+                ManagedFileEntity(
+                    folder = FileFolders.CONVERSATION_MEDIA,
+                    relativePath = relativePath,
+                    displayName = displayName,
+                    mimeType = normalizedMime,
+                    sizeBytes = file.length(),
+                    createdAt = now,
+                    updatedAt = now,
+                )
+            )
+            file.toUri()
+        } catch (error: Exception) {
+            file.delete()
+            throw error
+        } finally {
+            temporary.delete()
+        }
     }
 
     /**
@@ -100,17 +155,67 @@ class FilesManager(
         require(entity.folder == FileFolders.CONVERSATION_MEDIA) {
             "Only conversation-owned media can be deleted by this operation"
         }
-        val folder = File(context.filesDir, FileFolders.CONVERSATION_MEDIA).canonicalFile
-        val file = getFile(entity)
-        require(file.canonicalFile.parentFile == folder && !Files.isSymbolicLink(file.toPath())) {
-            "Conversation media path is invalid"
+        val root = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
+        require(!Files.isSymbolicLink(root.toPath()) && root.canonicalFile.parentFile == context.filesDir.canonicalFile) {
+            "Conversation media root is invalid"
         }
+        val file = getFile(entity)
+        val parent = file.canonicalFile.parentFile
+        require(parent != null && parent.parentFile == root.canonicalFile &&
+            parent.name.matches(CONVERSATION_ID_PATTERN) &&
+            !Files.isSymbolicLink(parent.toPath()) && !Files.isSymbolicLink(file.toPath())
+        ) { "Conversation media path is invalid" }
         if (file.exists()) {
             require(file.isFile) { "Conversation media is not a regular file" }
             if (!file.delete()) return@withContext false
         }
         repository.deleteByPath(entity.relativePath)
+        parent.delete()
         true
+    }
+
+    /**
+     * Remove only conversation media that has no persisted message owner. Unknown references
+     * and failed database checks are retained; this also repairs crashes before message commit.
+     */
+    suspend fun reconcileConversationMedia(
+        hasFileReference: suspend (String) -> Boolean,
+    ): Int = withContext(Dispatchers.IO) {
+        val entities = list(FileFolders.CONVERSATION_MEDIA)
+        val trackedPaths = entities.mapTo(mutableSetOf()) { it.relativePath }
+        var removed = 0
+        entities.forEach { entity ->
+            val referenced = try {
+                hasFileReference(getFile(entity).toUri().toString())
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                true
+            }
+            if (!referenced && deleteConversationMedia(entity)) removed += 1
+        }
+
+        val root = File(context.filesDir, FileFolders.CONVERSATION_MEDIA)
+        if (root.isDirectory && !Files.isSymbolicLink(root.toPath())) {
+            root.listFiles().orEmpty()
+                .filter { it.isDirectory && it.name.matches(CONVERSATION_ID_PATTERN) && !Files.isSymbolicLink(it.toPath()) }
+                .forEach { directory ->
+                    directory.listFiles().orEmpty().filter { it.isFile && !Files.isSymbolicLink(it.toPath()) }.forEach { file ->
+                        val relativePath = FileUtils.getRelativePathInFilesDir(context.filesDir, file) ?: return@forEach
+                        if (relativePath in trackedPaths) return@forEach
+                        val referenced = try {
+                            hasFileReference(file.toUri().toString())
+                        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            true
+                        }
+                        if (!referenced && file.delete()) removed += 1
+                    }
+                    directory.delete()
+                }
+        }
+        removed
     }
 
     suspend fun saveManagedText(
