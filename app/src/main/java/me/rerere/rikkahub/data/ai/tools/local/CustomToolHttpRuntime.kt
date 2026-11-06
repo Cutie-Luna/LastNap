@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.withContext
@@ -343,6 +344,7 @@ class CustomToolHttpRuntime(
         var redirects = 0
 
         while (true) {
+            executionJob.ensureActive()
             validateUrl(extension, currentUrl)
             val requestBuilder = Request.Builder().url(currentUrl)
             headers.forEach { (name, value) -> requestBuilder.header(name, value) }
@@ -356,33 +358,37 @@ class CustomToolHttpRuntime(
             val response = try {
                 call.execute()
             } catch (_: IOException) {
-                throw IllegalStateException("Custom tool HTTP request failed")
-            } finally {
                 cancellation.complete()
+                throw IllegalStateException("Custom tool HTTP request failed")
             }
 
-            val responseResult = response.use { received ->
-                if (received.code in REDIRECT_CODES && received.header("Location") != null) {
-                    if (redirects >= MAX_REDIRECTS) {
-                        throw IllegalStateException("Custom tool HTTP redirect limit exceeded")
+            val responseResult = try {
+                response.use { received ->
+                    if (received.code in REDIRECT_CODES && received.header("Location") != null) {
+                        if (redirects >= MAX_REDIRECTS) {
+                            throw IllegalStateException("Custom tool HTTP redirect limit exceeded")
+                        }
+                        val redirected = currentUrl.resolve(received.header("Location")!!)
+                            ?: throw IllegalStateException("Custom tool HTTP redirect URL is invalid")
+                        require(sameOrigin(currentUrl, redirected)) {
+                            "Custom tool HTTP redirects must remain on the same origin"
+                        }
+                        currentUrl = parseAndValidateUrl(extension, redirected.toString())
+                        if (received.code == 303 ||
+                            (received.code in setOf(301, 302) && currentMethod !in setOf("GET", "HEAD"))
+                        ) {
+                            currentMethod = "GET"
+                            currentBody = null
+                        }
+                        redirects += 1
+                        null
+                    } else {
+                        responseToJson(received, currentUrl, secretsUsed)
                     }
-                    val redirected = currentUrl.resolve(received.header("Location")!!)
-                        ?: throw IllegalStateException("Custom tool HTTP redirect URL is invalid")
-                    require(sameOrigin(currentUrl, redirected)) {
-                        "Custom tool HTTP redirects must remain on the same origin"
-                    }
-                    currentUrl = parseAndValidateUrl(extension, redirected.toString())
-                    if (received.code == 303 ||
-                        (received.code in setOf(301, 302) && currentMethod !in setOf("GET", "HEAD"))
-                    ) {
-                        currentMethod = "GET"
-                        currentBody = null
-                    }
-                    redirects += 1
-                    null
-                } else {
-                    responseToJson(received, currentUrl, secretsUsed)
                 }
+            } finally {
+                // Keep the cancellation hook active while the response body is streamed.
+                cancellation.complete()
             }
             if (responseResult != null) return responseResult
         }
