@@ -202,8 +202,17 @@ class CustomToolStorage(private val root: File) : CustomToolStorageProvider {
         root.listFiles().orEmpty().filter { it.isDirectory && !Files.isSymbolicLink(it.toPath()) }.forEach { directory ->
             val owner = runCatching { File(directory, OWNER_FILE).readText() }.getOrNull()
             if (owner != null && owner !in validToolIds) {
-                val toolId = owner
-                runCatching { deleteToolStorage(toolId) }.onSuccess { removed += 1 }
+                // Never let a mismatched/corrupt marker in one directory target another
+                // tool's hashed directory during orphan cleanup.
+                val markerMatchesDirectory = runCatching {
+                    validateToolId(owner)
+                    directory.name == owner.sha256() &&
+                        directory.canonicalFile.parentFile == root.canonicalFile &&
+                        !Files.isSymbolicLink(directory.toPath())
+                }.getOrDefault(false)
+                if (markerMatchesDirectory) {
+                    runCatching { deleteToolStorage(owner) }.onSuccess { removed += 1 }
+                }
             } else if (owner == null && directory.listFiles().isNullOrEmpty()) {
                 if (directory.delete()) removed += 1
             }
