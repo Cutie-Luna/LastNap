@@ -1335,22 +1335,34 @@ fun ExtensionBuilderPage(
                 TextButton(
                     onClick = {
                         scope.launch {
+                            var definitionRemoved = false
                             try {
+                                // Stop new and in-flight calls first. Then commit definition removal
+                                // before deleting owned data, so a crash can only leave recoverable
+                                // orphaned data, never a live tool with silently erased state.
                                 httpRuntime.revokeToolAndJoin(draftId)
+                                settingsStore.update { it.removeCustomExtension(draftId) }
+                                definitionRemoved = true
                                 withContext(Dispatchers.IO) {
                                     storage.deleteToolStorage(draftId)
                                     secretStore.deleteToolSecrets(draftId)
                                 }
-                                settingsStore.update { it.removeCustomExtension(draftId) }
                                 showDeleteConfirmation = false
                                 clearDraftState()
                             } catch (cancelled: CancellationException) {
                                 throw cancelled
                             } catch (error: Exception) {
-                                httpRuntime.restoreToolAfterFailedDeletion(draftId)
-                                showDeleteConfirmation = false
-                                testPassed = false
-                                testResult = (error.message ?: "Could not delete this tool").take(6_000)
+                                if (definitionRemoved) {
+                                    // Startup/Builder reconciliation will retry private-data cleanup.
+                                    // Never restore a tool after its definition has been deleted.
+                                    showDeleteConfirmation = false
+                                    clearDraftState()
+                                } else {
+                                    httpRuntime.restoreToolAfterFailedDeletion(draftId)
+                                    showDeleteConfirmation = false
+                                    testPassed = false
+                                    testResult = (error.message ?: "Could not delete this tool").take(6_000)
+                                }
                             }
                         }
                     },
