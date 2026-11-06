@@ -1335,6 +1335,7 @@ fun ExtensionBuilderPage(
             text = { Text(stringResource(R.string.extension_builder_page_delete_message, name)) },
             confirmButton = {
                 TextButton(
+                    enabled = !isDeleting,
                     onClick = {
                         if (isDeleting) return@TextButton
                         isDeleting = true
