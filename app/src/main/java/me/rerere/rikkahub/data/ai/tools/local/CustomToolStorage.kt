@@ -241,6 +241,20 @@ class CustomToolStorage(
                 if (markerMatchesDirectory) {
                     runCatching { deleteToolStorage(owner) }.onSuccess { removed += 1 }
                 }
+            } else if (owner in validToolIds) {
+                val directoryIsOwned = runCatching {
+                    requireOwnedDirectory(owner, directory)
+                    true
+                }.getOrDefault(false)
+                if (directoryIsOwned) {
+                    directory.listFiles().orEmpty()
+                        .filter { file ->
+                            file.name.startsWith(".") && file.name.endsWith(".tmp") &&
+                                file.isFile && !Files.isSymbolicLink(file.toPath()) &&
+                                file.canonicalFile.parentFile == directory.canonicalFile
+                        }
+                        .forEach { if (it.delete()) removed += 1 }
+                }
             } else if (owner == null && directory.listFiles().isNullOrEmpty()) {
                 if (directory.delete()) removed += 1
             }
