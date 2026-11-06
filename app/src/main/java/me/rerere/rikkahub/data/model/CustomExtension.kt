@@ -47,6 +47,7 @@ enum class CustomExtensionValidationError {
     TOO_MANY_API_HOSTS,
     INVALID_API_HOST_PATTERN,
     LOCAL_NETWORK_WITHOUT_API_ACCESS,
+    SECRETS_WITHOUT_API_ACCESS,
     TOO_MANY_SECRETS,
     TOO_MANY_VARIABLES,
     INVALID_SECRET_DECLARATION,
@@ -124,6 +125,9 @@ fun CustomExtension.validationErrors(): Set<CustomExtensionValidationError> = bu
 
     if (!apiAccessEnabled && allowLocalNetwork) {
         add(CustomExtensionValidationError.LOCAL_NETWORK_WITHOUT_API_ACCESS)
+    }
+    if (!apiAccessEnabled && secrets.isNotEmpty()) {
+        add(CustomExtensionValidationError.SECRETS_WITHOUT_API_ACCESS)
     }
     if (apiAccessEnabled) {
         if (allowedApiHosts.isEmpty()) add(CustomExtensionValidationError.API_HOSTS_REQUIRED)
