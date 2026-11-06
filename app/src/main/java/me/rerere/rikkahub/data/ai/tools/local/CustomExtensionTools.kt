@@ -1,5 +1,6 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -117,6 +118,7 @@ internal fun createCustomExtensionTools(
             },
             needsApproval = { _ -> extension.needsApproval },
             execute = { arguments ->
+                var unpublishedMediaUri: String? = null
                 val executeTool: suspend () -> List<UIMessagePart> = {
                     val args = arguments as? JsonObject ?: error("Custom tool arguments must be a JSON object")
                     val serializedArguments = args.toString()
@@ -129,7 +131,9 @@ internal fun createCustomExtensionTools(
                     val serializedInput = input.toString()
                     val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
                     val code = "const input = JSON.parse($serializedInputLiteral);\\n$implementation"
-                    val output = if (extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) {
+                    val usesNativeRuntime = extension.apiAccessEnabled ||
+                        extension.storageEnabled || extension.variables.isNotEmpty()
+                    val output = if (usesNativeRuntime) {
                         requireNotNull(httpRuntime).evaluate(
                             extension = extension,
                             code = code,
@@ -139,16 +143,25 @@ internal fun createCustomExtensionTools(
                     } else {
                         evaluateJavascript(code)
                     }
-                    if (extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) {
+                    val parts = if (usesNativeRuntime) {
                         customToolOutputParts(output)
                     } else {
                         listOf(UIMessagePart.Text(output))
                     }
+                    unpublishedMediaUri = parts.filterIsInstance<UIMessagePart.Image>().lastOrNull()?.url
+                    parts
                 }
-                if (httpRuntime != null) {
-                    httpRuntime.runToolExecution(extension.id) { executeTool() }
-                } else {
-                    executeTool()
+                try {
+                    if (httpRuntime != null) {
+                        httpRuntime.runToolExecution(extension.id) { executeTool() }
+                    } else {
+                        executeTool()
+                    }
+                } catch (cancelled: CancellationException) {
+                    // If native publication completed but cancellation won before the typed
+                    // result could leave the execution lease, discard its uncommitted media.
+                    unpublishedMediaUri?.let { httpRuntime?.discardConversationMedia(it) }
+                    throw cancelled
                 }
             },
         )
