@@ -241,7 +241,7 @@ class CustomToolStorage(
                 if (markerMatchesDirectory) {
                     runCatching { deleteToolStorage(owner) }.onSuccess { removed += 1 }
                 }
-            } else if (owner in validToolIds) {
+            } else if (owner != null && owner in validToolIds) {
                 val directoryIsOwned = runCatching {
                     requireOwnedDirectory(owner, directory)
                     true
