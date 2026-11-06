@@ -139,7 +139,11 @@ internal fun createCustomExtensionTools(
                     } else {
                         evaluateJavascript(code)
                     }
-                    customToolOutputParts(output)
+                    if (extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) {
+                        customToolOutputParts(output)
+                    } else {
+                        listOf(UIMessagePart.Text(output))
+                    }
                 }
                 if (httpRuntime != null) {
                     httpRuntime.runToolExecution(extension.id) { executeTool() }

@@ -62,6 +62,15 @@ class CustomExtensionToolsTest {
     }
 
     @Test
+    fun legacyJsonOutputRemainsPlainTextEvenWhenItContainsAMediaUriField() {
+        val output = """{"mediaUri":"file:///conversation_media/chat/image.png"}"""
+        val parts = customToolOutputParts(output)
+
+        assertEquals(1, parts.size)
+        assertEquals(output, (parts.single() as UIMessagePart.Text).text)
+    }
+
+    @Test
     fun onlySelectedEnabledAndCurrentlyTestedDefinitionsBecomeTools() {
         val selected = enabledExtension("selected")
         val unselected = enabledExtension("unselected")

@@ -317,9 +317,9 @@ fun ExtensionBuilderPage(
         )
         val valuesToSave = variableValues.filterKeys { key -> saved.variables.any { it.name == key } }
         scope.launch {
-            withContext(Dispatchers.IO) {
-                secretStore.retainDeclaredSecrets(draftId, saved.secrets.map { it.name }.toSet())
-            }
+            // Commit the new declarations first. If Settings persistence fails, the previous
+            // tool definition and its Secrets must remain usable; startup reconciliation can
+            // safely finish cleanup after a successful definition update.
             settingsStore.update { current ->
                 val next = if (isExistingDraft) {
                     current.customExtensions.map { if (it.id == draftId) saved else it }
@@ -332,6 +332,9 @@ fun ExtensionBuilderPage(
                     current.customToolVariables + (draftId to valuesToSave)
                 }
                 current.copy(customExtensions = next, customToolVariables = nextVariables)
+            }
+            withContext(Dispatchers.IO) {
+                secretStore.retainDeclaredSecrets(draftId, saved.secrets.map { it.name }.toSet())
             }
             clearDraftState()
         }
