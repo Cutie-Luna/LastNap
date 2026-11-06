@@ -481,9 +481,11 @@ class CustomToolHttpRuntime(
         val responseBody = response.body
         val mediaType = responseBody?.contentType()
         val expectedLength = responseBody?.contentLength() ?: 0L
-        val isText = mediaType == null || mediaType.type == "text" ||
-            mediaType.subtype.contains("json") || mediaType.subtype.contains("xml") ||
-            mediaType.subtype.contains("javascript") || mediaType.subtype == "x-www-form-urlencoded"
+        val isText = mediaType != null && (
+            mediaType.type == "text" ||
+                mediaType.subtype.contains("json") || mediaType.subtype.contains("xml") ||
+                mediaType.subtype.contains("javascript") || mediaType.subtype == "x-www-form-urlencoded"
+            )
         val limit = if (isText) MAX_TEXT_RESPONSE_BYTES else MAX_BINARY_RESPONSE_BYTES
         require(expectedLength < 0 || expectedLength <= limit) {
             "Custom tool HTTP response exceeds the size limit"
@@ -525,10 +527,12 @@ class CustomToolHttpRuntime(
         // Keep every response view consistent: arrayBuffer() must not bypass text redaction.
         val safeBodyBytes = if (isText) responseText.toByteArray(charset) else bytes
         val headerObject = buildJsonObject {
-            response.headers.names().forEach { name ->
-                val values = response.headers.values(name).map { redactSecrets(it, secretsUsed) }
-                put(name.lowercase(Locale.ROOT), values.joinToString(", "))
-            }
+            response.headers.names()
+                .filterNot { it.lowercase(Locale.ROOT) in BLOCKED_RESPONSE_HEADERS }
+                .forEach { name ->
+                    val values = response.headers.values(name).map { redactSecrets(it, secretsUsed) }
+                    put(name.lowercase(Locale.ROOT), values.joinToString(", "))
+                }
         }
         return buildJsonObject {
             put("status", response.code)
@@ -703,6 +707,10 @@ class CustomToolHttpRuntime(
         private val BLOCKED_REQUEST_HEADERS = setOf(
             "host", "content-length", "transfer-encoding", "connection",
             "proxy-authorization", "proxy-connection", "keep-alive", "upgrade", "te", "trailer",
+        )
+        private val BLOCKED_RESPONSE_HEADERS = setOf(
+            "set-cookie", "set-cookie2", "www-authenticate", "proxy-authenticate",
+            "authentication-info", "proxy-authentication-info",
         )
         private const val STORAGE_POLYFILL = """
 globalThis.storage = Object.freeze({
