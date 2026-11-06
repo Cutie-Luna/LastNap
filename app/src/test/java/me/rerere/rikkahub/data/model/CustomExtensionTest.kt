@@ -255,7 +255,10 @@ class CustomExtensionTest {
         assertTrue(CustomExtensionValidationError.INVALID_API_HOST_PATTERN in withoutLocalAccess.validationErrors())
         assertEquals(emptySet<CustomExtensionValidationError>(), withLocalAccess.validationErrors())
         assertTrue(withLocalAccess.allowsApiHost("127.0.0.1"))
-        assertTrue(withLocalAccess.allowsApiHost("192.168.1.40"))
+        // Local-network permission is separate from the exact host allowlist.
+        assertFalse(withLocalAccess.allowsApiHost("192.168.1.40"))
+        val explicitlyAllowedLanHost = withLocalAccess.copy(allowedApiHosts = listOf("192.168.1.40"))
+        assertTrue(explicitlyAllowedLanHost.allowsApiHost("192.168.1.40"))
         assertFalse(publicIp.allowsApiHost("8.8.8.8"))
         assertTrue(CustomExtensionValidationError.INVALID_API_HOST_PATTERN in publicIp.validationErrors())
     }
