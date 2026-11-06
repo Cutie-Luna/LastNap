@@ -206,7 +206,7 @@ jobs:
           fi
 
           "$AAPT" dump resources "$APK" > "$RUNNER_TEMP/lastnap-resources.txt"
-          for RESOURCE in "mipmap/ic_launcher" "drawable/appicon" "drawable/noticon" "drawable/ic_launcher_background"; do
+          for RESOURCE in "mipmap/ic_launcher" "drawable-nodpi/appicon" "drawable-nodpi/noticon" "drawable/ic_launcher_background"; do
             if ! grep -Fq "$RESOURCE" "$RUNNER_TEMP/lastnap-resources.txt"; then
               echo "::error::Expected packaged resource not found: $RESOURCE"
               exit 1
