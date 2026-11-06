@@ -189,9 +189,9 @@ class CustomToolHttpRuntime(
 
         val executionJob = currentCoroutineContext().job
         val jobs = activeExecutions.computeIfAbsent(extension.id) { ConcurrentHashMap.newKeySet<Job>() }
-        jobs.add(executionJob)
+        val addedExecutionJob = jobs.add(executionJob)
         if (extension.id in revokedToolIds) {
-            jobs.remove(executionJob)
+            if (addedExecutionJob) jobs.remove(executionJob)
             if (jobs.isEmpty()) activeExecutions.remove(extension.id, jobs)
             throw CancellationException("Custom tool was deleted")
         }
@@ -401,7 +401,7 @@ class CustomToolHttpRuntime(
             savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
         } finally {
-            jobs.remove(executionJob)
+            if (addedExecutionJob) jobs.remove(executionJob)
             if (jobs.isEmpty()) activeExecutions.remove(extension.id, jobs)
         }
     }
