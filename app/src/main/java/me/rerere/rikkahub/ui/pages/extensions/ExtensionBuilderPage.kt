@@ -1000,6 +1000,8 @@ fun ExtensionBuilderPage(
                                                 } catch (cancelled: CancellationException) {
                                                     throw cancelled
                                                 } catch (error: Exception) {
+                                                    testedHash = null
+                                                    enabled = false
                                                     testPassed = false
                                                     testResult = error.message ?: "Could not save Secret"
                                                 } finally {
