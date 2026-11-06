@@ -1,5 +1,6 @@
 package me.rerere.rikkahub.di
 
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.analytics
 import com.google.firebase.crashlytics.crashlytics
@@ -71,6 +72,8 @@ val appModule = module {
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (error: Exception) {
+                Log.w("CustomToolCleanup", "Could not reconcile orphaned custom-tool data", error)
             }
         }
     }
