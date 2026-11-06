@@ -96,6 +96,16 @@ class CustomToolHttpRuntimeTest {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
             when (exchange.requestURI.path) {
+                "/image" -> {
+                    val body = byteArrayOf(
+                        0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 2, 0, 0, 0, 3,
+                    )
+                    exchange.responseHeaders.add("Content-Type", "image/png")
+                    exchange.sendResponseHeaders(200, body.size.toLong())
+                    exchange.responseBody.use { it.write(body) }
+                }
                 "/binary" -> {
                     val body = byteArrayOf(0, 20, 30)
                     exchange.responseHeaders.add("Content-Type", "application/octet-stream")
@@ -226,6 +236,44 @@ class CustomToolHttpRuntimeTest {
             val result = Json.parseToJsonElement(output).jsonObject["result"]?.jsonPrimitive?.content
 
             assertEquals("20", result)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun imageCanBePublishedFromFetchResponseAndAllowedUrl() = runBlocking {
+        val server = startServer()
+        val conversationId = "12345678-1234-1234-1234-123456789abc"
+        val expectedBytes = byteArrayOf(
+            0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 2, 0, 0, 0, 3,
+        )
+        try {
+            val responseStore = MemoryMediaStore()
+            val responseOutput = runtime(mediaStore = responseStore).evaluate(
+                extension = localExtension(),
+                code = """
+                    const response = fetch("http://127.0.0.1:${server.address.port}/image");
+                    media.imageFromResponse(response, "from-response.png");
+                    "ready"
+                """.trimIndent(),
+                conversationId = conversationId,
+            )
+            assertTrue(expectedBytes.contentEquals(responseStore.savedBytes))
+            assertEquals("image/png", responseStore.savedMimeType)
+            assertTrue(Json.parseToJsonElement(responseOutput).jsonObject.containsKey("mediaUri"))
+
+            val urlStore = MemoryMediaStore()
+            val urlOutput = runtime(mediaStore = urlStore).evaluate(
+                extension = localExtension(),
+                code = """media.imageFromUrl("http://127.0.0.1:${server.address.port}/image", {}, "from-url.png"); "ready"""",
+                conversationId = conversationId,
+            )
+            assertTrue(expectedBytes.contentEquals(urlStore.savedBytes))
+            assertEquals("image/png", urlStore.savedMimeType)
+            assertTrue(Json.parseToJsonElement(urlOutput).jsonObject.containsKey("mediaUri"))
         } finally {
             server.stop(0)
         }
