@@ -740,7 +740,7 @@ class CustomToolHttpRuntime(
     private fun sameOrigin(first: HttpUrl, second: HttpUrl): Boolean =
         first.scheme == second.scheme && first.host == second.host && first.port == second.port
 
-    private fun isSafeAddress(address: InetAddress, allowLocalNetwork: Boolean): Boolean {
+    internal fun isSafeAddress(address: InetAddress, allowLocalNetwork: Boolean): Boolean {
         if (address.isAnyLocalAddress || address.isMulticastAddress) return false
         val bytes = address.address
         val ipv4 = when {
@@ -778,20 +778,34 @@ class CustomToolHttpRuntime(
         }
 
         if (address is java.net.Inet6Address) {
-            if (address.isLinkLocalAddress || address.isSiteLocalAddress) return false
             val isLoopback = address.isLoopbackAddress
+            val isLinkLocal = address.isLinkLocalAddress
+            val isSiteLocal = address.isSiteLocalAddress
             val isUniqueLocal = (bytes[0].toInt() and 0xfe) == 0xfc
             val isDocumentation = (bytes[0].toInt() and 0xff) == 0x20 &&
                 (bytes[1].toInt() and 0xff) == 0x01 &&
                 (bytes[2].toInt() and 0xff) == 0x0d &&
                 (bytes[3].toInt() and 0xff) == 0xb8
-            if (isDocumentation) return false
-            if (isLoopback || isUniqueLocal) return allowLocalNetwork
+            val isCloudMetadata =
+                (bytes[0].toInt() and 0xff) == 0xfd &&
+                    (bytes[1].toInt() and 0xff) == 0x00 &&
+                    (bytes[2].toInt() and 0xff) == 0x0e &&
+                    (bytes[3].toInt() and 0xff) == 0xc2 &&
+                    bytes.drop(4).take(11).all { it == 0.toByte() } &&
+                    (bytes[15].toInt() and 0xff) == 0xfe ||
+                (bytes[0].toInt() and 0xff) == 0xfd &&
+                    (bytes[1].toInt() and 0xff) == 0x20 &&
+                    (bytes[2].toInt() and 0xff) == 0x00 &&
+                    (bytes[3].toInt() and 0xff) == 0xce &&
+                    bytes.drop(4).take(11).all { it == 0.toByte() } &&
+                    (bytes[15].toInt() and 0xff) == 0xfe
+            if (isDocumentation || isCloudMetadata) return false
+            if (isLoopback || isLinkLocal || isSiteLocal || isUniqueLocal) return allowLocalNetwork
         }
         return true
     }
 
-    private fun isLocalAddress(address: InetAddress): Boolean {
+    internal fun isLocalAddress(address: InetAddress): Boolean {
         val bytes = address.address
         if (address is Inet4Address) {
             val first = bytes[0].toInt() and 0xff

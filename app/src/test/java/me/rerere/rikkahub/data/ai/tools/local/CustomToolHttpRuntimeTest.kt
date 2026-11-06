@@ -19,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CountDownLatch
@@ -532,6 +533,30 @@ class CustomToolHttpRuntimeTest {
         } finally {
             server.stop(0)
         }
+    }
+
+    @Test
+    fun ipv6LinkLocalAndSiteLocalRequireTheExplicitLocalNetworkCapability() {
+        val runtime = runtime()
+        val linkLocal = InetAddress.getByName("fe80::1")
+        val siteLocal = InetAddress.getByName("fec0::1")
+
+        assertFalse(runtime.isSafeAddress(linkLocal, allowLocalNetwork = false))
+        assertFalse(runtime.isSafeAddress(siteLocal, allowLocalNetwork = false))
+        assertTrue(runtime.isSafeAddress(linkLocal, allowLocalNetwork = true))
+        assertTrue(runtime.isSafeAddress(siteLocal, allowLocalNetwork = true))
+        assertTrue(runtime.isLocalAddress(linkLocal))
+        assertTrue(runtime.isLocalAddress(siteLocal))
+    }
+
+    @Test
+    fun ipv6CloudMetadataDestinationsRemainBlockedWithLocalNetworkEnabled() {
+        val runtime = runtime()
+        val awsMetadata = InetAddress.getByName("fd00:ec2::254")
+        val googleMetadata = InetAddress.getByName("fd20:ce::254")
+
+        assertFalse(runtime.isSafeAddress(awsMetadata, allowLocalNetwork = true))
+        assertFalse(runtime.isSafeAddress(googleMetadata, allowLocalNetwork = true))
     }
 
     @Test
