@@ -561,7 +561,10 @@ class CustomToolHttpRuntime(
             put("status", response.code)
             put("ok", response.isSuccessful)
             put("statusText", redactSecrets(response.message, secretsUsed))
-            put("url", url.newBuilder().query(null).fragment(null).build().toString())
+            put(
+                "url",
+                redactSecrets(url.newBuilder().query(null).fragment(null).build().toString(), secretsUsed)
+            )
             put("headers", headerObject)
             put("isText", isText)
             put("body", responseText)
