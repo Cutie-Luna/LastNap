@@ -173,7 +173,7 @@ class CustomToolHttpRuntime(
         ).toString()
         val executionStorage = storageOverride ?: storage
         var pendingImage: CustomToolImagePayload? = null
-        var savedMediaUri: Uri? = null
+        var savedMediaUri: String? = null
         val logs = StringBuilder()
         var logsTruncated = false
         fun appendLog(line: String) {
