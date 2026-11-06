@@ -307,6 +307,8 @@ class CustomExtensionTest {
             name = "Configured API",
             description = "",
             implementation = "return globalThis.variables.API_BASE",
+            apiAccessEnabled = true,
+            allowedApiHosts = listOf("api.example.com"),
         )
         val declared = base.copy(
             secrets = listOf(CustomToolValueDeclaration("API_KEY")),
@@ -314,6 +316,7 @@ class CustomExtensionTest {
         )
 
         assertNotEquals(base.testFingerprint(), declared.testFingerprint())
+        assertEquals(emptySet<CustomExtensionValidationError>(), base.validationErrors())
         assertEquals(emptySet<CustomExtensionValidationError>(), declared.validationErrors())
     }
 
