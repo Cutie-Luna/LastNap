@@ -287,10 +287,10 @@ class CustomToolHttpRuntimeTest {
             secrets = listOf(me.rerere.rikkahub.data.model.CustomToolValueDeclaration("API_KEY"))
         )
 
-        val output = runtime().evaluate(extension, "1")
-        val error = Json.parseToJsonElement(output).jsonObject["error"]?.jsonPrimitive?.content.orEmpty()
+        val error = runCatching { runtime().evaluate(extension, "1") }.exceptionOrNull()
 
-        assertTrue(error.contains("Missing required Secrets"))
+        assertTrue(error is IllegalArgumentException)
+        assertTrue(error?.message.orEmpty().contains("Missing required Secrets"))
     }
 
     @Test
