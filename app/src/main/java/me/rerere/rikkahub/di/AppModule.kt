@@ -71,9 +71,27 @@ val appModule = module {
                     val declaredSecretsByTool = settings.customExtensions.associate { extension ->
                         extension.id to extension.secrets.mapTo(mutableSetOf()) { it.name }
                     }
-                    secretStore.reconcile(declaredSecretsByTool)
-                    storage.reconcile(declaredSecretsByTool.keys)
-                    filesManager.reconcileConversationMedia(conversationRepository::hasFileReference)
+                    try {
+                        secretStore.reconcile(declaredSecretsByTool)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        Log.w("CustomToolCleanup", "Could not reconcile custom-tool Secrets", error)
+                    }
+                    try {
+                        storage.reconcile(declaredSecretsByTool.keys)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        Log.w("CustomToolCleanup", "Could not reconcile custom-tool storage", error)
+                    }
+                    try {
+                        filesManager.reconcileConversationMedia(conversationRepository::hasFileReference)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        Log.w("ConversationMediaCleanup", "Could not reconcile conversation media", error)
+                    }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
