@@ -21,6 +21,17 @@ class CustomExtensionTest {
     }
 
     @Test
+    fun `Secrets require the API access capability`() {
+        val extension = CustomExtension(
+            name = "API tool",
+            description = "",
+            secrets = listOf(CustomToolValueDeclaration("API_KEY")),
+        )
+
+        assertTrue(CustomExtensionValidationError.SECRETS_WITHOUT_API_ACCESS in extension.validationErrors())
+    }
+
+    @Test
     fun `legacy permission values migrate to approval required`() {
         val legacy = """{"id":"legacy","name":"Legacy","description":"","permission":"ALWAYS_ALLOW"}"""
         val decoded = JsonInstant.decodeFromString<CustomExtension>(legacy)
