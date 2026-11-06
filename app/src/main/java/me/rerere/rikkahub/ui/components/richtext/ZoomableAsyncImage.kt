@@ -15,6 +15,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
+import coil3.request.error
 import coil3.request.placeholder
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.ui.components.ui.ImagePreviewDialog
@@ -32,12 +33,14 @@ fun ZoomableAsyncImage(
     alpha: Float = DefaultAlpha,
 ) {
     var showImageViewer by remember { mutableStateOf(false) }
+    var imageAvailable by remember(model) { mutableStateOf(false) }
     val context = LocalContext.current
     val placeholder = if(LocalDarkMode.current) R.drawable.placeholder_dark else R.drawable.placeholder
     val export = LocalExportContext.current
     val coilModel = ImageRequest.Builder(context)
         .data(model)
         .placeholder(placeholder)
+        .error(placeholder)
         .crossfade(false)
         .allowHardware(!export)
         .build()
@@ -47,20 +50,24 @@ fun ZoomableAsyncImage(
         contentDescription = contentDescription,
         modifier = modifier
             .shimmer(isLoading = loading)
-            .clickable {
-                showImageViewer = true
-            },
+            .then(
+                if (imageAvailable) Modifier.clickable { showImageViewer = true }
+                else Modifier
+            ),
         contentScale = contentScale,
         alpha = alpha,
         alignment = alignment,
         onLoading = {
             loading = true
+            imageAvailable = false
         },
         onSuccess = {
             loading = false
+            imageAvailable = true
         },
         onError = {
             loading = false
+            imageAvailable = false
         },
     )
     if (showImageViewer) {
