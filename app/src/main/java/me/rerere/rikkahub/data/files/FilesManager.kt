@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import java.io.File
+import java.nio.file.Files
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -206,17 +207,29 @@ class FilesManager(
         }
 
     fun deleteChatFiles(uris: List<Uri>) {
-        val relativePaths = mutableSetOf<String>()
-        uris.filter { it.toString().startsWith("file:") }.forEach { uri ->
-            val file = uri.toFile()
-            getRelativePathInFilesDir(file)?.let { relativePaths.add(it) }
-            if (file.exists()) {
-                file.delete()
+        // Only delete managed chat-upload files. A file:// URL may also point to a workspace,
+        // skill, or another app-owned asset that this conversation does not own.
+        val relativePaths = uris.mapNotNull { uri ->
+            if (uri.scheme != "file") return@mapNotNull null
+            val file = runCatching { uri.toFile() }.getOrNull() ?: return@mapNotNull null
+            val path = getRelativePathInFilesDir(file) ?: return@mapNotNull null
+            if (!path.startsWith("${FileFolders.UPLOAD}/") || Files.isSymbolicLink(file.toPath())) {
+                return@mapNotNull null
             }
-        }
-        if (relativePaths.isNotEmpty()) {
-            appScope.launch(Dispatchers.IO) {
-                relativePaths.forEach { path ->
+            path
+        }.toSet()
+        if (relativePaths.isEmpty()) return
+
+        appScope.launch(Dispatchers.IO) {
+            relativePaths.forEach { path ->
+                // The managed-file record is the ownership proof. If it is missing or the
+                // physical delete fails, retain the metadata so cleanup can be retried safely.
+                if (repository.getByPath(path) == null) return@forEach
+                val file = File(context.filesDir, path)
+                if (Files.isSymbolicLink(file.toPath()) || (file.exists() && !file.isFile)) {
+                    return@forEach
+                }
+                if (!file.exists() || file.delete()) {
                     repository.deleteByPath(path)
                 }
             }
