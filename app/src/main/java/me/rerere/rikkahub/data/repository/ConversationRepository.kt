@@ -22,6 +22,7 @@ import me.rerere.rikkahub.data.db.entity.MessageNodeEntity
 import me.rerere.rikkahub.data.db.fts.MessageFtsManager
 import me.rerere.rikkahub.data.db.fts.MessageSearchSort
 import me.rerere.rikkahub.data.files.FilesManager
+import me.rerere.rikkahub.data.files.findUnreferencedChatFiles
 import me.rerere.rikkahub.data.model.Conversation
 import me.rerere.rikkahub.data.model.MessageNode
 import me.rerere.rikkahub.utils.JsonInstant
@@ -353,14 +354,8 @@ class ConversationRepository(
         }
         // The same managed file can be referenced by another conversation or branch.
         // Check the persisted message-node index after deleting this conversation's rows.
-        val unreferencedFiles = fullConversation.files.filter { uri ->
-            try {
-                !hasFileReference(uri.toString())
-            } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                false
-            }
+        val unreferencedFiles = findUnreferencedChatFiles(fullConversation.files) { uri ->
+            hasFileReference(uri)
         }
         filesManager.deleteChatFiles(unreferencedFiles)
     }
