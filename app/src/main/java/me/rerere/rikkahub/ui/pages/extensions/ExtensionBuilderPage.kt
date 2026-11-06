@@ -917,6 +917,13 @@ fun ExtensionBuilderPage(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            if (!apiAccessEnabled) {
+                                Text(
+                                    stringResource(R.string.extension_builder_page_secrets_require_api),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
                             secretDeclarations.forEach { declaration ->
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
