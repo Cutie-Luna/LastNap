@@ -326,9 +326,20 @@ class ChatService(
      * Only delete after the persisted message-node index confirms that no owner remains.
      * If the database cannot confirm ownership, retain the file and let reconciliation retry.
      */
-    private suspend fun deleteFilesIfUnreferenced(files: List<Uri>) {
+    private suspend fun deleteFilesIfUnreferenced(
+        files: List<Uri>,
+        excludingConversationId: Uuid? = null,
+    ) {
+        val activeSessionReferences = sessionManager.snapshot()
+            .filter { it.id != excludingConversationId }
+            .flatMap { session ->
+                val queued = session.messageQueue.state.value.messages + listOfNotNull(session.submittingMessage)
+                session.state.value.files + queued.flatMap { it.parts }.localFileUrls().map { it.toUri() }
+            }
+            .toSet()
+        val candidates = files.filterNot { it in activeSessionReferences }
         val deletable = findUnreferencedChatFiles(
-            files = files,
+            files = candidates,
             fileUrl = { it.toString() },
             hasFileReference = { uri -> conversationRepo.hasFileReference(uri) },
         )
@@ -1108,7 +1119,9 @@ class ChatService(
         session.replace(newConversation(conversationId), existsInDatabase = false) { previous ->
             conversationRepo.getConversationById(conversationId)?.let { conversationRepo.deleteConversation(it) }
             // 数据库那份不知道只在内存里出现过的附件
-            previous?.let { deleteFilesIfUnreferenced(it.files) }
+            previous?.let {
+                deleteFilesIfUnreferenced(it.files, excludingConversationId = it.id)
+            }
         }
         sessionManager.removeIfIdle(session)
     }
