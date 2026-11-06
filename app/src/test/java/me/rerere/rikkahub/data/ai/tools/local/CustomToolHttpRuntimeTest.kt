@@ -617,6 +617,22 @@ class CustomToolHttpRuntimeTest {
     }
 
     @Test
+    fun ipv4CloudMetadataDestinationsRemainBlockedWithLocalNetworkEnabled() {
+        val runtime = runtime()
+        listOf(
+            "169.254.169.254",
+            "169.254.170.2",
+            "100.100.100.200",
+            "168.63.129.16",
+        ).forEach { host ->
+            assertFalse(
+                "Cloud metadata endpoint $host must stay blocked",
+                runtime.isSafeAddress(InetAddress.getByName(host), allowLocalNetwork = true),
+            )
+        }
+    }
+
+    @Test
     fun ipv6CloudMetadataDestinationsRemainBlockedWithLocalNetworkEnabled() {
         val runtime = runtime()
         val awsMetadata = InetAddress.getByName("fd00:ec2::254")
