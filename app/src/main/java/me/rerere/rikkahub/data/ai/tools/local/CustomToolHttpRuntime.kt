@@ -1,5 +1,6 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
+import android.net.Uri
 import com.dokar.quickjs.QuickJsException
 import com.dokar.quickjs.QuickJsInterruptedException
 import com.dokar.quickjs.binding.function
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import me.rerere.rikkahub.data.files.FilesManager
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.CustomExtensionLimits
 import me.rerere.rikkahub.data.model.CustomExtensionValidationError
@@ -56,6 +58,7 @@ class CustomToolHttpRuntime(
     private val baseClient: OkHttpClient,
     private val secretStore: CustomToolSecretProvider,
     private val storage: CustomToolStorageProvider,
+    private val filesManager: FilesManager? = null,
 ) {
     private val activeExecutions = ConcurrentHashMap<String, MutableSet<Job>>()
     private val revokedToolIds = ConcurrentHashMap.newKeySet<String>()
@@ -86,6 +89,7 @@ class CustomToolHttpRuntime(
         code: String,
         variables: Map<String, String> = emptyMap(),
         storageOverride: CustomToolStorageProvider? = null,
+        conversationId: String? = null,
         timeoutMillis: Long = DEFAULT_EXECUTION_TIMEOUT_MS,
     ): String = withContext(Dispatchers.Default) {
         if (extension.id in revokedToolIds) throw CancellationException("Custom tool was deleted")
@@ -133,6 +137,8 @@ class CustomToolHttpRuntime(
             safeVariables.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
         ).toString()
         val executionStorage = storageOverride ?: storage
+        var pendingImage: CustomToolImagePayload? = null
+        var savedMediaUri: Uri? = null
         val logs = StringBuilder()
         var logsTruncated = false
         fun appendLog(line: String) {
