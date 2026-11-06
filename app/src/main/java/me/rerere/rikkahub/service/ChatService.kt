@@ -312,11 +312,12 @@ class ChatService(
 
     // 只删上次落库时引用、这次落库不再引用的文件；只在内存里出现过的文件宁可漏删也不误删
     private suspend fun deleteUnreferencedFiles(previous: Conversation, current: Conversation) {
-        val session = sessionManager.get(current.id)
-        val queuedFiles = (session?.messageQueue?.state?.value?.messages.orEmpty() +
-            listOfNotNull(session?.submittingMessage))
-            .flatMap { it.parts }.localFileUrls().map { it.toUri() }
-        val retainedFiles = (current.files + queuedFiles).toSet()
+        val activeSessions = sessionManager.snapshot()
+        val activeSessionFiles = activeSessions.flatMap { session ->
+            val queued = session.messageQueue.state.value.messages + listOfNotNull(session.submittingMessage)
+            session.state.value.files + queued.flatMap { it.parts }.localFileUrls().map { it.toUri() }
+        }
+        val retainedFiles = (current.files + activeSessionFiles).toSet()
         deleteFilesIfUnreferenced(previous.files.filter { it !in retainedFiles })
     }
 
