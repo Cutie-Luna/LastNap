@@ -97,6 +97,7 @@ jobs:
             --tests 'me.rerere.rikkahub.data.datastore.SettingsFieldsTest' \
             --tests 'me.rerere.rikkahub.data.datastore.SettingsNormalizationTest' \
             --tests 'me.rerere.rikkahub.data.files.ConversationMediaOwnershipTest' \
+            --tests 'me.rerere.rikkahub.data.files.ConversationMediaOwnershipTest' \
             :app:lintGithubDebug \
             :app:assembleGithubDebug
 
