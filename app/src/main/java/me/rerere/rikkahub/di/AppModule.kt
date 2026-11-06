@@ -12,6 +12,8 @@ import kotlinx.coroutines.withContext
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolSecretStore
 import me.rerere.rikkahub.data.ai.tools.local.CustomToolStorage
 import me.rerere.rikkahub.data.datastore.SettingsStore
+import me.rerere.rikkahub.data.files.FilesManager
+import me.rerere.rikkahub.data.repository.ConversationRepository
 import me.rerere.rikkahub.AppScope
 import me.rerere.rikkahub.data.ai.ChatRequestFactory
 import me.rerere.rikkahub.data.ai.tools.ChatToolFactory
@@ -60,6 +62,8 @@ val appModule = module {
         val settingsStore = get<SettingsStore>()
         val secretStore = get<CustomToolSecretStore>()
         val storage = get<CustomToolStorage>()
+        val filesManager = get<FilesManager>()
+        val conversationRepository = get<ConversationRepository>()
         get<AppScope>().launch {
             val settings = settingsStore.awaitLoaded()
             try {
@@ -69,6 +73,7 @@ val appModule = module {
                     }
                     secretStore.reconcile(declaredSecretsByTool)
                     storage.reconcile(declaredSecretsByTool.keys)
+                    filesManager.reconcileConversationMedia(conversationRepository::hasFileReference)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
