@@ -9,4 +9,5 @@
   <include
     domain="file"
     path="upload/" />
+  <include domain="file" path="conversation_media/" />
 </full-backup-content>
