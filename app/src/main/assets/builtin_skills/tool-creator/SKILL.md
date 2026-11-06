@@ -26,8 +26,10 @@ The Builder has Simple and Advanced modes. AI assistance applies to BOTH:
 
 - **Simple:** translate the user's plain-language idea into the tool fields. Do not require the user to invent JSON or JavaScript.
 - **Advanced:** still help with every field. Draft, explain, debug, or refine the schema, instructions, JavaScript and example input; do not assume the user wants to write all code alone.
+- In BOTH modes, assist with the complete configuration: API access on/off, exact allowed hosts, whether local-network permission is needed, Secret and Variable declaration names/descriptions/required status, private storage on/off, and the approval recommendation. Explain the reason for each capability choice; the user makes the final choice.
+- Never ask for Secret values in chat, code, prompts or test input. Suggest declaration names only; the user enters values in the Builder's masked Secret fields. Variables are non-secret and are configured separately.
 - The modes edit the same saved tool format and use the same validation, test gate, sandbox and approval behavior.
-- The Builder does not silently accept an AI draft. Give the user copy-ready content to place or review in the appropriate fields. The user then runs the real sandbox test.
+- The Builder does not silently accept an AI draft. Give the user copy-ready content and configuration recommendations to place or review in the appropriate fields. The user then runs the real sandbox test.
 
 ## Tool design workflow
 
@@ -52,6 +54,12 @@ When helping create or substantially revise a tool, provide the following labell
 - **Input schema** — complete JSON Schema object with `type: "object"`
 - **JavaScript implementation** — complete code for the supported sandbox
 - **Example test input** — valid JSON object
+- **API access and allowed hosts** — default OFF; if needed, state the exact hostnames and why each is required. Public hosts use HTTPS on port 443.
+- **Local-network permission** — ON only when a required endpoint is private or local; name the exact local host.
+- **Secrets** — declaration names, descriptions, and required/optional status only. Use `{{secret:NAME}}` only in HTTP header values. Never include or request the Secret value.
+- **Variables** — non-sensitive declaration names, descriptions, required/optional status, and what each controls. Values are entered separately in the Builder.
+- **Private storage** — recommend ON only when the tool needs persistent per-tool data; explain that disabling preserves it and deleting the tool removes it.
+- **Need approval** — recommend ON by default and explain the trade-off; the user chooses.
 
 Briefly explain where each part belongs. For an existing tool, identify which fields changed and provide complete replacement content for those fields. Do not omit required fields just because the user selected Advanced mode.
 
@@ -73,7 +81,8 @@ The user chooses the switch. Do not silently turn it off, and do not describe an
 - **Secrets:** Secret declarations require API access to be enabled. The user declares named Secrets in the Builder and enters values there. Never ask for values in chat or source code. Use a declared Secret only in an HTTP header value with the exact reference form `{{secret:NAME}}`. The native host inserts it at request time; JavaScript and the assistant never receive the plaintext value. Secret values are encrypted locally with Android Keystore and are excluded from backups and exports. Do not put Secret references in URLs or request bodies; those locations are not supported.
 - **Variables:** non-sensitive configuration values are available as `globalThis.variables.NAME`. They are stored with app settings and may be included in settings backups. Never describe Variables as secret storage.
 - **Private tool storage:** only when the user enables it, JavaScript receives `storage.readText(name)`, `storage.writeText(name, value)`, `storage.readBase64(name)`, `storage.writeBase64(name, value)`, `storage.delete(name)` and `storage.list()`. Names are single safe filenames, not paths. Storage is isolated by immutable tool ID, shared by assistants using that same tool, limited to 100 files / 1 MiB per file / 10 MiB per tool with a 100 MiB shared total across all tools, and excluded from backups. Disabling storage hides access but preserves data; deleting the tool removes its private storage and Secrets.
-- Media already committed to a conversation belongs to that conversation, not the producing tool. Deleting or disabling a tool must not remove media from existing chats. Do not promise image/video display from an API response until the typed media handoff is available.
+- **Image output:** when API access is enabled, the native media bridge supports `media.image(data, mimeType, fileName)`, `media.imageFromResponse(response, fileName)`, and `media.imageFromUrl(url, options, fileName)`. Supply Base64, an ArrayBuffer, or a typed array; the supported validated formats are PNG, JPEG, WebP and GIF, up to 8 MiB and one image per invocation. URLs must pass the same API host and network policy. The host materializes the image into conversation-owned storage and returns a typed image part; do not return Base64 in ordinary tool text. The image is rendered in chat and can be sent to models that support image input.
+- Media already committed to a conversation belongs to that conversation, not the producing tool. Disabling or deleting a tool must not remove media from existing chats. Do not advertise API-produced video, audio or document rendering; those paths are not implemented by this image bridge.
 - Do not assume MCP, workspace files, arbitrary app storage, or other external services are available inside custom-tool JavaScript.
 - Do not attempt to bypass sandbox restrictions, approval prompts, implementation/schema test fingerprints, execution timeouts, memory limits, request limits, storage quotas or input-size limits.
 - If a request requires an unavailable capability, explain that before drafting code and suggest a design that fits the available runtime.

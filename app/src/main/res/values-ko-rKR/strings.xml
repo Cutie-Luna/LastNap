@@ -1814,8 +1814,8 @@ mDNS 주소: .local 호스트네임을 사용하며, IP를 몰라도 같은 네�
     <string name="extension_builder_page_skill_simple_help">이 도구를 사용할 때 어시스턴트가 따라야 할 단계나 규칙을 설명하세요.</string>
     <string name="extension_builder_page_simple_mode">간단히</string>
     <string name="extension_builder_page_advanced_mode">고급</string>
-    <string name="extension_builder_page_simple_help">원하는 기능을 쉬운 말로 설명하세요. Tool Creator가 활성화된 어시스턴트는 이름, 지침, 입력 형식, JavaScript 및 예제 입력을 작성하거나 다듬을 수 있습니다. 각 내용을 여기에 붙여 넣고 검토한 다음 실제 샌드박스 테스트를 실행하세요.</string>
-    <string name="extension_builder_page_advanced_help">고급 모드에서도 AI 도움을 받을 수 있습니다. Tool Creator 어시스턴트에게 스키마, JavaScript, 지침 또는 테스트 입력을 작성하거나 수정해 달라고 요청한 뒤 각 항목에 붙여 넣고 샌드박스 테스트를 실행하기 전에 검토하세요.</string>
+    <string name="extension_builder_page_simple_help">원하는 도구를 쉬운 말로 설명하세요. Tool Creator는 이름, 설명, 지침, 입력 형식, JavaScript, 테스트 입력뿐 아니라 API 액세스와 허용 호스트, 로컬 네트워크 필요 여부, Secret 및 Variable 선언, 비공개 저장소, 승인 권장 사항까지 모든 항목을 작성할 수 있습니다. 선언 이름은 제안할 수 있지만 Secret 값은 묻지 않습니다. 각 항목을 검토해 여기에 입력하고, Secret 값은 이 Builder에서만 입력한 다음 실제 샌드박스 테스트를 실행하세요.</string>
+    <string name="extension_builder_page_advanced_help">고급 모드에서도 AI 도움을 받을 수 있습니다. Tool Creator는 스키마, JavaScript, 지침, 테스트 입력, API 액세스와 허용 호스트, 로컬 네트워크 필요 여부, Secret 및 Variable 선언, 비공개 저장소, 승인 권장 사항 등 모든 항목을 작성하거나 수정할 수 있습니다. 선언 이름은 제안할 수 있지만 Secret 값은 묻지 않습니다. 각 항목을 검토하고 Secret 값은 이 Builder에서만 입력한 다음 샌드박스 테스트를 실행하세요.</string>
     <string name="extension_builder_page_build_details">기술 세부 정보</string>
     <string name="extension_builder_page_build_details_help">입력 형식, JavaScript 및 예제 입력입니다. 기술 항목을 추가하거나 검토할 준비가 되면 여세요.</string>
     <string name="extension_builder_page_inputs_section">입력 형식</string>

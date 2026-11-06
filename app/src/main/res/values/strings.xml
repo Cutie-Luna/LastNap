@@ -385,8 +385,8 @@
   <string name="extension_builder_page_skill_simple_help">Describe the steps or rules the assistant should follow when using this tool.</string>
   <string name="extension_builder_page_simple_mode">Simple</string>
   <string name="extension_builder_page_advanced_mode">Advanced</string>
-  <string name="extension_builder_page_simple_help">Describe what you want in everyday words. An assistant with Tool Creator enabled can draft or refine the name, instructions, input shape, JavaScript and example input. Place the parts here, review them, then run the real sandbox test.</string>
-  <string name="extension_builder_page_advanced_help">Advanced mode is AI-assisted too. Ask your Tool Creator assistant to write or refine the schema, JavaScript, instructions and test input, then place and review each part here before running the sandbox test.</string>
+  <string name="extension_builder_page_simple_help">Describe the tool in everyday words. Tool Creator can draft every field: name, description, instructions, input shape, JavaScript and test input, plus API access and host allowlist, local-network need, Secret and Variable declarations, private storage and an approval recommendation. It may suggest declaration names, never Secret values. Review and place each part here, enter Secrets only in this Builder, then run the real sandbox test.</string>
+  <string name="extension_builder_page_advanced_help">Advanced mode is AI-assisted too. Tool Creator can draft or refine every field, including schema, JavaScript, instructions, test input, API access and host allowlist, local-network need, Secret and Variable declarations, private storage and an approval recommendation. It may suggest declaration names, never Secret values. Review each part, enter Secrets only in this Builder, then run the sandbox test.</string>
   <string name="extension_builder_page_build_details">Build details</string>
   <string name="extension_builder_page_build_details_help">Input shape, JavaScript and example input. Open this when you are ready to add or review the technical parts.</string>
   <string name="extension_builder_page_inputs_section">Input shape</string>

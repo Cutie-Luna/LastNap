@@ -1812,8 +1812,8 @@
     <string name="extension_builder_page_skill_simple_help">صف الخطوات أو القواعد التي ينبغي للمساعد اتباعها عند استخدام هذه الأداة.</string>
     <string name="extension_builder_page_simple_mode">بسيط</string>
     <string name="extension_builder_page_advanced_mode">متقدم</string>
-    <string name="extension_builder_page_simple_help">صف ما تريده بكلمات بسيطة. يمكن لمساعد مفعّل لديه Tool Creator إعداد الاسم والتعليمات وشكل الإدخال وJavaScript ومدخل المثال أو تحسينها. ضع الأجزاء هنا وراجعها، ثم أجرِ اختبار البيئة المعزولة الفعلي.</string>
-    <string name="extension_builder_page_advanced_help">الوضع المتقدم مدعوم بالذكاء الاصطناعي أيضًا. اطلب من مساعد Tool Creator كتابة المخطط أو JavaScript أو التعليمات أو مدخل الاختبار أو تحسينها، ثم ضع كل جزء هنا وراجعه قبل تشغيل الاختبار.</string>
+    <string name="extension_builder_page_simple_help">صِف الأداة بكلمات بسيطة. يمكن لـ Tool Creator إعداد كل الحقول: الاسم والوصف والتعليمات وشكل الإدخال وJavaScript ومدخل الاختبار، بالإضافة إلى الوصول إلى API وقائمة المضيفين وإذن الشبكة المحلية وتعريفات الأسرار والمتغيرات والتخزين الخاص وتوصية الموافقة. يمكنه اقتراح أسماء التعريفات، وليس قيم الأسرار. راجع الأجزاء وضعها هنا، وأدخل الأسرار في هذه الصفحة فقط، ثم أجرِ اختبار البيئة المعزولة.</string>
+    <string name="extension_builder_page_advanced_help">الوضع المتقدم مدعوم بالذكاء الاصطناعي أيضًا. يمكن لـ Tool Creator إعداد كل الحقول أو تحسينها، بما فيها المخطط وJavaScript والتعليمات ومدخل الاختبار والوصول إلى API وقائمة المضيفين وإذن الشبكة المحلية وتعريفات الأسرار والمتغيرات والتخزين الخاص وتوصية الموافقة. يمكنه اقتراح أسماء التعريفات، وليس قيم الأسرار. راجع كل جزء، وأدخل الأسرار في هذه الصفحة فقط، ثم أجرِ اختبار البيئة المعزولة.</string>
     <string name="extension_builder_page_build_details">تفاصيل البناء</string>
     <string name="extension_builder_page_build_details_help">شكل الإدخال وJavaScript ومدخل المثال. افتح هذا القسم عندما تكون مستعدًا لإضافة التفاصيل التقنية أو مراجعتها.</string>
     <string name="extension_builder_page_inputs_section">شكل الإدخال</string>

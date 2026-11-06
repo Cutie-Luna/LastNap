@@ -31,6 +31,31 @@ class BuiltinSkillsTest {
     }
 
     @Test
+    fun `tool creator covers every Builder field and the tested image handoff`() {
+        val skill = File("src/main/assets/builtin_skills/tool-creator/SKILL.md").readText()
+        listOf(
+            "API access and allowed hosts",
+            "Local-network permission",
+            "Secrets",
+            "Variables",
+            "Private storage",
+            "Need approval",
+            "media.image(data, mimeType, fileName)",
+            "media.imageFromResponse(response, fileName)",
+            "media.imageFromUrl(url, options, fileName)",
+            "one image per invocation",
+            "Never ask for Secret values",
+        ).forEach { required ->
+            assertTrue("Tool Creator skill must document $required", skill.contains(required))
+        }
+
+        val strings = File("src/main/res/values/strings.xml").readText()
+        assertTrue(strings.contains("API access and host allowlist"))
+        assertTrue(strings.contains("Secret and Variable declarations"))
+        assertTrue(strings.contains("enter Secrets only in this Builder"))
+    }
+
+    @Test
     fun `builtin skills in assets are valid`() {
         // Android 单元测试的工作目录是模块根目录
         val root = File("src/main/assets/builtin_skills")

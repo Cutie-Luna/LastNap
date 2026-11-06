@@ -1814,8 +1814,8 @@ mDNSアドレス: .localホスト名を使用し、IPを知らなくても同じ
     <string name="extension_builder_page_skill_simple_help">このツールを使うときにアシスタントが従う手順やルールを説明してください。</string>
     <string name="extension_builder_page_simple_mode">シンプル</string>
     <string name="extension_builder_page_advanced_mode">詳細</string>
-    <string name="extension_builder_page_simple_help">作りたいことを普段の言葉で説明してください。Tool Creator を有効にしたアシスタントが、名前、指示、入力形式、JavaScript、入力例を作成・修正できます。内容をここに貼り付けて確認し、実際のサンドボックステストを実行してください。</string>
-    <string name="extension_builder_page_advanced_help">詳細モードでも AI の支援を利用できます。Tool Creator アシスタントにスキーマ、JavaScript、指示、テスト入力の作成や修正を依頼し、各項目に貼り付けて確認してからサンドボックステストを実行してください。</string>
+    <string name="extension_builder_page_simple_help">作りたいツールを普段の言葉で説明してください。Tool Creator は、名前、説明、指示、入力形式、JavaScript、テスト入力に加え、APIアクセスと許可ホスト、ローカルネットワークの必要性、SecretとVariableの宣言、プライベートストレージ、承認の推奨など、すべての項目を作成できます。宣言名は提案できますが、Secretの値は尋ねません。各項目を確認してここに配置し、Secretの値はこのBuilderだけに入力してから実際のサンドボックステストを実行してください。</string>
+    <string name="extension_builder_page_advanced_help">詳細モードでもAIの支援を利用できます。Tool Creator は、スキーマ、JavaScript、指示、テスト入力、APIアクセスと許可ホスト、ローカルネットワークの必要性、SecretとVariableの宣言、プライベートストレージ、承認の推奨など、すべての項目を作成・修正できます。宣言名は提案できますが、Secretの値は尋ねません。各項目を確認し、Secretの値はこのBuilderだけに入力してからサンドボックステストを実行してください。</string>
     <string name="extension_builder_page_build_details">技術的な詳細</string>
     <string name="extension_builder_page_build_details_help">入力形式、JavaScript、入力例です。技術的な項目を追加または確認するときに開いてください。</string>
     <string name="extension_builder_page_inputs_section">入力形式</string>

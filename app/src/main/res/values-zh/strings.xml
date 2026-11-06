@@ -1817,8 +1817,8 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
     <string name="extension_builder_page_skill_simple_help">描述助手使用此工具时应遵循的步骤或规则。</string>
     <string name="extension_builder_page_simple_mode">简单</string>
     <string name="extension_builder_page_advanced_mode">高级</string>
-    <string name="extension_builder_page_simple_help">用日常语言描述你想要的功能。启用了 Tool Creator 的助手可以起草或修改名称、指令、输入格式、JavaScript 和示例输入。将内容粘贴到这里并检查，然后运行实际的沙盒测试。</string>
-    <string name="extension_builder_page_advanced_help">高级模式同样支持 AI 协助。请 Tool Creator 助手编写或改进架构、JavaScript、指令或测试输入，然后将各部分粘贴到这里并检查，最后运行沙盒测试。</string>
+    <string name="extension_builder_page_simple_help">用日常语言描述你想创建的工具。Tool Creator 可以起草所有字段：名称、描述、指令、输入格式、JavaScript 和测试输入，以及 API 访问和允许的主机、本地网络需求、Secret 和 Variable 声明、私有存储和审批建议。它可以建议声明名称，但不会询问 Secret 值。请检查并将各部分放入此处，Secret 值只能在此 Builder 中填写，然后运行真实的沙盒测试。</string>
+    <string name="extension_builder_page_advanced_help">高级模式同样支持 AI 协助。Tool Creator 可以起草或修改所有字段，包括架构、JavaScript、指令、测试输入、API 访问和允许的主机、本地网络需求、Secret 和 Variable 声明、私有存储及审批建议。它可以建议声明名称，但不会询问 Secret 值。请检查各部分，Secret 值只能在此 Builder 中填写，然后运行沙盒测试。</string>
     <string name="extension_builder_page_build_details">技术细节</string>
     <string name="extension_builder_page_build_details_help">输入格式、JavaScript 和示例输入。准备添加或检查技术内容时，请展开此区域。</string>
     <string name="extension_builder_page_inputs_section">输入格式</string>
