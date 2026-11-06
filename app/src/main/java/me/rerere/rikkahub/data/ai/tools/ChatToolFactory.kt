@@ -53,6 +53,7 @@ class ChatToolFactory(
         assistant: Assistant,
         model: Model,
         workspaceCwd: String? = null,
+        conversationId: String? = null,
     ): List<Tool> {
         val workspaceTools = createWorkspaceToolsIfReady(assistant.workspaceId?.toString(), workspaceCwd)
         val tools = buildList {
@@ -106,6 +107,7 @@ class ChatToolFactory(
             reservedToolNames = tools.mapTo(mutableSetOf()) { it.name },
             httpRuntime = customToolHttpRuntime,
             variablesByTool = settings.customToolVariables,
+            conversationId = conversationId,
             onNameCollision = { name ->
                 Log.w(TAG, "Skipping custom tool with colliding name: $name")
             },

@@ -29,6 +29,7 @@ import me.rerere.rikkahub.data.ai.mcp.McpManager
 import me.rerere.rikkahub.data.ai.transformers.AssistantTemplateLoader
 import me.rerere.rikkahub.data.ai.transformers.TemplateTransformer
 import me.rerere.rikkahub.data.datastore.SettingsStore
+import me.rerere.rikkahub.data.files.FilesManager
 import me.rerere.rikkahub.data.db.AppDatabase
 import me.rerere.rikkahub.data.db.AppDatabaseFactory
 import me.rerere.rikkahub.data.db.fts.MessageFtsManager
@@ -71,6 +72,7 @@ val dataSourceModule = module {
         CustomToolHttpRuntime.create(
             secretStore = get(),
             storage = get(),
+            mediaStore = get<FilesManager>(),
         )
     }
 

@@ -47,6 +47,20 @@ class CustomExtensionToolsTest {
         onNameCollision = onCollision,
     )
 
+
+    @Test
+    fun conversationImageMetadataBecomesATypedImagePartNotModelVisibleUriText() {
+        val uri = "file:///conversation_media/12345678-1234-1234-1234-123456789abc/generated.png"
+        val parts = customToolOutputParts(
+            """{"result":"ready","mediaMimeType":"image/png","mediaUri":"$uri"}"""
+        )
+
+        assertEquals(2, parts.size)
+        assertEquals("""{"result":"ready"}""", (parts[0] as UIMessagePart.Text).text)
+        assertEquals(uri, (parts[1] as UIMessagePart.Image).url)
+        assertFalse((parts[0] as UIMessagePart.Text).text.contains(uri))
+    }
+
     @Test
     fun onlySelectedEnabledAndCurrentlyTestedDefinitionsBecomeTools() {
         val selected = enabledExtension("selected")

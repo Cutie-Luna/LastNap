@@ -33,7 +33,7 @@ class FilesManager(
     private val context: Context,
     private val repository: FilesRepository,
     private val appScope: AppScope,
-) {
+) : ConversationMediaStore {
     companion object {
         private const val TAG = "FilesManager"
         private const val MAX_CONVERSATION_MEDIA_BYTES = 8 * 1024 * 1024
@@ -83,12 +83,12 @@ class FilesManager(
      * Persist an image produced by a tool as conversation-owned media, never in tool storage.
      * The returned URI is safe to attach to a message and is included in chat backups.
      */
-    suspend fun saveConversationMedia(
+    override suspend fun saveConversationMedia(
         conversationId: String,
         bytes: ByteArray,
         displayName: String,
         mimeType: String,
-    ): Uri = withContext(NonCancellable + Dispatchers.IO) {
+    ): String = withContext(NonCancellable + Dispatchers.IO) {
         require(conversationId.matches(CONVERSATION_ID_PATTERN)) { "Conversation ID is invalid" }
         require(bytes.isNotEmpty() && bytes.size <= MAX_CONVERSATION_MEDIA_BYTES) {
             "Conversation image exceeds the 8 MiB size limit"
@@ -139,7 +139,7 @@ class FilesManager(
                     updatedAt = now,
                 )
             )
-            file.toUri()
+            file.toUri().toString()
         } catch (error: Exception) {
             file.delete()
             throw error
@@ -361,6 +361,10 @@ class FilesManager(
                 }
             )
         }
+
+    override fun discardConversationMedia(uri: String) {
+        deleteChatFiles(listOf(Uri.parse(uri)))
+    }
 
     fun deleteChatFiles(uris: List<Uri>) {
         // A conversation may own uploaded attachments or generated media. Never delete an

@@ -39,6 +39,7 @@ internal fun createCustomExtensionTools(
     onNameCollision: (String) -> Unit = {},
     httpRuntime: CustomToolHttpRuntime? = null,
     variablesByTool: Map<String, Map<String, String>> = emptyMap(),
+    conversationId: String? = null,
 ): List<Tool> {
     val usedNames = reservedToolNames.toMutableSet()
     val seenIds = mutableSetOf<String>()
@@ -116,29 +117,58 @@ internal fun createCustomExtensionTools(
             },
             needsApproval = { _ -> extension.needsApproval },
             execute = { arguments ->
-                val args = arguments as? JsonObject ?: error("Custom tool arguments must be a JSON object")
-                val serializedArguments = args.toString()
-                val argumentBytes = serializedArguments.toByteArray(Charsets.UTF_8).size
-                require(argumentBytes <= CustomExtensionLimits.MAX_INPUT_LENGTH) {
-                    "Custom tool arguments exceed the 64 KiB limit"
+                val executeTool: suspend () -> List<UIMessagePart> = {
+                    val args = arguments as? JsonObject ?: error("Custom tool arguments must be a JSON object")
+                    val serializedArguments = args.toString()
+                    val argumentBytes = serializedArguments.toByteArray(Charsets.UTF_8).size
+                    require(argumentBytes <= CustomExtensionLimits.MAX_INPUT_LENGTH) {
+                        "Custom tool arguments exceed the 64 KiB limit"
+                    }
+                    val input = args["input"] as? JsonObject
+                        ?: error("The input object is required")
+                    val serializedInput = input.toString()
+                    val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
+                    val code = "const input = JSON.parse($serializedInputLiteral);\\n$implementation"
+                    val output = if (extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) {
+                        requireNotNull(httpRuntime).evaluate(
+                            extension = extension,
+                            code = code,
+                            variables = variablesByTool[extension.id].orEmpty(),
+                            conversationId = conversationId,
+                        )
+                    } else {
+                        evaluateJavascript(code)
+                    }
+                    customToolOutputParts(output)
                 }
-                val input = args["input"] as? JsonObject
-                    ?: error("The input object is required")
-                val serializedInput = input.toString()
-                val serializedInputLiteral = JsonPrimitive(serializedInput).toString()
-                val code = "const input = JSON.parse($serializedInputLiteral);\n$implementation"
-                val output = if (extension.apiAccessEnabled || extension.storageEnabled || extension.variables.isNotEmpty()) {
-                    requireNotNull(httpRuntime).evaluate(
-                        extension = extension,
-                        code = code,
-                        variables = variablesByTool[extension.id].orEmpty(),
-                    )
+                if (httpRuntime != null) {
+                    httpRuntime.runToolExecution(extension.id) { executeTool() }
                 } else {
-                    evaluateJavascript(code)
+                    executeTool()
                 }
-                listOf(UIMessagePart.Text(output))
             },
         )
+    }
+}
+
+
+/**
+ * Converts the native runtime envelope into provider-facing parts. Conversation media URIs
+ * are host metadata, not text for the model: expose them only as typed image parts.
+ */
+internal fun customToolOutputParts(output: String): List<UIMessagePart> {
+    val payload = runCatching { Json.parseToJsonElement(output) as? JsonObject }.getOrNull()
+        ?: return listOf(UIMessagePart.Text(output))
+    val mediaUri = (payload["mediaUri"] as? JsonPrimitive)?.contentOrNull
+    if (mediaUri.isNullOrBlank() || !mediaUri.startsWith("file://")) {
+        return listOf(UIMessagePart.Text(output))
+    }
+    val visiblePayload = JsonObject(payload.filterKeys {
+        it != "mediaUri" && it != "mediaMimeType" && it != "mediaPending"
+    })
+    return buildList {
+        if (visiblePayload.isNotEmpty()) add(UIMessagePart.Text(visiblePayload.toString()))
+        add(UIMessagePart.Image(mediaUri))
     }
 }
 

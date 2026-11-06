@@ -1,6 +1,5 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
-import android.net.Uri
 import com.dokar.quickjs.QuickJsException
 import com.dokar.quickjs.QuickJsInterruptedException
 import com.dokar.quickjs.binding.function
@@ -24,7 +23,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import me.rerere.rikkahub.data.files.FilesManager
+import me.rerere.rikkahub.data.files.ConversationMediaStore
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.CustomExtensionLimits
 import me.rerere.rikkahub.data.model.CustomExtensionValidationError
@@ -64,7 +63,7 @@ class CustomToolHttpRuntime(
     private val baseClient: OkHttpClient,
     private val secretStore: CustomToolSecretProvider,
     private val storage: CustomToolStorageProvider,
-    private val filesManager: FilesManager? = null,
+    private val mediaStore: ConversationMediaStore? = null,
 ) {
     private val activeExecutions = ConcurrentHashMap<String, MutableSet<Job>>()
     private val revokedToolIds = ConcurrentHashMap.newKeySet<String>()
@@ -85,7 +84,9 @@ class CustomToolHttpRuntime(
             throw CancellationException("Custom tool was deleted")
         }
         try {
-            return block()
+            val result = block()
+            currentCoroutineContext().ensureActive()
+            return result
         } finally {
             if (added) jobs.remove(executionJob)
             if (jobs.isEmpty()) activeExecutions.remove(toolId, jobs)
@@ -94,7 +95,7 @@ class CustomToolHttpRuntime(
 
     /** Remove an image saved by an invocation that was cancelled before returning its tool part. */
     fun discardConversationMedia(uri: String) {
-        filesManager?.deleteChatFiles(listOf(Uri.parse(uri)))
+        mediaStore?.discardConversationMedia(uri)
     }
 
     /** Permanently invalidates this immutable tool ID and cancels any work already running. */
@@ -364,7 +365,7 @@ class CustomToolHttpRuntime(
                 }
                 val image = pendingImage
                 val mediaUri = if (image != null && conversationId != null) {
-                    val manager = filesManager ?: error("Conversation media storage is unavailable")
+                    val manager = mediaStore ?: error("Conversation media storage is unavailable")
                     manager.saveConversationMedia(
                         conversationId = conversationId,
                         bytes = image.bytes,
@@ -385,20 +386,20 @@ class CustomToolHttpRuntime(
                     }
                 }.toString()
             } ?: run {
-                savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
+                savedMediaUri?.let { discardConversationMedia(it) }
                 errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
             }
         } catch (cancelled: CancellationException) {
-            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
+            savedMediaUri?.let { discardConversationMedia(it) }
             throw cancelled
         } catch (_: QuickJsInterruptedException) {
-            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
+            savedMediaUri?.let { discardConversationMedia(it) }
             errorPayload("Custom tool execution timed out after ${timeoutMillis}ms")
         } catch (error: QuickJsException) {
-            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
+            savedMediaUri?.let { discardConversationMedia(it) }
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
         } catch (error: Exception) {
-            savedMediaUri?.let { filesManager?.deleteChatFiles(listOf(it)) }
+            savedMediaUri?.let { discardConversationMedia(it) }
             errorPayload((error.message ?: "Custom tool execution failed").take(MAX_LOG_CHARS))
         } finally {
             if (addedExecutionJob) jobs.remove(executionJob)
@@ -810,7 +811,7 @@ class CustomToolHttpRuntime(
         fun create(
             secretStore: CustomToolSecretStore,
             storage: CustomToolStorage,
-            filesManager: FilesManager? = null,
+            mediaStore: ConversationMediaStore? = null,
         ): CustomToolHttpRuntime {
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
@@ -822,7 +823,7 @@ class CustomToolHttpRuntime(
                 .retryOnConnectionFailure(false)
                 // Deliberately no request, body, or header logging interceptors.
                 .build()
-            return CustomToolHttpRuntime(client, secretStore, storage, filesManager)
+            return CustomToolHttpRuntime(client, secretStore, storage, mediaStore)
         }
 
         private const val DEFAULT_EXECUTION_TIMEOUT_MS = 45_000L

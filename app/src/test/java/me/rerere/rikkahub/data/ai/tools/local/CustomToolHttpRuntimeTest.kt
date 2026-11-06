@@ -11,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import me.rerere.rikkahub.data.files.ConversationMediaStore
 import me.rerere.rikkahub.data.model.CustomExtension
 import me.rerere.rikkahub.data.model.validationErrors
 import okhttp3.OkHttpClient
@@ -48,9 +49,33 @@ class CustomToolHttpRuntimeTest {
         }
     }
 
+    private class MemoryMediaStore : ConversationMediaStore {
+        var savedConversationId: String? = null
+        var savedBytes: ByteArray? = null
+        var savedMimeType: String? = null
+        var discarded: String? = null
+
+        override suspend fun saveConversationMedia(
+            conversationId: String,
+            bytes: ByteArray,
+            displayName: String,
+            mimeType: String,
+        ): String {
+            savedConversationId = conversationId
+            savedBytes = bytes.copyOf()
+            savedMimeType = mimeType
+            return "file:///conversation_media/$conversationId/generated.png"
+        }
+
+        override fun discardConversationMedia(uri: String) {
+            discarded = uri
+        }
+    }
+
     private fun runtime(
         secrets: Map<String, String> = emptyMap(),
         storage: CustomToolStorageProvider = MemoryStorage(),
+        mediaStore: ConversationMediaStore? = null,
     ) = CustomToolHttpRuntime(
         OkHttpClient.Builder()
             .connectTimeout(3, TimeUnit.SECONDS)
@@ -63,6 +88,7 @@ class CustomToolHttpRuntimeTest {
                 extension.secrets.filter { it.required && secrets[it.name].isNullOrEmpty() }.map { it.name }
         },
         storage,
+        mediaStore,
     )
 
     private fun startServer(): HttpServer {
@@ -113,6 +139,52 @@ class CustomToolHttpRuntimeTest {
         }
         server.start()
         return server
+    }
+
+
+    @Test
+    fun imagePublicationIsSavedToConversationOwnedMediaWithItsConversationId() = runBlocking {
+        val mediaStore = MemoryMediaStore()
+        val bytes = byteArrayOf(
+            0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 2, 0, 0, 0, 3,
+        )
+        val encoded = java.util.Base64.getEncoder().encodeToString(bytes)
+        val conversationId = "12345678-1234-1234-1234-123456789abc"
+        val output = runtime(mediaStore = mediaStore).evaluate(
+            extension = localExtension(),
+            code = """media.image("$encoded", "image/png", "generated.png"); "ready"""",
+            conversationId = conversationId,
+        )
+        val payload = Json.parseToJsonElement(output).jsonObject
+
+        assertEquals(conversationId, mediaStore.savedConversationId)
+        assertTrue(bytes.contentEquals(mediaStore.savedBytes))
+        assertEquals("image/png", mediaStore.savedMimeType)
+        assertEquals(
+            "file:///conversation_media/$conversationId/generated.png",
+            payload["mediaUri"]?.jsonPrimitive?.content,
+        )
+        assertEquals("image/png", payload["mediaMimeType"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun toolExecutionLeaseIsCancelledAndJoinedWhenToolIsRevoked() = runBlocking {
+        val runtime = runtime()
+        val started = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val invocation = async {
+            runtime.runToolExecution("leased-tool") {
+                started.complete(Unit)
+                kotlinx.coroutines.awaitCancellation()
+            }
+        }
+        started.await()
+
+        runtime.revokeToolAndJoin("leased-tool")
+
+        assertTrue(invocation.isCancelled)
+        assertTrue(runCatching { runtime.runToolExecution("leased-tool") { Unit } }.isFailure)
     }
 
     @Test
