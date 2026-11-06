@@ -152,6 +152,26 @@ class BackupManagerTest {
         assertFalse(File(session, "record/out_1.mp4.part").exists())
     }
 
+    @Test fun conversationMediaKeepsItsConversationPathAcrossBackupAndRestore() = runBlocking {
+        val chatMedia = File(context.filesDir, "conversation_media/chat-a/generated.png")
+        chatMedia.parentFile!!.mkdirs()
+        chatMedia.writeBytes(byteArrayOf(1, 2, 3, 4, 5))
+
+        val archive = manager.createBackup(includeDatabase = false, includeFiles = true)
+        ZipFile(archive).use { zip ->
+            val entry = zip.getEntry("conversation_media/chat-a/generated.png")
+            assertTrue("Conversation media must be included in file backups", entry != null)
+            assertFalse(zip.entries().asSequence().any { it.name.startsWith("custom_tool_storage/") })
+        }
+
+        chatMedia.parentFile!!.deleteRecursively()
+        manager.stageRestore(archive, includeDatabase = false, includeFiles = true)
+        // Do not replace the app-under-test's real settings; this test is about the file payload.
+        assertTrue(File(context.noBackupFilesDir, "backup-restore/pending/settings.json").delete())
+        assertTrue(BackupManager.applyPendingRestore(context, JsonInstant))
+        assertEquals(listOf<Byte>(1, 2, 3, 4, 5), chatMedia.readBytes().toList())
+    }
+
     @Test fun unsupportedSchemaIsRejectedBeforePublishing() = runBlocking {
         val future = File(directory, "future")
         withRoom(future) {
